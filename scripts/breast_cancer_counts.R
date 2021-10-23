@@ -61,7 +61,7 @@ write_csv(alliance_bc_count, "Alliance-breast_cancer_object_count.csv")
 mndr_bc <- dplyr::filter(mndr_dis, DOID %in% bc_doid)
 
 mndr_bc_count <- mndr_bc %>%
-    dplyr::select(MNDR_ID, ncRNA_Category, Species) %>%
+    dplyr::select(ncRNA_symbol, ncRNA_Category, Species) %>%
     unique() %>%
     dplyr::count(Species, ncRNA = ncRNA_Category) %>%
     tidyr::pivot_wider(
