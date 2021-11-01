@@ -94,3 +94,92 @@ virtuoso::vos_import(
     )
 )
 ```
+
+
+# DOIDs without definitions
+
+I extracted the DOIDs without definitions, excluding obsolete terms, along with all annotated xrefs for further analysis and use. I did not use the `src/sparql/extra/DO_no_defs.rq` SPARQL query (it has the same terms but results in multiple rows per term because it represents parents). Instead, I directly excluded obsolete terms and did not extract parent information.
+```{r}
+query_no_def_xref <-
+    '# Query non-deprecated DOIDs without definitions
+    PREFIX rdfs: <http://www.w3.org/2000/01/rdf-schema#>
+    PREFIX owl: <http://www.w3.org/2002/07/owl#>
+    PREFIX obo: <http://purl.obolibrary.org/obo/>
+    PREFIX oboInOwl: <http://www.geneontology.org/formats/oboInOwl#>
+
+    SELECT ?doid ?do_name ?xref
+    FROM <doid>
+    WHERE {
+        ?class a owl:Class ;
+            oboInOwl:id ?doid ;
+            rdfs:label ?do_name .
+        OPTIONAL { ?class oboInOwl:hasDbXref ?xref . }
+        # include only those missing definitions & not deprecated
+        FILTER NOT EXISTS { ?class obo:IAO_0000115 ?def . }
+        FILTER NOT EXISTS { ?class owl:deprecated ?any . }
+    }'
+
+do_no_def <- virtuoso::vos_query(vcon, query_no_def_xref) %>%
+    tibble::as_tibble() %>%
+    dplyr::mutate(xref_ns = stringr::str_remove(xref, ":.*"))
+```
+
+There are **`r format(dplyr::n_distinct(do_no_def$doid), big.mark = ",")` DOIDs without definitions**. Of these, `r dplyr::n_distinct(do_no_def$doid[is.na(do_no_def$xref)])` have NO xrefs. See the list below:
+    ```{r}
+dplyr::filter(do_no_def, is.na(xref))
+```
+Here's a quick snapshot of the xrefs:
+```{r}
+dplyr::count(do_no_def, xref_ns) %>%
+    dplyr::arrange(desc(n))
+```
+
+```{r}
+nci_mesh_umls <- do_no_def %>%
+    dplyr::filter(xref_ns %in% c("MESH", "NCI", "UMLS_CUI")) %>%
+    dplyr::group_by(doid) %>%
+    dplyr::summarize(
+        nci_mesh = any(xref_ns %in% c("MESH", "NCI")),
+        umls = any(xref_ns == "UMLS_CUI")
+    )
+
+nm_no_umls <- nci_mesh_umls %>%
+    dplyr::filter(nci_mesh & !umls)
+```
+
+I would assume that most NCI and MESH terms are also in UMLS. Of the `r format(dplyr::n_distinct(nci_mesh_umls$doid[nci_mesh_umls$nci_mesh]), big.mark = ",")` DOIDs with NCI or MESH xrefs there are `r format(dplyr::n_distinct(nm_no_umls$doid), big.mark = ",")` DOIDs _WITHOUT_ UMLS xrefs. Those DOIDs are:
+```{r}
+dplyr::filter(do_no_def, doid %in% nm_no_umls$doid) %>%
+    dplyr::group_by(doid, do_name) %>%
+    dplyr::summarize(xref = paste0(xref, collapse = "|"), .groups = "drop")
+```
+
+And lastly, the number of DOIDs without definitions **with or without NCI/MESH xrefs** is:
+```{r}
+nci_mesh_xref <- do_no_def %>%
+    dplyr::group_by(doid) %>%
+    dplyr::summarize(
+        has_nci_mesh_xref = any(xref_ns %in% c("MESH", "NCI"))
+    )
+
+nci_mesh_xref %>%
+    dplyr::count(has_nci_mesh_xref)
+```
+
+That's about 1/5 of the DOIDs without definitions that NCI & MESH can't help with. Among those it appears most have xrefs to one of the ICD's or SNOMED (via UMLS). I'm not sure any of those will be accessible for definitions.
+```{r}
+doid_no_nci_mesh <- dplyr::filter(nci_mesh_xref, !has_nci_mesh_xref)$doid
+
+do_no_nci_mesh <- do_no_def %>%
+    dplyr::filter(doid %in% doid_no_nci_mesh)
+
+do_no_nci_mesh %>%
+    dplyr::count(xref_ns)
+```
+
+The small number of DOIDs without definitions with xrefs to EFO/GARD/OMIM are:
+```{r}
+dplyr::filter(do_no_nci_mesh, xref_ns %in% c("EFO", "GARD", "OMIM")) %>%
+    dplyr::group_by(doid, do_name) %>%
+    dplyr::summarize(xref = paste0(xref, collapse = "; "), .groups = "drop")
+```
