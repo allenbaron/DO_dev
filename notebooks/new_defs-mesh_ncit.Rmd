@@ -1,0 +1,96 @@
+---
+title: "Produce Candidate Definitions for DOIDs without them"
+author: "J. Allen Baron"
+date: "2021-10-28"
+output:
+    html_document:
+        toc: true
+        toc_float: true
+        df_print: paged
+---
+
+```{r setup, include = FALSE}
+library(here)
+library(virtuoso)
+library(parallel)
+```
+
+# PURPOSE
+To identify candidate definitions from MESH and NCI Thesaurus for DOIDs without definitions.
+
+
+# Data Setup (Manual Execution)
+
+## Download Data
+
+1. Copy doid.owl (release: v2021-10-11) from HumanDiseaseOntology git repo to data.
+2. Download NCI Thesaurus OWL file (asserted version; release 21.09d) to data from https://evs.nci.nih.gov/evs-download/thesaurus-downloads.
+    - NOTE: .zip can't be read by `virtuoso` bulk database uploader, so I unzipped and recompressed it as .gz file.
+3. Download MESH N-triples file to data from https://hhs.github.io/meshrdf/ ftp site (release: 2021-10-28, updated nightly).
+
+```{r}
+# data files
+doid_owl <- here::here("data/doid_v2021-10-11.owl")
+nci_owl <- here::here("data/Thesaurus.owl.gz")
+mesh_nt <- here::here("data/mesh.nt.gz")
+```
+
+```{r eval = FALSE, include = FALSE}
+# extra if using NCI thesaurus flat file
+nci_tsv <- here::here("data/Thesaurus_21.09d.FLAT.zip")
+nci_colnames <- c("code", "concept_name", "parents", "synonyms", "definition",
+                  "display_name", "concept_status", "semantic_type")
+nci <- readr::read_tsv(nci_tsv, col_names = nci_colnames)
+```
+
+
+## Setup a Virtuoso Database
+
+I installed Virtuoso using `scripts/setup_virtuoso.R` and default values. That script and SPARQL queries herein rely on the `virtuoso` R package.
+
+I chose to load the 3 rdf files as individual graphs so that I could explore them separately and avoid unexpected results from queries finding hits in multiple data sources.
+
+```{r}
+# start database and initiate a connection
+virtuoso::vos_start()
+vcon <- virtuoso::vos_connect()
+
+# list graphs (i.e. URIs)
+virtuoso::vos_list_graphs(vcon)
+```
+
+```{r eval = FALSE}
+# import data into db, ran interactively once
+virtuoso::vos_import(
+    con = vcon,
+    files = doid_owl,
+    graph = "doid",
+    n_cores = dplyr::if_else(
+        parallel::detectCores() > 2,
+        parallel::detectCores() - 2,
+        1
+    )
+)
+
+virtuoso::vos_import(
+    con = vcon,
+    files = mesh_nt,
+    graph = "mesh",
+    n_cores = dplyr::if_else(
+        parallel::detectCores() > 2,
+        parallel::detectCores() - 2,
+        1
+    )
+)
+
+virtuoso::vos_import(
+    con = vcon,
+    files = nci_owl,
+    graph = "nci",
+    n_cores = dplyr::if_else(
+        parallel::detectCores() > 2,
+        parallel::detectCores() - 2,
+        1
+    )
+)
+```
