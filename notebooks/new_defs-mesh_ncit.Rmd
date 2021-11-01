@@ -183,3 +183,66 @@ dplyr::filter(do_no_nci_mesh, xref_ns %in% c("EFO", "GARD", "OMIM")) %>%
     dplyr::group_by(doid, do_name) %>%
     dplyr::summarize(xref = paste0(xref, collapse = "; "), .groups = "drop")
 ```
+
+
+# Extract definitions from NCI & MESH
+
+```{r}
+query_new_def <-
+    '# Query non-deprecated DOIDs without definitions
+    PREFIX rdfs: <http://www.w3.org/2000/01/rdf-schema#>
+    PREFIX owl: <http://www.w3.org/2002/07/owl#>
+    PREFIX obo: <http://purl.obolibrary.org/obo/>
+    PREFIX oboInOwl: <http://www.geneontology.org/formats/oboInOwl#>
+    PREFIX nci: <http://ncicb.nci.nih.gov/xml/owl/EVS/Thesaurus.owl#>
+    PREFIX mesh: <http://id.nlm.nih.gov/mesh/>
+    PREFIX meshv: <http://id.nlm.nih.gov/mesh/vocab#>
+
+    SELECT ?doid ?do_name ?def ?xref
+    FROM <doid>
+    FROM <mesh>
+    FROM <nci>
+    WHERE {
+        # DOID data
+        ?class a owl:Class ;
+            oboInOwl:id ?doid ;
+            rdfs:label ?do_name ;
+            oboInOwl:hasDbXref ?xref .
+        # include only those missing definitions & not deprecated
+        FILTER NOT EXISTS { ?class obo:IAO_0000115 ?any_def . }
+        FILTER NOT EXISTS { ?class owl:deprecated ?any . }
+        # include only NCI/MESH xrefs
+        FILTER REGEX(STR(?xref), "(NCI|MESH).*")
+
+        # xref definition data
+        BIND(
+            REPLACE(
+                STR(?xref),
+                "NCI:",
+                "http://ncicb.nci.nih.gov/xml/owl/EVS/Thesaurus.owl#"
+            ) as ?nci_uri
+        )
+        BIND(
+            REPLACE(
+                STR(?xref),
+                "MESH:",
+                "http://id.nlm.nih.gov/mesh/"
+            ) as ?mesh_nci_uri
+        )
+        ?mesh_nci_uri a owl:Class .
+        OPTIONAL {
+            ?mesh_nci_uri meshv:scopeNote ?def .
+        }
+        OPTIONAL {
+            ?mesh_nci_uri nci:P97 ?def .
+            # remove obsolete/retired concepts from NCI
+            FILTER NOT EXISTS {
+                ?nci_uri nci:P310 ?old_concept .
+                VALUES ?old_concept { "Obsolete_Concept" "Retired_Concept" }
+            }
+        }
+    }'
+
+do_nci_mesh <- virtuoso::vos_query(vcon, query_new_def) %>%
+    tibble::as_tibble()
+```
