@@ -194,6 +194,7 @@ dplyr::filter(do_no_nci_mesh, xref_ns %in% c("EFO", "GARD", "OMIM")) %>%
 
 # Extract definitions from NCI & MESH
 
+I attempted to extract definitions from the MESH & NCI rdf files. Though the query works only NCI definitions are returned. It appears that there are _NO_ `meshv:scopeNote` triples for the MESH terms of interest.
 ```{r}
 query_new_def <-
     '# Query non-deprecated DOIDs without definitions
@@ -211,32 +212,31 @@ query_new_def <-
     FROM <nci>
     WHERE {
         {
-        SELECT *
-        FROM <doid>
-        FROM <mesh>
-        WHERE {
-            ?class a owl:Class ;
-                oboInOwl:id ?doid ;
-                rdfs:label ?do_name ;
-                oboInOwl:hasDbXref ?xref .
-            FILTER NOT EXISTS { ?class obo:IAO_0000115 ?any_def . }
-            FILTER NOT EXISTS { ?class owl:deprecated ?any . }
+            SELECT *
+            FROM <doid>
+            FROM <mesh>
+            WHERE {
+                ?class a owl:Class ;
+                    oboInOwl:id ?doid ;
+                    rdfs:label ?do_name ;
+                    oboInOwl:hasDbXref ?xref .
+                FILTER NOT EXISTS { ?class obo:IAO_0000115 ?any_def . }
+                FILTER NOT EXISTS { ?class owl:deprecated ?any . }
 
-            # MESH defs
-            FILTER STRSTARTS(STR(?xref), "MESH")
-        BIND(
-            IRI(CONCAT(
-                "http://id.nlm.nih.gov/mesh/",
-                STRAFTER( STR(?xref), ":" )
-            )) AS ?uri
-        )
-            OPTIONAL {
-                # ?uri meshv:scopeNote ?def .
-                ?uri ?p ?o .
-                ?uri meshv:identifier ?code .
+                # MESH defs
+                FILTER STRSTARTS(STR(?xref), "MESH")
+                BIND(
+                    IRI(CONCAT(
+                        "http://id.nlm.nih.gov/mesh/",
+                        STRAFTER( STR(?xref), ":" )
+                    )) AS ?uri
+                )
+                OPTIONAL {
+                    # ?uri meshv:scopeNote ?def .       # no results
+                    # ?uri ?p ?o .                      # has results but nothing
+                    # ?uri meshv:identifier ?code .     #   resmbling definitions
+                }
             }
-        }
-        # LIMIT 100
         }
         UNION
         {
@@ -264,7 +264,6 @@ query_new_def <-
                     }
                 }
             }
-            # LIMIT 100
         }
     }'
 
@@ -272,9 +271,9 @@ do_nci_mesh <- virtuoso::vos_query(vcon, query_new_def) %>%
     tibble::as_tibble()
 ```
 
-Like my attempts to get definitions with the mesh.nt.gz file download, no meshv:scopeNote is available via the API with or without inference on for mesh:D010211 "Papilledema" which unquestionably has a "Scope Note" in the MESH  search result (https://meshb.nlm.nih.gov/record/ui?ui=D010211).
+Like my attempts to get definitions from the mesh.nt.gz file download, no meshv:scopeNote is available via the API, with or without inference on, for mesh:D010211 "Papilledema" which unquestionably has a "Scope Note" in the MESH search result (https://meshb.nlm.nih.gov/record/ui?ui=D010211).
 
-The SPARQL query I submitted to the API
+This is the SPARQL query I submitted to the API:
 ```
 PREFIX rdf: <http://www.w3.org/1999/02/22-rdf-syntax-ns#>
 PREFIX rdfs: <http://www.w3.org/2000/01/rdf-schema#>
