@@ -1,12 +1,13 @@
 ---
 title: "Produce Candidate Definitions for DOIDs without them"
 author: "J. Allen Baron"
-date: "2021-10-28"
+date: "2021-11-02"
 output:
     html_document:
         toc: true
         toc_float: true
         df_print: paged
+        code_folding: hide
 ---
 
 ```{r setup, include = FALSE}
@@ -14,10 +15,15 @@ library(here)
 library(virtuoso)
 library(parallel)
 library(tidyverse)
+library(keyring)
+library(rentrez)
+library(googlesheets4)
+
+options(gargle_oauth_email = "allenbaron@som.umaryland.edu")
 ```
 
 # PURPOSE
-To identify candidate definitions from MESH and NCI Thesaurus for DOIDs without definitions.
+To obtain candidate definitions from MESH and NCI Thesaurus for DOIDs without definitions.
 
 
 # Data Setup (Manual Execution)
@@ -51,13 +57,13 @@ I installed Virtuoso using `scripts/setup_virtuoso.R` and default values. That s
 
 I chose to load the 3 rdf files as individual graphs so that I could explore them separately and avoid unexpected results from queries finding hits in multiple data sources.
 
-```{r}
+```{r message = FALSE}
 # start database and initiate a connection
 virtuoso::vos_start()
 vcon <- virtuoso::vos_connect()
 ```
 
-```{r}
+```{r message = FALSE}
 # list graphs (i.e. URIs)
 vgraphs <- virtuoso::vos_list_graphs(vcon)$g
 
@@ -105,7 +111,7 @@ if (!"nci" %in% vgraphs) {
 
 # DOIDs without definitions
 
-I extracted the DOIDs without definitions, excluding obsolete terms, along with all annotated xrefs for further analysis and use. I did not use the `src/sparql/extra/DO_no_defs.rq` SPARQL query (it has the same terms but results in multiple rows per term because it represents parents). Instead, I directly excluded obsolete terms and did not extract parent information.
+I extracted the DOIDs without definitions, excluding obsolete terms, along with all annotated xrefs for further analysis. I did not use the `src/sparql/extra/DO_no_defs.rq` SPARQL query (it has the same terms but results in multiple rows per term because it represents parents). Instead, I directly excluded obsolete terms and did not extract parent information.
 ```{r}
 query_no_def_xref <-
     '# Query non-deprecated DOIDs without definitions
@@ -131,14 +137,15 @@ do_no_def <- virtuoso::vos_query(vcon, query_no_def_xref) %>%
     dplyr::mutate(xref_ns = stringr::str_remove(xref, ":.*"))
 ```
 
-There are **`r format(dplyr::n_distinct(do_no_def$doid), big.mark = ",")` DOIDs without definitions**. Of these, `r dplyr::n_distinct(do_no_def$doid[is.na(do_no_def$xref)])` have NO xrefs. See the list below:
-    ```{r}
-dplyr::filter(do_no_def, is.na(xref))
-```
-Here's a quick snapshot of the xrefs:
+
+## General Statistics
+
+There are **`r format(dplyr::n_distinct(do_no_def$doid), big.mark = ",")` DOIDs without definitions**. Of these, `r dplyr::n_distinct(do_no_def$doid[is.na(do_no_def$xref)])` have NO xrefs.
+
+Here's a quick count of the xrefs generally:
 ```{r}
 dplyr::count(do_no_def, xref_ns) %>%
-    dplyr::arrange(desc(n))
+    dplyr::arrange(dplyr::desc(n))
 ```
 
 ```{r}
@@ -152,13 +159,6 @@ nci_mesh_umls <- do_no_def %>%
 
 nm_no_umls <- nci_mesh_umls %>%
     dplyr::filter(nci_mesh & !umls)
-```
-
-I would assume that most NCI and MESH terms are also in UMLS. Of the `r format(dplyr::n_distinct(nci_mesh_umls$doid[nci_mesh_umls$nci_mesh]), big.mark = ",")` DOIDs with NCI or MESH xrefs there are `r format(dplyr::n_distinct(nm_no_umls$doid), big.mark = ",")` DOIDs _WITHOUT_ UMLS xrefs. Those DOIDs are:
-```{r}
-dplyr::filter(do_no_def, doid %in% nm_no_umls$doid) %>%
-    dplyr::group_by(doid, do_name) %>%
-    dplyr::summarize(xref = paste0(xref, collapse = "|"), .groups = "drop")
 ```
 
 And lastly, the number of DOIDs without definitions **with or without NCI/MESH xrefs** is:
@@ -181,8 +181,33 @@ do_no_nci_mesh <- do_no_def %>%
     dplyr::filter(doid %in% doid_no_nci_mesh)
 
 do_no_nci_mesh %>%
-    dplyr::count(xref_ns)
+    dplyr::count(xref_ns) %>%
+    dplyr::arrange(dplyr::desc(n))
 ```
+
+
+## [Potentially] Actionable DOID w/o Def Lists
+
+### Need xrefs
+
+Here are the `r dplyr::n_distinct(do_no_def$doid[is.na(do_no_def$xref)])` DOIDs without definitions that have NO xrefs.:
+```{r}
+dplyr::filter(do_no_def, is.na(xref)) %>%
+    dplyr::select(-xref_ns)
+```
+
+
+### [Potentially] Missing UMLS xrefs
+
+I assumed that most NCI and MESH terms are also in UMLS. Of the `r format(dplyr::n_distinct(nci_mesh_umls$doid[nci_mesh_umls$nci_mesh]), big.mark = ",")` DOIDs with NCI or MESH xrefs there are `r format(dplyr::n_distinct(nm_no_umls$doid), big.mark = ",")` DOIDs _WITHOUT_ UMLS xrefs. Those DOIDs are:
+```{r}
+dplyr::filter(do_no_def, doid %in% nm_no_umls$doid) %>%
+    dplyr::group_by(doid, do_name) %>%
+    dplyr::summarize(xref = paste0(xref, collapse = "|"), .groups = "drop")
+```
+
+
+### [Potentially] Get Defs from EFO/GARD/OMIM
 
 The small number of DOIDs without definitions with xrefs to EFO/GARD/OMIM are:
 ```{r}
@@ -192,9 +217,11 @@ dplyr::filter(do_no_nci_mesh, xref_ns %in% c("EFO", "GARD", "OMIM")) %>%
 ```
 
 
-# Extract definitions from NCI & MESH
+# Extraction of Definitions from NCI & MESH
 
-I attempted to extract definitions from the MESH & NCI rdf files. Though the query works only NCI definitions are returned. It appears that there are _NO_ `meshv:scopeNote` triples for the MESH terms of interest.
+## SPARQL Queries to RDF Files
+
+I attempted to extract definitions from the MESH & NCI rdf files. Though the SPARQL query works, only NCI definitions are returned. It appears that there are _NO_ `meshv:scopeNote` (definition) triples for the MESH terms of interest in the file.
 ```{r}
 query_new_def <-
     '# Query non-deprecated DOIDs without definitions
@@ -267,13 +294,15 @@ query_new_def <-
         }
     }'
 
-do_nci_mesh <- virtuoso::vos_query(vcon, query_new_def) %>%
+do_nci <- virtuoso::vos_query(vcon, query_new_def) %>%
     tibble::as_tibble()
 ```
 
-Like my attempts to get definitions from the mesh.nt.gz file download, no meshv:scopeNote is available via the API, with or without inference on, for mesh:D010211 "Papilledema" which unquestionably has a "Scope Note" in the MESH search result (https://meshb.nlm.nih.gov/record/ui?ui=D010211).
+I attempted to identify a definition (`meshv:scopeNote`) for a specific MESH record that I know has one (MESH:D010211, "Papilledema", https://meshb.nlm.nih.gov/record/ui?ui=D010211), by submitting queries to MeSH's SPARQL API endpoint. As in my attempts to get definitions from the mesh.nt.gz file download, there is no `meshv:scopeNote` triple available via the SPARQL API endpoint, with or without inference on.
 
-This is the SPARQL query I submitted to the API:
+<details>
+<summary>SPARQL query submitted to the API:</summary>
+
 ```
 PREFIX rdf: <http://www.w3.org/1999/02/22-rdf-syntax-ns#>
 PREFIX rdfs: <http://www.w3.org/2000/01/rdf-schema#>
@@ -291,4 +320,160 @@ WHERE {
   ?class ?p ?o .
   VALUES ?class { mesh:D010211 }
 }
+```
+
+<details>
+
+I have not been able to identify a downloadable or queryable source, besides the MESH rdf resources, from which to get definitions. The last option I can think of is to try the Entrez API.
+
+
+## MESH Entrez API Queries
+
+I extracted the MESH codes and checked to find out what access to MESH the Entrez API has.
+```{r}
+mesh_codes <- do_nci %>%
+    dplyr::filter(stringr::str_detect(xref, "MESH")) %>%
+    .$xref %>%
+    stringr::str_remove("MESH:")
+```
+
+MESH is an available database and is searchable by code (i.e. NLM MeSH Browser Unique ID).
+```{r include = FALSE}
+# get ENTREZ API key via keyring
+rentrez::set_entrez_key(keyring::key_get("ENTREZ_KEY"))
+```
+
+```{r}
+rentrez::entrez_dbs()
+rentrez::entrez_db_summary("mesh")
+rentrez::entrez_db_searchable("mesh")
+```
+
+Hopefully, the definitions available in the online MeSH search are also accessible via the Entrez API.
+
+I thought the definitions would most likely be included in the summary info so I attempted to access the summaries but nothing was returned. After some investigation I discovered the Entrez API is using a different internal unique identifier for their records (UID instead of MHUI; not visible on search result pages).
+
+Online searches didn't work, so I used an Entrez API search with MHUIs to get the UIDs, and then was able to obtain the MeSH summary information, which included Scope Notes (ie. definitions!!).
+```{r}
+mc_n <- length(mesh_codes)
+mesh_wh_list <- purrr::map(
+    seq(0, 800, by = 100),
+    function(s) {
+        s1 <- s + 1
+        e <- dplyr::if_else(s + 100 < mc_n, s + 100, as.double(mc_n))
+
+        rentrez::entrez_search(
+            db = "mesh",
+            term = paste0(paste0(mesh_codes[s:e], "[MHUI]"), collapse = " OR "),
+            use_history = TRUE,
+            retmax = 1000,
+            retmode = "xml"
+        )
+    }
+)
+```
+
+```{r}
+mesh_uid <- purrr::map(mesh_wh_list, ~.x$ids) %>%
+    unlist()
+mesh_wh <- rentrez::entrez_post(db = "mesh", id = mesh_uid)
+
+# avoid extra, unnecessary API calls when knitting
+mesh_summary_file <- here::here("data/mesh_summary-20211102.rda")
+if (!file.exists(mesh_summary_file)) {
+    mesh_summary <- rentrez::entrez_summary(
+        db = "mesh",
+        web_history = mesh_wh,
+        always_return_list = TRUE,
+        retmode = "xml"
+    )
+    save(mesh_summary, file = mesh_summary_file)
+} else {
+    load(mesh_summary_file)
+}
+
+mesh_tbl <- mesh_summary %>%
+        tibble::enframe(name = "esummary_id", value = "tmp") %>%
+        tidyr::unnest_wider(col = "tmp")
+
+mesh_tbl_tidy <- mesh_tbl %>%
+    dplyr::mutate(xref = paste0("MESH:", DS_MeSHUI)) %>%
+    dplyr::select(def = DS_ScopeNote, xref)
+```
+
+Some of the NLM MeSH Browser Unique IDs (MHUI) I passed to the API did not return Unique IDs (UIDs; `r nrow(mesh_tbl)` records for `r length(mesh_codes)` MHUIs were returned). I checked to see which MHUIs did not have matches and found none.
+```{r}
+mesh_codes[!mesh_codes %in% mesh_tbl$DS_MeSHUI]
+```
+
+After a little more exploration, I discovered that I'd included duplicates in the list to the API and that there are _not_ actually any missing. So the data looks complete! ... in the sense that there is a record for every xref I have.
+
+I merged this MESH data in with the DOIDs and NCI definitions and cleaned it up a bit to make it more human-readable.
+```{r}
+do_nci_mesh <- dplyr::left_join(do_nci, mesh_tbl_tidy, by = "xref") %>%
+    # combine definition cols
+    dplyr::mutate(def = dplyr::if_else(!is.na(def.x), def.x, def.y)) %>%
+    dplyr::select(-def.x, -def.y) %>%
+    unique() %>%
+    dplyr::arrange(doid, dplyr::desc(xref))
+```
+
+
+## Xref Definition Statistics
+
+For those DOIDs with NCI and/or MeSH xrefs, the overall count of DOIDs with candidate definitions from both NCI & MeSH, just one of them, or none is:
+```{r include = FALSE}
+# custom functions
+mesh_present <- function(x, d) {
+    any(stringr::str_detect(x, "MESH") & !is.na(d))
+}
+nci_present <- function(x, d) {
+    any(stringr::str_detect(x, "NCI") & !is.na(d))
+}
+```
+
+```{r}
+do_nci_mesh %>%
+    dplyr::group_by(doid) %>%
+    dplyr::summarize(
+        def_source = dplyr::case_when(
+             mesh_present(xref, def) & nci_present(xref, def) ~ "NCI & MESH",
+             nci_present(xref, def) ~ "NCI",
+             mesh_present(xref, def) ~ "MESH",
+             all(is.na(def)) ~ "none"
+        )
+    ) %>%
+    dplyr::mutate(
+        def_source = factor(def_source, levels = c("NCI & MESH", "NCI", "MESH",
+                                                 "none"))
+    ) %>%
+    dplyr::count(def_source, name = "doid_n")
+```
+
+The count of NCI/MeSH xrefs without their own definitions is:
+```{r}
+xref_no_def <- do_nci_mesh %>%
+    dplyr::filter(is.na(def) & !is.na(xref)) %>%
+    unique()
+
+xref_no_def %>%
+    dplyr::mutate(xref_ns = stringr::str_remove(xref, ":.*")) %>%
+    dplyr::count(xref_ns)
+```
+
+And those xrefs without any definitions are:
+```{r}
+xref_no_def %>%
+    dplyr::arrange(doid, dplyr::desc(xref))
+```
+
+
+# Save Candidate Definitions
+
+Lastly I saved the definitions data to a Google Sheets file in `Disease_Ontology/DO_definitions/Sets of terms to Define/2021-Missing_Definitions`.
+```{r}
+gs_id <- googlesheets4::as_sheets_id(
+    "https://docs.google.com/spreadsheets/d/1aHfmvsO5BBPTIWL_mUcxZyEAEJDuoDVrWmbAITzH2MQ/edit?usp=sharing"
+)
+googlesheets4::write_sheet(data = do_nci_mesh, ss = gs_id, sheet = "definitions")
 ```
