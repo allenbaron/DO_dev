@@ -265,3 +265,25 @@ query_new_def <-
 do_nci_mesh <- virtuoso::vos_query(vcon, query_new_def) %>%
     tibble::as_tibble()
 ```
+
+Like my attempts to get definitions with the mesh.nt.gz file download, no meshv:scopeNote is available via the API with or without inference on for mesh:D010211 "Papilledema" which unquestionably has a "Scope Note" in the MESH  search result (https://meshb.nlm.nih.gov/record/ui?ui=D010211).
+
+The SPARQL query I submitted to the API
+```
+PREFIX rdf: <http://www.w3.org/1999/02/22-rdf-syntax-ns#>
+PREFIX rdfs: <http://www.w3.org/2000/01/rdf-schema#>
+PREFIX xsd: <http://www.w3.org/2001/XMLSchema#>
+PREFIX owl: <http://www.w3.org/2002/07/owl#>
+PREFIX meshv: <http://id.nlm.nih.gov/mesh/vocab#>
+PREFIX mesh: <http://id.nlm.nih.gov/mesh/>
+PREFIX mesh2021: <http://id.nlm.nih.gov/mesh/2021/>
+PREFIX mesh2020: <http://id.nlm.nih.gov/mesh/2020/>
+PREFIX mesh2019: <http://id.nlm.nih.gov/mesh/2019/>
+
+SELECT *
+FROM <http://id.nlm.nih.gov/mesh>
+WHERE {
+  ?class ?p ?o .
+  VALUES ?class { mesh:D010211 }
+}
+```
