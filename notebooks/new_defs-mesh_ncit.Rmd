@@ -3,14 +3,19 @@ title: "Produce Candidate Definitions for DOIDs without them"
 author: "J. Allen Baron"
 date: "2021-11-02"
 output:
-    html_document:
+    pdf_document:
         toc: true
-        toc_float: true
-        df_print: paged
-        code_folding: hide
+        number_sections: true
+        df_print: kable
 ---
 
+
 ```{r setup, include = FALSE}
+knitr::opts_chunk$set(echo=FALSE)
+options(gargle_oauth_email = "allenbaron@som.umaryland.edu")
+```
+
+```{r pkgs, include = FALSE}
 library(here)
 library(virtuoso)
 library(parallel)
@@ -18,8 +23,6 @@ library(tidyverse)
 library(keyring)
 library(rentrez)
 library(googlesheets4)
-
-options(gargle_oauth_email = "allenbaron@som.umaryland.edu")
 ```
 
 # PURPOSE
