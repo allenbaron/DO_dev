@@ -467,6 +467,8 @@ xref_no_def %>%
 And those xrefs without any definitions are:
 ```{r}
 xref_no_def %>%
+    dplyr::group_by(doid, do_name) %>%
+    dplyr::summarize(xref = paste0(xref, collapse = " | ")) %>%
     dplyr::arrange(doid, dplyr::desc(xref))
 ```
 
