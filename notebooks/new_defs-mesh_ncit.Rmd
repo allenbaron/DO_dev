@@ -55,45 +55,51 @@ I chose to load the 3 rdf files as individual graphs so that I could explore the
 # start database and initiate a connection
 virtuoso::vos_start()
 vcon <- virtuoso::vos_connect()
-
-# list graphs (i.e. URIs)
-virtuoso::vos_list_graphs(vcon)
 ```
 
-```{r eval = FALSE}
+```{r}
+# list graphs (i.e. URIs)
+vgraphs <- virtuoso::vos_list_graphs(vcon)$g
+
 # import data into db, ran interactively once
-virtuoso::vos_import(
-    con = vcon,
-    files = doid_owl,
-    graph = "doid",
-    n_cores = dplyr::if_else(
-        parallel::detectCores() > 2,
-        parallel::detectCores() - 2,
-        1
+if (!"doid" %in% vgraphs) {
+    virtuoso::vos_import(
+        con = vcon,
+        files = doid_owl,
+        graph = "doid",
+        n_cores = dplyr::if_else(
+            parallel::detectCores() > 2,
+            parallel::detectCores() - 2,
+            1
+        )
     )
-)
+}
 
-virtuoso::vos_import(
-    con = vcon,
-    files = mesh_nt,
-    graph = "mesh",
-    n_cores = dplyr::if_else(
-        parallel::detectCores() > 2,
-        parallel::detectCores() - 2,
-        1
+if (!"mesh" %in% vgraphs) {
+    virtuoso::vos_import(
+        con = vcon,
+        files = mesh_nt,
+        graph = "mesh",
+        n_cores = dplyr::if_else(
+            parallel::detectCores() > 2,
+            parallel::detectCores() - 2,
+            1
+        )
     )
-)
+}
 
-virtuoso::vos_import(
-    con = vcon,
-    files = nci_owl,
-    graph = "nci",
-    n_cores = dplyr::if_else(
-        parallel::detectCores() > 2,
-        parallel::detectCores() - 2,
-        1
+if (!"nci" %in% vgraphs) {
+    virtuoso::vos_import(
+        con = vcon,
+        files = nci_owl,
+        graph = "nci",
+        n_cores = dplyr::if_else(
+            parallel::detectCores() > 2,
+            parallel::detectCores() - 2,
+            1
+        )
     )
-)
+}
 ```
 
 
