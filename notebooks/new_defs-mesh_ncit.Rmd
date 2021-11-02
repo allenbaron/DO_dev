@@ -13,6 +13,7 @@ output:
 library(here)
 library(virtuoso)
 library(parallel)
+library(tidyverse)
 ```
 
 # PURPOSE
@@ -198,48 +199,66 @@ query_new_def <-
     PREFIX mesh: <http://id.nlm.nih.gov/mesh/>
     PREFIX meshv: <http://id.nlm.nih.gov/mesh/vocab#>
 
-    SELECT ?doid ?do_name ?def ?xref
+    SELECT *
     FROM <doid>
     FROM <mesh>
     FROM <nci>
     WHERE {
-        # DOID data
-        ?class a owl:Class ;
-            oboInOwl:id ?doid ;
-            rdfs:label ?do_name ;
-            oboInOwl:hasDbXref ?xref .
-        # include only those missing definitions & not deprecated
-        FILTER NOT EXISTS { ?class obo:IAO_0000115 ?any_def . }
-        FILTER NOT EXISTS { ?class owl:deprecated ?any . }
-        # include only NCI/MESH xrefs
-        FILTER REGEX(STR(?xref), "(NCI|MESH).*")
+        {
+        SELECT *
+        FROM <doid>
+        FROM <mesh>
+        WHERE {
+            ?class a owl:Class ;
+                oboInOwl:id ?doid ;
+                rdfs:label ?do_name ;
+                oboInOwl:hasDbXref ?xref .
+            FILTER NOT EXISTS { ?class obo:IAO_0000115 ?any_def . }
+            FILTER NOT EXISTS { ?class owl:deprecated ?any . }
 
-        # xref definition data
+            # MESH defs
+            FILTER STRSTARTS(STR(?xref), "MESH")
         BIND(
-            REPLACE(
-                STR(?xref),
-                "NCI:",
-                "http://ncicb.nci.nih.gov/xml/owl/EVS/Thesaurus.owl#"
-            ) as ?nci_uri
+            IRI(CONCAT(
+                "http://id.nlm.nih.gov/mesh/",
+                STRAFTER( STR(?xref), ":" )
+            )) AS ?uri
         )
-        BIND(
-            REPLACE(
-                STR(?xref),
-                "MESH:",
-                "http://id.nlm.nih.gov/mesh/"
-            ) as ?mesh_nci_uri
-        )
-        ?mesh_nci_uri a owl:Class .
-        OPTIONAL {
-            ?mesh_nci_uri meshv:scopeNote ?def .
-        }
-        OPTIONAL {
-            ?mesh_nci_uri nci:P97 ?def .
-            # remove obsolete/retired concepts from NCI
-            FILTER NOT EXISTS {
-                ?nci_uri nci:P310 ?old_concept .
-                VALUES ?old_concept { "Obsolete_Concept" "Retired_Concept" }
+            OPTIONAL {
+                # ?uri meshv:scopeNote ?def .
+                ?uri ?p ?o .
+                ?uri meshv:identifier ?code .
             }
+        }
+        # LIMIT 100
+        }
+        UNION
+        {
+            SELECT *
+            FROM <doid>
+            FROM <nci>
+            WHERE {
+                ?class a owl:Class ;
+                    oboInOwl:id ?doid ;
+                    rdfs:label ?do_name ;
+                    oboInOwl:hasDbXref ?xref .
+                FILTER NOT EXISTS { ?class obo:IAO_0000115 ?any_def . }
+                FILTER NOT EXISTS { ?class owl:deprecated ?any . }
+
+                # NCI defs
+                FILTER STRSTARTS(STR(?xref), "NCI")
+                BIND( STRAFTER( STR(?xref), ":" ) AS ?code )
+                OPTIONAL {
+                    ?uri nci:P97 ?def ;
+                        nci:NHC0 ?code .
+                    # remove obsolete/retired concepts from NCI
+                    FILTER NOT EXISTS {
+                        ?uri nci:P310 ?old_concept .
+                        VALUES ?old_concept { "Obsolete_Concept" "Retired_Concept" }
+                    }
+                }
+            }
+            # LIMIT 100
         }
     }'
 
