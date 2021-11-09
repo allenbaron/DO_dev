@@ -1,0 +1,144 @@
+---
+title: "ICD-O Fuzzy String Mapping"
+author: "J. Allen Baron"
+date: "11/9/2021"
+output:
+    pdf_document:
+        toc: true
+        number_sections: true
+        df_print: kable
+---
+
+```{r setup, include = FALSE}
+knitr::opts_chunk$set(echo = FALSE)
+```
+
+```{r pkgs_fxns, include = FALSE}
+library(here)
+library(virtuoso)
+library(tidyverse)
+library(readxl)
+library(DO.utils) # >= v0.1.5.900
+```
+
+
+# PURPOSE
+To attempt to map ICD-O names to DO names using approximate ("fuzzy") string matching.
+
+
+# Data Setup
+The latest version of DO (v2021-10-11) was loaded into a Virtuoso database previously in `notebooks/new_defs-mesh-ncit` and will be reused here. The ICD-O file was provided by Lynn.
+
+The number of DO terms is significantly larger than ICD-O terms, as DO includes all diseases whereas ICD-O focuses on cancer. Instead of using DO in its entirety, I limited the DO terms t only those in the `disease of cellular proliferation` branch. This will help to reduce computation time and spurious matches.
+
+```{r}
+# Virtuoso start up
+virtuoso::vos_start()
+vcon <- virtuoso::vos_connect()
+
+# query DO
+q_id_label_cp <- readr::read_lines(
+    here::here("sparql/DO-id_label-branch_cp.rq")
+)
+    # insert virtuoso DO URI
+    select_pos <- grep("SELECT", q_id_label_cp)
+    q_id_label_cp <- vctr_to_string(
+        c(
+            q_id_label_cp[1:select_pos],
+            "FROM <doid>",
+            q_id_label_cp[(select_pos + 1):length(q_id_label_cp)]
+        ),
+        delim = "\n"
+    )
+
+do <- virtuoso::vos_query(vcon, q_id_label_cp) %>%
+    tibble::as_tibble()
+
+
+# load ICDO
+icdo <- readxl::read_xls(
+    here::here("data/ICD-O-3.2_final_15112019.xls"),
+    skip = 1,
+    col_types = "text",
+    .name_repair = "universal"
+)
+```
+
+After retrieving only DO cellular proliferation terms, it's interesting to note that the total diseases from each resource are similar (DO: `r format(nrow(do), big.mark = ",")`; ICD-O: `r format(nrow(icdo), big.mark = ",")`)
+
+
+# Data Preparation
+
+Approximate string matching can take a significant amount of computational resources and can very much be a process of trial and error. To reduce the amount of error, I explored some of the characteristics of the labels in the two datasets.
+
+
+## Explore String Length
+
+String length influences the number of mismatches that can be allowed before producing completely spurious matches, affecting the balance of false positives and negatives.
+```{r}
+# combine DO & ICDO terms for analysis
+all_terms <- tibble::tibble(
+    source = c(rep("do", nrow(do)), rep("icdo", nrow(icdo))),
+    term = c(do$label, icdo$Term)
+) %>%
+    dplyr::mutate(str_len = stringr::str_length(term))
+```
+
+Violin plots show that the length of labels in DO and ICD-O are similar, with a maximum around 25 characters and the majority <75. ICD-O tends to have somewhat longer labels with a maximum ~125, compared to DO's ~95.
+```{r}
+ggplot(all_terms) +
+    geom_violin(aes(x = source, y = str_len))
+```
+
+Previous experience has taught me to limit mismatches to <80% of the maximal length to avoid spurious matches. With a maximal length of 25 that's pretty small for this dataset. It might be possible to break terms up by length but that would depend on if the longer terms in the two sources happen to correspond with one another.
+
+To look at overall counts, I also created a frequency plot and compared 6-stat summaries. No new insights are immediately apparent.
+```{r}
+ggplot(all_terms) +
+    geom_freqpoly(aes(x = str_len, color = source), binwidth = 1)
+
+tapply(
+    all_terms$str_len,
+    all_terms$source,
+    function(x) summary(x)
+) %>%
+    dplyr::bind_rows(.id = "source") %>%
+    dplyr::mutate(source = c("do", "icdo"))
+```
+
+
+# Explore Label Patterns
+
+Both resources have a set pattern for creating labels. If that pattern is readily apparent, I might be able to rearrange one set for better matching results.
+
+Comparing common words found in cancer names across these two resources, the following patterns become apparent:
+
+1. Both use "carcinoma" similarly and primarily at the end of labels
+2. DO tends to have "malignant" at the beginning while ICD-O tends to have it at the end after a comma.
+3. DO uses "benign" in conjunction with "neoplasm" or "tumor" primarily at the end, while ICD-O uses it in much the same way as malignant
+4. Both use "neoplasm" similarly
+5. Whereas DO uses "cancer", ICD-O does NOT. In fact, matches to "cancer" only appear in terms of "precancerous melanosis"
+```{r}
+common_cancer_words <- c("carcinoma", "malignant", "benign", "neoplasm",
+                         "cancer")
+purrr::map(
+    common_cancer_words,
+    ~ all_terms %>%
+        dplyr::group_by(source) %>%
+        dplyr::filter(stringr::str_detect(term, .x)) %>%
+        dplyr::sample_n(
+            size = dplyr::if_else(length(term) < 10, length(term), 10L)
+        ) %>%
+        dplyr::mutate(n = dplyr::row_number()) %>%
+        dplyr::ungroup() %>%
+        dplyr::select(n, source, term) %>%
+        tidyr::pivot_wider(
+            names_from = source,
+            values_from = term
+        )
+)
+```
+
+Based on these observations, matches might be improved by:
+1. Moving "malignant" and "benign" in DO to the end after an added comma, possibly dropping "neoplasm" or "tumor" when it follows benign
+2. Replacing "cancer" in DO with "carcinoma"? Or possibly just removing "cancer"? [It's not clear how these modifications would affect matches.]
