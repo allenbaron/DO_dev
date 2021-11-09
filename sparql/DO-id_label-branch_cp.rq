@@ -1,0 +1,17 @@
+# Return a list of all non-obsolete class IDs and labels in the
+# disease of cellular proliferation branch
+
+PREFIX rdfs: <http://www.w3.org/2000/01/rdf-schema#>
+PREFIX owl: <http://www.w3.org/2002/07/owl#>
+PREFIX oboInOwl: <http://www.geneontology.org/formats/oboInOwl#>
+PREFIX DOID: <http://purl.obolibrary.org/obo/DOID_>
+
+SELECT DISTINCT ?id ?label
+WHERE {
+    ?s a owl:Class ;
+        rdfs:subClassOf+ DOID:14566 .
+    FILTER (CONTAINS(STR(?s), "DOID"))
+	OPTIONAL { ?s oboInOwl:id ?id . }
+    OPTIONAL { ?s rdfs:label ?label . }
+    FILTER NOT EXISTS { ?s owl:deprecated ?obsolete . }
+}
