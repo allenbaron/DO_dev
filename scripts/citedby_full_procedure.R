@@ -211,30 +211,10 @@ col_pmc_merge <- col_pmc %>%
 
 # Merge -------------------------------------------------------------------
 
-# PubMed citedby & collection
-pm_merge <- dplyr::bind_rows(
-    cb_pm_merge,
-    col_pm_merge
-) %>%
-    collapse_col(c(source, cites))
+# PubMed and Scopus cited by results (prefer PubMed data for matches)
+match_scop <- match_citations(cb_pm_merge, cb_scop_merge)
 
-# ...and Collection PMC results (prefer PubMed data for matches)
-match_pmc <- match_citations(pm_merge, col_pmc_merge)
-
-pmc_merge <- pm_merge %>%
-    dplyr::mutate(
-        source = dplyr::if_else(
-            is.na(match_index),
-            source,
-            paste(source, "ncbi_col-pmc", sep = "; ")
-        )
-    ) %>%
-    dplyr::bind_rows(col_pmc_merge[-na.omit(match_pmc), ])
-
-# ...and Scopus cited by results (prefer PubMed data for matches)
-match_scop <- match_citations(pmc_merge, cb_scop_merge)
-
-cb_merge <- pmc_merge %>%
+cb_merge <- cb_pm_merge %>%
     dplyr::mutate(
         source = dplyr::if_else(
             is.na(match_scop),
@@ -245,8 +225,34 @@ cb_merge <- pmc_merge %>%
     ) %>%
     dplyr::bind_rows(cb_scop_merge[-na.omit(match_scop), ])
 
+## ...and Collection PubMed results (prefer previously merged data)
+match_col_pm <- match_citations(cb_merge, col_pm_merge)
+
+cb_col_merge1 <- cb_merge %>%
+    dplyr::mutate(
+        source = dplyr::if_else(
+            is.na(match_col_pm),
+            source,
+            paste(source, "ncbi_col-pubmed", sep = "; ")
+        )
+    ) %>%
+    dplyr::bind_rows(col_pm_merge[-na.omit(match_col_pm), ])
+
+# ...and Collection PMC results (prefer PubMed data for matches)
+match_pmc <- match_citations(cb_col_merge1, col_pmc_merge)
+
+final_merge <- cb_col_merge1 %>%
+    dplyr::mutate(
+        source = dplyr::if_else(
+            is.na(match_pmc),
+            source,
+            paste(source, "ncbi_col-pmc", sep = "; ")
+        )
+    ) %>%
+    dplyr::bind_rows(col_pmc_merge[-na.omit(match_pmc), ])
+
 # ...and SAVE
-readr::write_csv(cb_merge, merge_citedby_file)
+readr::write_csv(final_merge, merge_citedby_file)
 
 # improvements needed
 #   1. abbreviated titles for Scopus data
@@ -255,4 +261,3 @@ readr::write_csv(cb_merge, merge_citedby_file)
 #   4. keep only oldest added date for record
 #   5. export as xlsx or googlesheet
 #       - convert IDs to links
-
