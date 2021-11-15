@@ -7,11 +7,20 @@ library(rentrez)
 library(lubridate)
 library(DO.utils) # requires >= v0.1.6
 
-merge_citedby_file <- here::here("data", "citedby", "DO_citedby-20211112.csv")
+
+# Identify files ----------------------------------------------------------
+
+citedby_dir <- here::here("data", "citedby")
+
+# cited by raw output files
+cb_pm_raw_file <- file.path(citedby_dir, "do_cb_pm_summary_by_id.rda")
+cb_scop_raw_file <- file.path(citedby_dir, "do_cb_scop_by_id.rda")
+
+# final tidied file
+merge_citedby_file <- file.path(citedby_dir, "DO_citedby-20211112.csv")
+
 
 # PubMed cited by data ----------------------------------------------------
-
-cb_pm_raw_file <- here::here("data", "citedby", "do_cb_pm_summary_by_id.rda")
 
 #  Load Data or Get/Save Data if it isn't available
 if (file.exists(cb_pm_raw_file)) {
@@ -52,8 +61,6 @@ cb_pm_merge <- cb_pm_by_id %>%
 
 
 # Scopus cited by data ----------------------------------------------------
-
-cb_scop_raw_file <- here::here("data", "citedby", "do_cb_scop_by_id.rda")
 
 # get data if it isn't available
 if (file.exists(cb_scop_raw_file)) {
