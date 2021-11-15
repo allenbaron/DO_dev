@@ -204,6 +204,8 @@ col_pmc_merge <- col_pmc %>%
         first_author, title = Title, journal = Source, pub_date, doi, pmid,
         pmcid
     ) %>%
+    # drop columns without values
+    dplyr::select(where(~!all(is.na(.x)))) %>%
     dplyr::mutate(source = "ncbi_col-pmc")
 
 
