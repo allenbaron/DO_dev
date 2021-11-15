@@ -219,21 +219,17 @@ pm_merge <- dplyr::bind_rows(
     collapse_col(c(source, cites))
 
 # ...and Collection PMC results (prefer PubMed data for matches)
-match_pmc <- try(match_citations(pm_merge, col_pmc_merge))
+match_pmc <- match_citations(pm_merge, col_pmc_merge)
 
-if (inherits(match_pmc, "try-error")) {
-    pmc_merge <- dplyr::bind_rows(pm_merge, col_pmc_merge)
-} else {
-    pmc_merge <- pm_merge %>%
-        dplyr::mutate(
-            source = dplyr::if_else(
-                is.na(match_index),
-                source,
-                paste(source, "ncbi_col-pmc", sep = "; ")
-            )
-        ) %>%
-        dplyr::bind_rows(col_pmc_merge[-na.omit(match_pmc), ])
-}
+pmc_merge <- pm_merge %>%
+    dplyr::mutate(
+        source = dplyr::if_else(
+            is.na(match_index),
+            source,
+            paste(source, "ncbi_col-pmc", sep = "; ")
+        )
+    ) %>%
+    dplyr::bind_rows(col_pmc_merge[-na.omit(match_pmc), ])
 
 # ...and Scopus cited by results (prefer PubMed data for matches)
 match_scop <- match_citations(pmc_merge, cb_scop_merge)
