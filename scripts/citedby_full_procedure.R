@@ -254,10 +254,21 @@ final_merge <- cb_col_merge1 %>%
 # ...and SAVE
 readr::write_csv(final_merge, merge_citedby_file)
 
+# convert IDs to links and save for Excel
+merge_w_links <- final_merge %>%
+    dplyr::mutate(
+        doi = DO.utils:::append_to_url(doi, url = DO.utils:::get_url("doi")),
+        pmid = DO.utils:::append_to_url(pmid, url = DO.utils:::get_url("pubmed")),
+        pmcid = DO.utils:::append_to_url(pmcid, url = DO.utils:::get_url("pmc"))
+    )
+
+readr::write_csv(
+    merge_w_links,
+    file.path(citedby_dir, "DO_citedby-20211112-w_links.csv")
+)
+
 # improvements needed
 #   1. abbreviated titles for Scopus data
 #   2. retain scopus_eid, citedby, etc for matches (not straight preference)
 #   3. added date for NCBI records
 #   4. keep only oldest added date for record
-#   5. export as xlsx or googlesheet
-#       - convert IDs to links
