@@ -1,17 +1,22 @@
 # Temporary script for citedby data
 
+library(here)
 library(tidyverse)
 library(keyring)
 library(rentrez)
 library(lubridate)
-library(DO.utils)
+library(DO.utils) # requires >= v0.1.6
+
+merge_citedby_file <- here::here("data", "citedby", "DO_citedby-20211112.csv")
 
 # PubMed cited by data ----------------------------------------------------
 
-cb_pm_raw <- "do_cb_pm_summary_by_id"
+cb_pm_raw_file <- here::here("data", "citedby", "do_cb_pm_summary_by_id.rda")
 
-# get data if it isn't available
-if (!exists(cb_pm_raw)) {
+#  Load Data or Get/Save Data if it isn't available
+if (file.exists(cb_pm_raw_file)) {
+    load(file = cb_pm_raw_file)
+} else {
     # set API key
     rentrez::set_entrez_key(keyring::key_get("ENTREZ_KEY"))
 
@@ -20,14 +25,11 @@ if (!exists(cb_pm_raw)) {
     pmid <- extract_pmid(pmid_raw)
 
     do_cb_pm_summary_by_id <- pubmed_summary(pmid)
-    save(
-        do_cb_pm_summary_by_id,
-        file = file.path("data", paste0(cb_pm_raw, ".rda"))
-    )
+    save(do_cb_pm_summary_by_id, file = cb_pm_raw_file)
 }
 
 cb_pm_by_id <- as_tibble(do_cb_pm_summary_by_id) %>%
-    hoist_ArticleIds()
+    DO.utils:::hoist_ArticleIds()
 
 # prepare for merge
 cb_pm_merge <- cb_pm_by_id %>%
@@ -51,11 +53,12 @@ cb_pm_merge <- cb_pm_by_id %>%
 
 # Scopus cited by data ----------------------------------------------------
 
-cb_scop_raw <- "do_cb_scop_by_id"
+cb_scop_raw_file <- here::here("data", "citedby", "do_cb_scop_by_id.rda")
 
 # get data if it isn't available
-if (!exists(cb_scop_raw)) {
-
+if (file.exists(cb_scop_raw_file)) {
+    load(file = cb_scop_raw_file)
+} else {
     do_cb_scop_by_id <- citedby_scopus(
         title = DO_pubs$title[1:8], # exclude 2022 paper, no citations yet
         id = DO_pubs$internal_id[1:8],
@@ -69,10 +72,7 @@ if (!exists(cb_scop_raw)) {
         verbose = FALSE
     )
 
-    save(
-        do_cb_scop_by_id,
-        file = file.path("data", paste0(cb_scop_raw, ".rda"))
-    )
+    save(do_cb_scop_by_id, cb_scop_raw_file)
 }
 
 cb_scop_by_id <- as_tibble(do_cb_scop_by_id)
@@ -110,8 +110,7 @@ cb_merge <- cb_pm_merge %>%
     ) %>%
     dplyr::bind_rows(cb_scop_merge[-na.omit(match_index), ])
 
-
-readr::write_csv(cb_merge, "data-raw/DO_citedby-20211112.csv")
+readr::write_csv(cb_merge, merge_citedby_file)
 
 # improvements needed
 #   1. abbreviated titles for Scopus data
