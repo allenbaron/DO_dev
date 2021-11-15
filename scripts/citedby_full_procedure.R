@@ -16,6 +16,13 @@ citedby_dir <- here::here("data", "citedby")
 cb_pm_raw_file <- file.path(citedby_dir, "do_cb_pm_summary_by_id.rda")
 cb_scop_raw_file <- file.path(citedby_dir, "do_cb_scop_by_id.rda")
 
+# collections raw input and output files
+collection_pm_raw_file <- file.path(citedby_dir, "do_collection_pm_summary.rda")
+collection_pmc_raw_file <- file.path(
+    citedby_dir,
+    "do_collection_pmc_summary.rda"
+)
+
 # final tidied file
 merge_citedby_file <- file.path(citedby_dir, "DO_citedby-20211112.csv")
 
@@ -106,23 +113,147 @@ cb_scop_merge <- cb_scop_by_id %>%
     collapse_col(c(cites, added))
 
 
-# Merge -------------------------------------------------------------------
-# prefer pubmed data
-match_index <- match_citations(cb_pm_merge, cb_scop_merge)
+# PubMed collection data --------------------------------------------------
 
-cb_merge <- cb_pm_merge %>%
+# get "cited by" articles identified in MyNCBI collection; enough of these are
+#   not redundant with the PubMed + Scopus cited by results to make this
+#   necessary
+
+# MANUAL STEP REQUIRED!!!
+# Download data manually to data/citedby_collection.txt by selecting:
+#   'Send to:' > 'File' > 'Summary (text)' (Format drop down) > 'Create File'
+#   URL: https://www.ncbi.nlm.nih.gov/myncbi/browse/collection/49204559/
+
+# extract PubMed IDs & get data from Entrez API to make formatting easier
+collection_txt <- read_pubmed_txt(
+    here::here("data", "citedby", "citedby_collection.txt")
+)
+
+collection_id <- tibble::tibble(
+    n = 1:length(collection_txt),
+    pmid = stringr::str_extract(
+        collection_txt,
+        "PMID: [0-9]{8}"
+    ),
+    pmcid = stringr::str_extract(
+        collection_txt,
+        "PMCID: PMC[0-9]+"
+    )
+) %>%
     dplyr::mutate(
-        source = dplyr::if_else(is.na(match_index), source, "pubmed|scopus"),
-        added = cb_scop_merge$added[match_index]
-    ) %>%
-    dplyr::bind_rows(cb_scop_merge[-na.omit(match_index), ])
+        pmid = stringr::str_remove(pmid, "PMID: "),
+        pmcid = stringr::str_remove(pmcid, "PMCID: ")
+    )
 
+# Get Entrez API records for collection records with PubMed IDs
+if (file.exists(collection_pm_raw_file)) {
+    load(file = collection_pm_raw_file)
+} else {
+    col_pmid <- collection_id$pmid %>%
+        na.omit() %>%
+        unique()
+    do_col_pm_summary <- pubmed_summary(col_pmid)
+    save(do_col_pm_summary, file = collection_pm_raw_file)
+}
+
+col_pm <- as_tibble(do_col_pm_summary) %>%
+    DO.utils:::hoist_ArticleIds()
+
+col_pm_merge <- col_pm %>%
+    dplyr::mutate(
+        pub_type = purrr::map_chr(PubType, vctr_to_string, delim = "|"),
+        pub_date = lubridate::date(SortPubDate)
+    ) %>%
+    dplyr::select(
+        first_author = SortFirstAuthor, title = Title, journal = Source,
+        pub_date, doi, pmid, pmcid, pub_type
+    ) %>%
+    dplyr::mutate(source = "ncbi_col-pubmed")
+
+
+# Get Entrez API records for collection records with PubMed Central IDs
+if (file.exists(collection_pmc_raw_file)) {
+    load(file = collection_pmc_raw_file)
+} else {
+    # get pmc summary only where no PubMed record exists
+    col_pmcid <- dplyr::filter(collection_id, is.na(pmid)) %>%
+        .$pmcid %>%
+        na.omit() %>%
+        unique()
+    do_col_pmc_summary <- pmc_summary(col_pmcid)
+    save(do_col_pmc_summary, file = collection_pmc_raw_file)
+}
+
+col_pmc <- as_tibble(do_col_pmc_summary) %>%
+    DO.utils:::hoist_ArticleIds()
+
+col_pmc_merge <- col_pmc %>%
+    tidyr::hoist(
+        .col = Authors,
+        first_author = list(1L, 1L)
+    ) %>%
+    dplyr::mutate(
+        pub_date = lubridate::date(SortDate),
+        pmid = dplyr::if_else(
+            stringr::str_length(pmid) < 8,
+            NA_character_,
+            pmid
+        )
+    ) %>%
+    dplyr::select(
+        first_author, title = Title, journal = Source, pub_date, doi, pmid,
+        pmcid
+    ) %>%
+    dplyr::mutate(source = "ncbi_col-pmc")
+
+
+# Merge -------------------------------------------------------------------
+
+# PubMed citedby & collection
+pm_merge <- dplyr::bind_rows(
+    cb_pm_merge,
+    col_pm_merge
+) %>%
+    collapse_col(c(source, cites))
+
+# ...and Collection PMC results (prefer PubMed data for matches)
+match_pmc <- try(match_citations(pm_merge, col_pmc_merge))
+
+if (inherits(match_pmc, "try-error")) {
+    pmc_merge <- dplyr::bind_rows(pm_merge, col_pmc_merge)
+} else {
+    pmc_merge <- pm_merge %>%
+        dplyr::mutate(
+            source = dplyr::if_else(
+                is.na(match_index),
+                source,
+                paste(source, "ncbi_col-pmc", sep = "; ")
+            )
+        ) %>%
+        dplyr::bind_rows(col_pmc_merge[-na.omit(match_pmc), ])
+}
+
+# ...and Scopus cited by results (prefer PubMed data for matches)
+match_scop <- match_citations(pmc_merge, cb_scop_merge)
+
+cb_merge <- pmc_merge %>%
+    dplyr::mutate(
+        source = dplyr::if_else(
+            is.na(match_scop),
+            source,
+            paste(source, "scopus", sep = "; ")
+        ),
+        added = cb_scop_merge$added[match_scop]
+    ) %>%
+    dplyr::bind_rows(cb_scop_merge[-na.omit(match_scop), ])
+
+# ...and SAVE
 readr::write_csv(cb_merge, merge_citedby_file)
 
 # improvements needed
 #   1. abbreviated titles for Scopus data
-#   2. retain scopus_eid for pubmed-scopus matches
-#   3. added date for pubmed records
+#   2. retain scopus_eid, citedby, etc for matches (not straight preference)
+#   3. added date for NCBI records
 #   4. keep only oldest added date for record
 #   5. export as xlsx or googlesheet
 #       - convert IDs to links
