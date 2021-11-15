@@ -254,6 +254,21 @@ final_merge <- cb_col_merge1 %>%
 # ...and SAVE
 readr::write_csv(final_merge, merge_citedby_file)
 
+# add evaluation columns for curation
+eval_cols <- readr::read_csv(here::here("data/citedby/cb_eval_cols.csv")) %>%
+    tidyr::pivot_wider(
+        names_from = col,
+        values_from = val
+    )
+
+merge_for_eval <- dplyr::bind_rows(final_merge, eval_cols)
+readr::write_csv(
+    merge_for_eval,
+    file.path(citedby_dir, "DO_citedby-20211112-for_eval.csv"),
+    na = ""
+)
+
+
 # convert IDs to links and save for Excel
 merge_w_links <- final_merge %>%
     dplyr::mutate(
