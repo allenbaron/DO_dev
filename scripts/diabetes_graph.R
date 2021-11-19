@@ -146,9 +146,11 @@ do_diabetes_tg <- do_diabetes_tg %>%
                 dend_height + 0.6,
                 dend_height
             ),
-
+            # EXTRA: shorten non-focus distances
+            dend_height = dend_height - dplyr::if_else(
+                dist_to_root < 5, (dend_height - 2) * 0.7, 0
+            ),
         # set label formatting
-
             # set colors
             label_color = dplyr::case_when(
                 central_focus ~ chosen_colors["std"],
