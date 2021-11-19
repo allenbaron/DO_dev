@@ -168,7 +168,7 @@ g_plot <- ggraph::ggraph(
     #circular = TRUE,
     height = dend_height
 ) +
-    ggraph::geom_edge_link() +
+    ggraph::geom_edge_bend(strength = 0.4) +
     ggraph::geom_node_label(
         aes(label = full_label, fontface = ff, fill = label_color),
         family = "mono", size = 3, hjust = 0.5,
