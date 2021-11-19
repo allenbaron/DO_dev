@@ -180,6 +180,12 @@ g_plot <- ggraph::ggraph(
     ggraph::geom_node_label(
         aes(label = doid_label, family = "mono"),
         angle = 270, size = 2,
+        nudge_y = dplyr::if_else(
+            tibble::as_tibble(do_diabetes_tg)$leaf,
+            rep(c(-0.05, 0.05
+                  ), times = 25)[1:49],
+            0
+        )
     ) +
     theme_void() +
     # add background (void makes it empty.. probably not look good on twitter)
