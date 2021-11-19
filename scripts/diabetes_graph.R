@@ -56,17 +56,8 @@ sum(do_diabetes$obsolete)
 # Convert to tidygraph ----------------------------------------------------
 
 do_diabetes_relations <- tibble::tibble(
-    id = c(
-        # limit parental pull to diabetes
-        names(do_diabetes$parents),
-        # include top-level disease nodes
-        do_diabetes$children[do_diabetes$id == "DOID:4"]
-    ),
-    parent = c(
-        do_diabetes$parents,
-        # for parent of top-level disease nodes
-        "DOID:4"
-    )
+    id = names(do_diabetes$parents),
+    parent = do_diabetes$parents
 ) %>%
     tidyr::unnest_longer(id) %>%
     tidyr::unnest_longer(parent) %>%
@@ -202,4 +193,4 @@ g_complete
 ggsave(g_complete,
        # CHANGE filename and ADJUST plot size
        filename = here::here("graphics/DO_diabetes_graph-20211119.png"),
-       width = 15, height = 7, units = "in")
+       width = 12, height = 6, units = "in")
