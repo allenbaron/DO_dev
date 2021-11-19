@@ -121,9 +121,14 @@ do_diabetes_tg <- do_diabetes_tg %>%
         root = tidygraph::node_is_sink(),
         leaf = tidygraph::node_is_source(),
         dist_to_root = tidygraph::node_distance_to(root),
-        # create labels
-            # CHOOSE which to LABEL FULLY: non-series nodes
+        # CHOOSE:
+            # which is CENTRAL FOCUS: Diabetes mellitus
+            central_focus = label == "diabetes mellitus",
+            # which are OF INTEREST: non-series descendants of Dm
+            of_interest = is_descendant("DOID:9351"),
+            # which to LABEL FULLY: non-series nodes
             make_full_label = !stringr::str_detect(label, "[0-9]$"),
+        # create labels
             # create full labels (term name & DOID)
             full_label = dplyr::if_else(
                 make_full_label,
@@ -141,11 +146,9 @@ do_diabetes_tg <- do_diabetes_tg %>%
                 dend_height + 0.6,
                 dend_height
             ),
+
         # set label formatting
-            # CHOOSE which is CENTRAL FOCUS: Diabetes mellitus
-            central_focus = label == "diabetes mellitus",
-            # CHOOSE which are OF INTEREST: non-series descendants of Dm
-            of_interest = is_descendant("DOID:9351"),
+
             # set colors
             label_color = dplyr::case_when(
                 central_focus ~ chosen_colors["std"],
