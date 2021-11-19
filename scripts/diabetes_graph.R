@@ -198,4 +198,4 @@ g_complete
 ggsave(g_complete,
        # CHANGE filename and ADJUST plot size
        filename = here::here("graphics/DO_diabetes_graph-20211119.png"),
-       width = 12, height = 6, units = "in")
+       width = 10, height = 6, units = "in")
