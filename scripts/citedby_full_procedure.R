@@ -255,13 +255,18 @@ final_merge <- cb_col_merge1 %>%
 readr::write_csv(final_merge, merge_citedby_file)
 
 # add evaluation columns for curation
-eval_cols <- readr::read_csv(here::here("data/citedby/cb_eval_cols.csv")) %>%
-    tidyr::pivot_wider(
-        names_from = col,
-        values_from = val
-    )
+eval_colnames <- c("cite_note", "tool", "tool_name", "research_study",
+                   "bioinformatics_analysis", "analysis_type", "cancer",
+                   "gene/genetic", "drug", "DISEASE", "url", "reference",
+                   "use", "text_note", "tweet")
+eval_cols <- purrr::set_names(
+    rep(NA_character_, length(eval_colnames)),
+        nm = eval_colnames
+)
 
-merge_for_eval <- dplyr::bind_rows(final_merge, eval_cols)
+merge_for_eval <- final_merge %>%
+    tibble::add_column(!!!eval_cols)
+
 readr::write_csv(
     merge_for_eval,
     file.path(citedby_dir, "DO_citedby-for_eval.csv"),
