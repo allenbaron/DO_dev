@@ -24,7 +24,7 @@ collection_pmc_raw_file <- file.path(
 )
 
 # final tidied file
-merge_citedby_file <- file.path(citedby_dir, "DO_citedby-20211112.csv")
+merge_citedby_file <- file.path(citedby_dir, "DO_citedby.csv")
 
 
 # PubMed cited by data ----------------------------------------------------
@@ -264,7 +264,7 @@ eval_cols <- readr::read_csv(here::here("data/citedby/cb_eval_cols.csv")) %>%
 merge_for_eval <- dplyr::bind_rows(final_merge, eval_cols)
 readr::write_csv(
     merge_for_eval,
-    file.path(citedby_dir, "DO_citedby-20211112-for_eval.csv"),
+    file.path(citedby_dir, "DO_citedby-for_eval.csv"),
     na = ""
 )
 
@@ -279,7 +279,7 @@ merge_w_links <- final_merge %>%
 
 readr::write_csv(
     merge_w_links,
-    file.path(citedby_dir, "DO_citedby-20211112-w_links.csv")
+    file.path(citedby_dir, "DO_citedby-w_links.csv")
 )
 
 # improvements needed
