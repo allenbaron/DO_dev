@@ -11,7 +11,7 @@ import pandas as pd
 start = datetime.now()
 
 do_dir = '../../Ontologies/HumanDiseaseOntology/'
-release_stat_dir = "../data/releases"
+release_stat_dir = "../data/DO_release"
 
 do_repo = Repo(do_dir)
 do_tags = do_repo.tags
@@ -59,6 +59,6 @@ df = pd.DataFrame.from_dict(do_dict, orient='index')
 
 print(df)
 
-df.to_csv(os.path.join(release_stat_dir, 'do_term_def_counts.csv'))
+df.to_csv(os.path.join(release_stat_dir, 'DO_term_def_counts.csv'))
 
 print(datetime.now() - start)

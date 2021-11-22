@@ -11,7 +11,7 @@ plot_out_dir <- "graphics/website"
 plot_files <- c("DO_cited_by_count.png", "DO_term_def_count.png",
                 "DO_branch_count.png", "DO_xref_count.png")
 
-release_dir <- "data/releases"
+release_dir <- "data/DO_release"
 #### UPDATE CSV FILES BEFORE RUNNING!!! #####
 
 data_files <- c(
@@ -27,12 +27,12 @@ data_files <- c(
     # DO term & definition counts (aka release details)
     # To prepare data (instructions will not currently work; MODIFICATIONS REQUIRED!!!):
     #   1. Update script to point to local HumanDiseaseOntology repo, if necessary
-    #   2. Update term & definition counts with scripts/do_term_def_counts-from_git.py
-    #   MODIFICATIONS NEEDED in scripts/do_term_def_counts-from_git.py:
+    #   2. Update term & definition counts with scripts/DO_term_def_counts-from_git.py
+    #   MODIFICATIONS NEEDED in scripts/DO_term_def_counts-from_git.py:
     #       1. Modify to check for missing release info & access only those
     #       releases (NEED TO DO THIS)
-    #       2. Modify to update release data in data/releases/do_releases-details.csv
-    here::here(release_dir, "do_releases-details.csv"),
+    #       2. Modify to update release data in data/DO_release/DO_release_details.csv
+    here::here(release_dir, "DO_release_details.csv"),
 
     # DO branch counts
     # To prepare data:
@@ -43,7 +43,7 @@ data_files <- c(
     #
     #   - Manually copy & paste stats from Google Sheet - DO_github_release_log
     #   (https://docs.google.com/spreadsheets/d/1-ZSUH43MJloR2EsBqHpGeY6IfKG7Gt8KBcU5remnoGI/edit#gid=269344614)
-    here::here(release_dir, "branch_counts-7_21.csv"),
+    here::here(release_dir, "branch_counts.csv"),
 
     # DO xref counts
     # To prepare data:
@@ -56,7 +56,7 @@ data_files <- c(
     #   2. Execute ROBOT query (in top-level directory):
     #       robot query --input src/ontology/doid.owl --query src/sparql/build/all-xref-report.rq xref.tsv
     #   3. Manually copy & paste stats from  xref.tsv
-    here::here(release_dir, "cross_references-7_21.csv")
+    here::here(release_dir, "cross_references.csv")
 )
 
 

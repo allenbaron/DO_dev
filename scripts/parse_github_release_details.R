@@ -10,11 +10,11 @@ library(tidyverse)
 library(DO.utils)
 library(lubridate)
 
-release_dir <- "data/releases"
+release_dir <- "data/DO_release"
 
 # load raw details (copied from github, must start at tag and end with "Assets")
 release_details_raw <- readr::read_lines(
-    here::here(release_dir, "do_releases-details.txt")
+    here::here(release_dir, "DO_release_details.txt")
 )
 
 # custom parsing functions
@@ -81,9 +81,9 @@ DO_release_tidy <- release_df %>%
     dplyr::ungroup()
 
 
-# Add release term & def counts (calc from git tags in do_release_stats.py)
+# Add release term & def counts (calc from git tags in DO_term_def_counts-from_git.py)
 dt_counts <- readr::read_csv(
-    here::here(release_dir, "do_term_def_counts.csv")
+    here::here(release_dir, "DO_term_def_counts.csv")
 ) %>%
     dplyr::rename(tag = X1) %>%
     dplyr::rename_with(.fn = ~paste0("n_", .x), .cols = -tag)
@@ -100,5 +100,5 @@ DO_release_tidy <- dplyr::left_join(
 # write
 readr::write_excel_csv(
     DO_release_tidy,
-    here::here(release_dir, "do_releases-details.csv")
+    here::here(release_dir, "DO_release_details.csv")
 )
