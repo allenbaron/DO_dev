@@ -10,8 +10,8 @@ import pandas as pd
 
 start = datetime.now()
 
-do_dir = '../../Ontologies/HumanDiseaseOntology/'
-release_stat_dir = "../data/DO_release"
+do_dir = '../Ontologies/HumanDiseaseOntology/'
+release_stat_dir = "data/DO_release"
 
 do_repo = Repo(do_dir)
 do_tags = do_repo.tags
