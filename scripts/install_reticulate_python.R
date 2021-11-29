@@ -11,7 +11,14 @@ py_pkg <- c("datetime", "GitPython", "rdflib", "pandas", "numpy")
 # unset RETICULATE_PYTHON variable if set
 Sys.unsetenv("RETICULATE_PYTHON")
 
-py <- reticulate::install_python(version = py_v, force = TRUE)
+tryCatch(
+    py <- reticulate::install_python(version = py_v, force = TRUE),
+    error = function(e) {
+        message(e)
+        # fails on first attempt due to errors with pyenv. FIX = REPEAT!!
+        py <- reticulate::install_python(version = py_v, force = TRUE)
+    }
+)
 
 py_venv <- reticulate::virtualenv_create(
     envname = venv_path,
