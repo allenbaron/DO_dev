@@ -38,8 +38,13 @@ if (class(renviron) == "try-error") {
         con = ".Renviron"
     )
 } else {
-    append(x = renviron, values = paste0("RETICULATE_PYTHON = ", py_path)) %>%
-        writeLines(con = ".Renviron")
+    if (!any(stringr::str_detect(renviron, "RETICULATE_PYTHON"))) {
+        append(
+            x = renviron,
+            values = paste0("RETICULATE_PYTHON = ", py_path)
+        ) %>%
+            writeLines(con = ".Renviron")
+    }
 }
 readRenviron(".Renviron")
 
