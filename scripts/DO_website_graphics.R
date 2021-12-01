@@ -209,6 +209,7 @@ g_xref <- ggplot(data = xref) +
         # do_colors["do_logo_blue_dark"])
     ) +
     ggtitle("DO Cross-References") +
+    xlab("Cross References") +
     coord_flip() +
     scale_y_continuous(
         breaks = seq(0, JABmisc::round_up(max(xref$Count), -3), by = 2000)
