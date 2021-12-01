@@ -221,16 +221,23 @@ grid.arrange(grobs = plots, nrow = 2, ncol = 2)
 
 
 # SAVE PLOTS --------------------------------------------------------------
-purrr::walk2(
-    .x = plot_files,
-    .y = plots,
-    ~ ggsave(
-        filename = here::here(plot_out_dir, .x),
-        plot = .y,
-        # size of previous files (4x3in at 300 dpi); makes them squish weird
-        # width = 4,
-        # height = 3,
-        # units = "in",
-        # dpi = 600
-    )
+purrr::pmap(
+    .l = list(
+        .x = plot_files,
+        .y = plots,
+        # set size of plots so they don't look weird (may adjust individually
+        #   in future
+        .w = list(8, 8, 8, 8),
+        .h = list(5.6, 5.6, 5.6, 5.6)
+    ),
+    function(.x, .y, .w, .h) {
+        ggsave(
+            filename = here::here(plot_out_dir, .x),
+            plot = .y,
+            width = .w,
+            height = .h,
+            units = "in",
+            dpi = 600
+        )
+    }
 )
