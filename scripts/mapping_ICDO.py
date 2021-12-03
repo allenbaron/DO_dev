@@ -14,8 +14,8 @@ from pyobo.gilda_utils import get_grounder
 from tqdm import tqdm
 
 HERE = Path(__file__).parent.resolve()
-INPUT = HERE.joinpath("ICD-O-3.2_final_15112019.xls")
-OUTPUT = HERE.joinpath("predictions.tsv")
+INPUT = HERE.joinpath("data/mapping", "ICD-O-3.2_final_15112019.xls")
+OUTPUT = HERE.joinpath("data/mapping", "biomappings-icdo_doid.tsv")
 
 
 def main():
