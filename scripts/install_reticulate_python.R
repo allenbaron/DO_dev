@@ -6,7 +6,8 @@ library(tidyverse)
 # specify setup
 py_v <- "3.9.9"
 venv_path <- "./pyenv"
-py_pkg <- c("datetime", "GitPython", "rdflib", "pandas", "numpy")
+py_pkg <- c("datetime", "GitPython", "rdflib", "pandas", "numpy",
+            "indra", "gilda", "pyobo", "tqdm", "xlrd")
 
 # unset RETICULATE_PYTHON variable if set
 Sys.unsetenv("RETICULATE_PYTHON")
