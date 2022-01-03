@@ -41,3 +41,15 @@ googlesheets4::write_sheet(
 ```
 
 _This approach explicitly sets DOIDs and ICD-O IDs as text to avoid the reformatting by Google Sheets/Excel, which recognize these as being of numeric types (numbers, dates, etc.), often leading to modification of these IDs._
+
+
+## Execution
+
+1. [2021-12-23] Identify DOID labels that exactly match ICD-O labels or have exact matches in the synonym column ("synonym_match").
+    - Review of a few of these indicates some xrefs are already in DO.
+2. [2022-01-03] Extract all DO xrefs and add existing ICD-O xrefs to Google sheet, sheet name "already_in_DO-2022_01_03". Then, identify those DOID-ICDO relationships that are already in DO on Google sheet.
+    - I identified an updated version of the ICD-O3.2 table at http://www.iacr.com.fr/index.php?option=com_content&view=category&layout=blog&id=100&Itemid=577 dated 2020-09-10, whereas the file originally used is dated 2019-11-15. I compared these for differences and only identified the following minor changes:
+        - **9875/3** preferred name was changed to "Chronic myeloid leukemia, BCR/ABL positive" and "Chronic myelogenous leukemia, BCR/ABL positive" was made a synonym; additional synonyms also added: "Chronic myeloid leukemia, Philadelphia chromosome (Ph1) positive", "Chronic myeloid leukemia, t(9;22)(q34;q11)"
+        - **9912/3** spelling error ("myeleoid" -> "myeloid") was corrected to make label "Acute myeloid leukemia with BCR-ABL1"
+        - _No need to repeat DOID-ICDO mapping with newer file._
+    - I also identified another US specific version of the table at https://www.naaccr.org/icdo3/ (the 2021 update, dated 2020-10-01, and 2022 update, dated 2021-07-29, are the same (named "ICD-O-3.2_MFin_17042019_web.xls") but differ from the versions I already have (though most of those differences appear to be minor modifications related to spelling or the presence of "NOS"). _I'm not going to use this version at this time, since I can't tell when/why it's been modified and the modifications seem trivial._
