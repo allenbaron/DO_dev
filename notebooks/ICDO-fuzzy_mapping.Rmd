@@ -57,7 +57,7 @@ do <- virtuoso::vos_query(vcon, q_id_label_cp) %>%
 
 # load ICDO
 icdo <- readxl::read_xls(
-    here::here("data/mapping/ICD-O-3.2_final_15112019.xls"),
+    here::here("data/mapping/ICD-O-3.2_final_update09102020.xls"),
     skip = 1,
     col_types = "text",
     .name_repair = "universal"
