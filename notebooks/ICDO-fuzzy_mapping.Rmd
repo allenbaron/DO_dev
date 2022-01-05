@@ -139,6 +139,70 @@ purrr::map(
 )
 ```
 
-Based on these observations, matches might be improved by:
-1. Moving "malignant" and "benign" in DO to the end after an added comma, possibly dropping "neoplasm" or "tumor" when it follows benign
-2. Replacing "cancer" in DO with "carcinoma"? Or possibly just removing "cancer"? [It's not clear how these modifications would affect matches.]
+Based on these observations & other known differences, matches might be improved by modifying ICD-O terms to create synonyms as follows:
+1. Remove ", NOS".
+2. Move "malignant" to the beginning (and dropping the preceding comma).
+3. Move "benign" to:
+    - the beginning
+    - the end
+    - the end followed by "neoplasm"
+    - the end followed by "tumor"
+4. Replace "carcinoma" with "cancer".
+
+
+# Improve Labels for Matching
+
+I executed the modifications mentioned in the previous section.
+
+```{r}
+list_benign_synonyms <- function(label) {
+    purrr::map(
+        label,
+        ~ list(
+            stringr::str_replace(.x, ", benign", " benign"),
+            stringr::str_replace(.x, ", benign", " benign neoplasm"),
+            stringr::str_replace(.x, ", benign", " benign tumor"),
+            stringr::str_replace(.x, "(.*), benign(.*)", "benign \\1\\2")
+        )
+    )
+}
+
+icdo_benign_mod <- icdo %>%
+    dplyr::filter(stringr::str_detect(Term, ", benign")) %>%
+    dplyr::mutate(mod = list_benign_synonyms(Term)) %>%
+    tidyr::unnest_longer(col = mod) %>%
+    dplyr::select(ICDO3.2, mod) %>%
+    dplyr::mutate(Level = "Synonym_mod") %>%
+    dplyr::rename(Term = mod)
+
+icdo_other_mods <- icdo %>%
+    dplyr::filter(
+        stringr::str_detect(Term, ", NOS|, malignant| carcinoma"),
+        !stringr::str_detect(Term, ", benign")
+    ) %>%
+    dplyr::mutate(
+        mod = stringr::str_replace_all(
+            Term,
+            c(", NOS" = "",
+              "(.*), malignant(.*)" = "malignant \\1\\2",
+              " carcinoma" = " cancer"
+            )
+        )
+    ) %>%
+        dplyr::select(ICDO3.2, mod) %>%
+        dplyr::mutate(Level = "Synonym_mod") %>%
+        dplyr::rename(Term = mod)
+
+icdo_mod <- icdo %>%
+    dplyr::select(ICDO3.2:Term) %>%
+    dplyr::bind_rows(icdo_benign_mod, icdo_other_mods) %>%
+    dplyr::group_by(ICDO3.2) %>%
+    dplyr::arrange(ICDO3.2, Level) %>%
+    dplyr::filter(!duplicated(Term)) %>%
+    dplyr::ungroup()
+```
+
+Then, saved the output to repeat grounding with pyobo/GILDA (which I tweaked slightly to track the synonym modifications I made).
+```{r}
+write_csv(icdo_mod, here::here("data/mapping/ICD-O-3.2_with_synonym_mod.csv"))
+```
