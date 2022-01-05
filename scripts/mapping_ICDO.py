@@ -13,12 +13,12 @@ from tqdm import tqdm
 import os
 
 HERE = os.getcwd()
-INPUT = os.path.join(HERE, "data/mapping", "ICD-O-3.2_final_15112019.xls")
-OUTPUT = os.path.join(HERE, "data/mapping", "biomappings-icdo_doid.tsv")
+INPUT = os.path.join(HERE, "data/mapping", "ICD-O-3.2_with_synonym_mod.csv")
+OUTPUT = os.path.join(HERE, "data/mapping", "biomappings-icdo_mod-doid.tsv")
 
 
 def main():
-    df = pd.read_excel(INPUT, usecols=[0, 1, 2], skiprows=1)
+    df = pd.read_csv(INPUT)
     df.columns = ["identifier", "type", "text"]
     df = df[df.identifier.notna() & df.text.notna()]
 
@@ -28,18 +28,22 @@ def main():
     for icdo_id, sdf in it:
         preferred = None
         synonyms = []
+        synonym_mods = []
         matches: list[ScoredMatch] = []
         for _, text_type, text in sdf.values:
             if text_type == "Preferred":
                 preferred = text
+            elif text_type == "Synonym_mod":
+                synonym_mods.append(text)
             else:
                 synonyms.append(text)
             matches.extend(grounder.ground(text))
         if not matches:
             continue
 
-        # Deduplicate synonyms
+        # Deduplicate synonym sets
         synonyms = sorted(set(synonyms))
+        synonym_mods = sorted(set(synonym_mods))
 
         # If no preferred term, pop the first off of synonyms
         if not preferred and synonyms:
@@ -52,6 +56,7 @@ def main():
             identifier=icdo_id,
             preferred=preferred,
             synonyms="|".join(synonyms),
+            synonym_mods="|".join(synonym_mods),
             score=round(best_match.score, 2),
             do_lui=best_match.term.id,
             do_name=best_match.term.entry_name
