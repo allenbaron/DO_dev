@@ -31,7 +31,7 @@ The latest version of DO (v2021-10-11) was loaded into a Virtuoso database previ
 
 The number of DO terms is significantly larger than ICD-O terms, as DO includes all diseases whereas ICD-O focuses on cancer. Instead of using DO in its entirety, I limited the DO terms t only those in the `disease of cellular proliferation` branch. This will help to reduce computation time and spurious matches.
 
-```{r}
+```{r, message=FALSE, results=FALSE}
 # Virtuoso start up
 virtuoso::vos_start()
 vcon <- virtuoso::vos_connect()
@@ -85,6 +85,7 @@ all_terms <- tibble::tibble(
 ```
 
 Violin plots show that the length of labels in DO and ICD-O are similar, with a maximum around 25 characters and the majority <75. ICD-O tends to have somewhat longer labels with a maximum ~125, compared to DO's ~95.
+
 ```{r}
 ggplot(all_terms) +
     geom_violin(aes(x = source, y = str_len))
@@ -93,6 +94,7 @@ ggplot(all_terms) +
 Previous experience has taught me to limit mismatches to <80% of the maximal length to avoid spurious matches. With a maximal length of 25 that's pretty small for this dataset. It might be possible to break terms up by length but that would depend on if the longer terms in the two sources happen to correspond with one another.
 
 To look at overall counts, I also created a frequency plot and compared 6-stat summaries. No new insights are immediately apparent.
+
 ```{r}
 ggplot(all_terms) +
     geom_freqpoly(aes(x = str_len, color = source), binwidth = 1)
@@ -121,7 +123,7 @@ Comparing common words found in cancer names across these two resources, the fol
 ```{r}
 common_cancer_words <- c("carcinoma", "malignant", "benign", "neoplasm",
                          "cancer")
-purrr::map(
+cancer_tbl <- purrr::map(
     common_cancer_words,
     ~ all_terms %>%
         dplyr::group_by(source) %>%
@@ -137,9 +139,16 @@ purrr::map(
             values_from = term
         )
 )
+
+cancer_tbl[[1]]
+cancer_tbl[[2]]
+cancer_tbl[[3]]
+cancer_tbl[[4]]
+cancer_tbl[[5]]
 ```
 
 Based on these observations & other known differences, matches might be improved by modifying ICD-O terms to create synonyms as follows:
+
 1. Remove ", NOS".
 2. Move "malignant" to the beginning (and dropping the preceding comma).
 3. Move "benign" to:
