@@ -68,3 +68,12 @@ _This approach explicitly sets DOIDs and ICD-O IDs as text to avoid the reformat
 During initial curation I noticed at least two near exact matches between DOID and ICD-O that differed only by an added ", NOS" in the ICD-O label. These matches were not identified by Charlie Hoyt with GILDA. There are likely hundreds more.
 
 [2021-01-05] I systematically processed the ICD-O codes as noted previously in "Programmatic Prediction Methods & Results" (see `notebooks/ICDO-fuzzy_mapping.Rmd`), updated Charlie's script (`scripts/mapping_ICDO.py`), and finally reran it locally.
+
+[2021-01-06] ClinGen has offered to help with curation of DOID-ICDO mappings with regard to the brain and leukemias. They also provided an updated ICD-O code file for CNS terms (`data/mapping/CNS ICD-O terms.xls`), which included both topography and morphology codes. I reformatted the morphology codes and terms to make it machine readable as listed below, ignoring the topography codes (which are meaningless for DO on their own):
+
+    - Removed header lines without codes
+    - Removed `*` and `†` from codes & terms
+    - Made tab-delimited
+    - Added a placeholder "Level" column with `NA` (I assume these are all preferred terms)
+    - Added headings to match previous ICD-O data files
+    - Saved output as `data/mapping/CNS ICD-O terms.csv`
