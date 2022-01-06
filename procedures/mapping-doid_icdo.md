@@ -63,3 +63,8 @@ _This approach explicitly sets DOIDs and ICD-O IDs as text to avoid the reformat
             - NCI terminologies: https://ncit.nci.nih.gov/ncitbrowser/pages/multiple_search.jsf?nav_type=terminologies
             - NCI mappings: https://ncit.nci.nih.gov/ncitbrowser/pages/mapping_search.jsf?nav_type=mappings&b=0&m=0
             - FTP site for EVS downloads: https://evs.nci.nih.gov/ftp1/
+
+
+During initial curation I noticed at least two near exact matches between DOID and ICD-O that differed only by an added ", NOS" in the ICD-O label. These matches were not identified by Charlie Hoyt with GILDA. There are likely hundreds more.
+
+[2021-01-05] I systematically processed the ICD-O codes as noted previously in "Programmatic Prediction Methods & Results" (see `notebooks/ICDO-fuzzy_mapping.Rmd`), updated Charlie's script (`scripts/mapping_ICDO.py`), and finally reran it locally.
