@@ -53,3 +53,13 @@ _This approach explicitly sets DOIDs and ICD-O IDs as text to avoid the reformat
         - **9912/3** spelling error ("myeleoid" -> "myeloid") was corrected to make label "Acute myeloid leukemia with BCR-ABL1"
         - _No need to repeat DOID-ICDO mapping with newer file._
     - I also identified another US specific version of the table at https://www.naaccr.org/icdo3/ (the 2021 update, dated 2020-10-01, and 2022 update, dated 2021-07-29, are the same (named "ICD-O-3.2_MFin_17042019_web.xls") but differ from the versions I already have (though most of those differences appear to be minor modifications related to spelling or the presence of "NOS"). _I'm not going to use this version at this time, since I can't tell when/why it's been modified and the modifications seem trivial._
+3. [2022-01-03] Prepare to add other missing mappings as well (ICD-10 codes, UMLS-based codes missing).
+    - ICD-O to ICD-9/10/10-CM conversion table: https://seer.cancer.gov/tools/conversion/.
+    - ICD-10-CM browser: https://icd10cmtool.cdc.gov/?fy=FY2022
+    - UMLS Metathesaurus browser: https://uts.nlm.nih.gov/uts/umls/home
+    - General sources:
+        - Charlie Hoyt's [pyobo](https://github.com/pyobo/pyobo/issues/28) python package parses a number of resources and lists others.
+        - NCI's [Enterprise Vocabulary Service (EVS)](https://evs.nci.nih.gov/) maintains NCI Thesaurus but also ingests, cross-references, and makes available various related terminologies including SNOMED, ICD-10-CM, MedDRA, etc.
+            - NCI terminologies: https://ncit.nci.nih.gov/ncitbrowser/pages/multiple_search.jsf?nav_type=terminologies
+            - NCI mappings: https://ncit.nci.nih.gov/ncitbrowser/pages/mapping_search.jsf?nav_type=mappings&b=0&m=0
+            - FTP site for EVS downloads: https://evs.nci.nih.gov/ftp1/
