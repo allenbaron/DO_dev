@@ -6,16 +6,15 @@ this repo since ICD and related resources are notoriously hard to
 find and get.
 """
 
-from pathlib import Path
-
 import pandas as pd
 from gilda.grounder import ScoredMatch
 from pyobo.gilda_utils import get_grounder
 from tqdm import tqdm
+import os
 
-HERE = Path(__file__).parent.resolve()
-INPUT = HERE.joinpath("data/mapping", "ICD-O-3.2_final_15112019.xls")
-OUTPUT = HERE.joinpath("data/mapping", "biomappings-icdo_doid.tsv")
+HERE = os.getcwd()
+INPUT = os.path.join(HERE, "data/mapping", "ICD-O-3.2_final_15112019.xls")
+OUTPUT = os.path.join(HERE, "data/mapping", "biomappings-icdo_doid.tsv")
 
 
 def main():
