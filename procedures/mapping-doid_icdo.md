@@ -43,7 +43,7 @@ googlesheets4::write_sheet(
 _This approach explicitly sets DOIDs and ICD-O IDs as text to avoid the reformatting by Google Sheets/Excel, which recognize these as being of numeric types (numbers, dates, etc.), often leading to modification of these IDs._
 
 
-## Execution
+## Explore Mappings
 
 1. [2021-12-23] Identify DOID labels that exactly match ICD-O labels or have exact matches in the synonym column ("synonym_match").
     - Review of a few of these indicates some xrefs are already in DO.
@@ -64,10 +64,15 @@ _This approach explicitly sets DOIDs and ICD-O IDs as text to avoid the reformat
             - NCI mappings: https://ncit.nci.nih.gov/ncitbrowser/pages/mapping_search.jsf?nav_type=mappings&b=0&m=0
             - FTP site for EVS downloads: https://evs.nci.nih.gov/ftp1/
 
-
 During initial curation I noticed at least two near exact matches between DOID and ICD-O that differed only by an added ", NOS" in the ICD-O label. These matches were not identified by Charlie Hoyt with GILDA. There are likely hundreds more.
 
-[2021-01-05] I systematically processed the ICD-O codes as noted previously in "Programmatic Prediction Methods & Results" (see `notebooks/ICDO-fuzzy_mapping.Rmd`), updated Charlie's script (`scripts/mapping_ICDO.py`), and finally reran it locally.
+[2021-01-05] I systematically processed the ICD-O codes as noted previously in "Programmatic Prediction Methods & Results" (see `notebooks/ICDO-fuzzy_mapping.Rmd`), updated Charlie's script (`scripts/mapping_ICDO.py`), and finally reran it locally. _The output was never explored in detail._
+
+
+
+# ClinGen-Assisted Curation Plan
+
+## ICD-O CNS file Preparation
 
 [2021-01-06] ClinGen has offered to help with curation of DOID-ICDO mappings with regard to the brain and leukemias. They also provided an updated ICD-O code file for CNS terms (`data/mapping/CNS ICD-O terms.xls`), which included both topography and morphology codes. I reformatted the morphology codes and terms to make it machine readable as listed below, ignoring the topography codes (which are meaningless for DO on their own):
 
@@ -77,3 +82,37 @@ During initial curation I noticed at least two near exact matches between DOID a
     - Added a placeholder "Level" column with `NA` (I assume these are all preferred terms)
     - Added headings to match previous ICD-O data files
     - Saved output as `data/mapping/CNS ICD-O terms.csv`
+
+I then reviewed the tidied CNS dataset provided by ClinGen and found that there are multiple instances where terms share an ICD-O code. These do not appear to be synonyms but similar diseases (in my opinion, without CNS cancer expertise). Many of these appear to have "Related" status in the previous (complete) ICD-0-3.2 file I was using. This will likely present a point of confusion because Charlie's script assumed everything not labelled "Preferred" could be considered a synonym, which I'm now realizing may not be the case. _I need to discuss this with Lynn._
+
+_This CNS files will not be used._
+
+
+## Step-wise Mapping Plan
+
+Discussion with Lynn has led to a modified proposal for identifying potential matches. The input will be an Excel file with the complete ICD-O-3.2 2021 update (that Lynn got from ClinGen). Lynn partitioned the data into multiple sheets, as follows:
+
+- 'all terms': Full set of terms
+- 'preferred terms': Preferred terms only (with or without ", NOS")
+- 'leukemia': leukemia preferred terms only (without ", NOS")
+- 'brain': brain-related cancer preferred terms only (without ", NOS")
+
+
+### Step-wise Approach
+
+**NOTE:** In each step the only modification to ICD-O terms will be removal of ", NOS". Other changes attempted previously did not significantly improve mapping (< 125 more matches of 700).
+
+
+First pass:
+
+1. Use _ONLY_ preferred ICD-O terms (with ", NOS" removed, since DO always drops this) from the 'preferred terms' sheet as input for GILDA "grounding" (i.e. matching).
+2. Copy leukemia & brain matches found to appropriate sheets for ClinGen review
+3. Personally curate remaining matches.
+
+
+Second pass (if desired):
+
+1. Use all ICD-O terms with a preferred term that has not been curated (again with ", NOS" removed) from the 'all terms' sheet and use GILDA to identify the best match for each term.
+2. Group the terms by preferred term and sort by match score
+3. Copy leukemia & brain matches found to appropriate sheets for ClinGen review
+4. Personally curate remaining matches.
