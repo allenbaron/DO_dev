@@ -97,20 +97,20 @@ Discussion with Lynn has led to a modified proposal for identifying potential ma
 - 'leukemia': leukemia preferred terms only (without ", NOS")
 - 'brain': brain-related cancer preferred terms only (without ", NOS")
 
-
-### Step-wise Approach
-
 **NOTE:** In each step the only modification to ICD-O terms will be removal of ", NOS". Other changes attempted previously did not significantly improve mapping (< 125 more matches of 700).
 
+Mapping will take place in two phases:
 
-First pass:
+### Phase 1:
 
 1. Use _ONLY_ preferred ICD-O terms (with ", NOS" removed, since DO always drops this) from the 'preferred terms' sheet as input for GILDA "grounding" (i.e. matching).
 2. Copy leukemia & brain matches found to appropriate sheets for ClinGen review
 3. Personally curate remaining matches.
 
 
-Second pass (if desired):
+
+
+### Phase 2 (if desired):
 
 1. Use all ICD-O terms with a preferred term that has not been curated (again with ", NOS" removed) from the 'all terms' sheet and use GILDA to identify the best match for each term.
 2. Group the terms by preferred term and sort by match score
