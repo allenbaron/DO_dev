@@ -20,11 +20,10 @@ def main(INPUT, OUTPUT):
 
     grounder = get_grounder("doid")
     results = []
-    it = tqdm(df, unit="term", desc="Predicting DOID mappings")
-    for icdo_id, sdf in it: #need iterrows()?
+    it = tqdm(df.values, unit="term", desc="Predicting DOID mappings")
+    for icdo_id, text in it:
         matches: list[ScoredMatch] = []
-        for _, text in sdf.values:
-            matches.extend(grounder.ground(text))
+        matches.extend(grounder.ground(text))
         if not matches:
             continue
 
@@ -32,10 +31,11 @@ def main(INPUT, OUTPUT):
         best_match: ScoredMatch = max(matches, key=lambda match: match.score)
 
         results.append(dict(
-            ICDO3.2=icdo_id,
-            score=round(best_match.score, 2),
-            DOID="DOID:".join(best_match.term.id),
-            DO_label=best_match.term.entry_name
+            ICDO_2021=icdo_id,
+            ICDO_label=text,
+            DOID="DOID:"+best_match.term.id,
+            DO_label=best_match.term.entry_name,
+            score=round(best_match.score, 2)
         ))
 
     df = pd.DataFrame(results)
