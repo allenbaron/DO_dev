@@ -28,14 +28,15 @@ icdo_data <- purrr::map(
 ns <- "DOID"
 
 
-# Identify mappings to full set of data
-all_mappings <- icdo_data$`all terms` %>%
-    dplyr::mutate(predicted = pyobo_map(Term, ns)) %>%
-    unnest_mapping(
+# Identify mappings to preferred terms
+preferred_mappings <- icdo_data$`preferred terms` %>%
+    dplyr::mutate(
+        predicted = DO.utils::pyobo_map(`Term (NOS removed)`, ns)
+    ) %>%
+    DO.utils::unnest_mapping(
         predicted,
         prefix = ns,
-        best_only = TRUE,
-        warn_best_gt1 = TRUE
+        best_only = TRUE
     )
 
 # copy mappings to preferred, leukemia, and brain sheets
