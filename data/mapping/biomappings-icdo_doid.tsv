@@ -1,0 +1,425 @@
+identifier	preferred	synonyms	score	do_lui	do_name
+8000/3	Neoplasm, malignant	Blastoma, NOS|Cancer|Malignancy|Tumor, malignant, NOS|Unclassified tumor, malignant	0.76	162	cancer
+8003/3	Malignant tumor, giant cell type		0.55	2705	malignant giant cell tumor
+8013/3	Large cell neuroendocrine carcinoma	Combined large cell neuroendocrine carcinoma	0.77	0050872	large cell neuroendocrine carcinoma
+8014/3	Large cell carcinoma with rhabdoid phenotype		0.77	7480	large cell carcinoma with rhabdoid phenotype
+8022/3	Pleomorphic carcinoma		0.77	5662	pleomorphic carcinoma
+8023/3	Nuclear protein in testis (NUT)-associated carcinoma	NUT carcinoma|NUT midline carcinoma	0.78	0060463	NUT midline carcinoma
+8031/3	Giant cell carcinoma		0.56	5583	lung giant cell carcinoma
+8033/3	Pseudosarcomatous carcinoma	Sarcomatoid carcinoma	0.77	4015	sarcomatoid carcinoma
+8042/3	Oat cell carcinoma		0.56	5411	lung oat cell carcinoma
+8044/3	Small cell carcinoma, intermediate cell	Small cell carcinoma, hypercalcemic type	0.56	0050685	small cell carcinoma
+805-808	Squamous cell neoplasms		0.77	3168	squamous cell neoplasm
+8051/0	Verrucous papilloma		0.77	3177	verrucous papilloma
+8051/3	Verrucous carcinoma, NOS	Verrucous epidermoid carcinoma|Verrucous squamous cell carcinoma	0.55	3737	verrucous carcinoma
+8052/3	Papillary squamous cell carcinoma	Papillary epidermoid carcinoma	0.55	4385	papillary squamous carcinoma
+8054/3	Warty carcinoma	Condylomatous carcinoma|Warty-basaloid carcinoma	0.56	3737	verrucous carcinoma
+8060/0	Squamous papillomatosis	Papillomatosis, NOS	0.77	7532	squamous papillomatosis
+8070/0	Actinic keratosis	Arsenical keratosis|PUVA keratosis	0.77	8866	actinic keratosis
+8070/3	Squamous cell carcinoma, NOS	Epidermoid carcinoma, NOS|Squamous carcinoma|Squamous cell carcinoma, usual type|Squamous cell epithelioma	0.55	1749	squamous cell carcinoma
+8071/3	Squamous cell carcinoma, keratinizing, NOS	Epidermoid carcinoma, keratinizing|Keratoacanthoma|Squamous cell carcinoma, large cell, keratinizing	0.76	3149	keratoacanthoma
+8072/0	Large cell acanthoma		0.77	4321	large cell acanthoma
+8074/3	Squamous cell carcinoma, spindle cell	Epidermoid carcinoma, spindle cell|Pseudovascular squamous cell carcinoma|Squamous cell carcinoma, sarcomatoid	0.55	5536	sarcomatoid squamous cell skin carcinoma
+8077/2	Squamous intraepithelial neoplasia, high grade	AIN III|Anal intraepithelial neoplasia, grade III|CIN III with severe dysplasia|CIN III, NOS|Cervical intraepithelial neoplasia, grade III|Esophageal squamous intraepithelial neoplasia (dysplasia), high grade|High grade squamous intraepithelial lesion|Squamous dysplasia, high grade|Squamous intraepithelial neoplasia, grade II|Squamous intraepithelial neoplasia, grade III|VAIN III|VIN III|Vaginal intraepithelial neoplasia, grade III|Vulvar intraepithelial neoplasia, grade III	0.55	8991	cervix uteri carcinoma in situ
+8082/3	Lymphoepithelial carcinoma	Lymphoepithelioma|Lymphoepithelioma-like carcinoma|Schmincke tumor	0.77	5660	lymphoepithelioma-like carcinoma
+8083/3	Basaloid squamous cell carcinoma	Papillary-basaloid carcinoma	0.77	5522	basaloid squamous cell carcinoma
+8084/0	Clear cell acanthoma		0.77	172	clear cell acanthoma
+809-811	Basal cell neoplasms		0.56	2513	basal cell carcinoma
+8090/1	Basal cell tumor		0.56	2513	basal cell carcinoma
+8090/3	Basal cell carcinoma, NOS	Basal cell carcinoma with adnexal differentiation|Basal cell epithelioma|Pigmented basal cell carcinoma|Rodent ulcer	0.77	4282	pigmented basal cell carcinoma
+8091/3	Superficial basal cell carcinoma	Multicentric basal cell carcinoma|Multifocal superficial basal cell carcinoma	0.77	4300	superficial basal cell carcinoma
+8093/3	Basal cell carcinoma, fibroepithelial	Fibroepithelial basal cell carcinoma, Pinkus type|Fibroepithelioma of Pinkus type|Fibroepithelioma, NOS|Pinkus tumor	0.56	4291	fibroepithelial basal cell carcinoma
+8094/3	Basosquamous carcinoma	Mixed basal-squamous cell carcinoma	0.77	5063	basosquamous carcinoma
+8095/3	Metatypical carcinoma		0.56	5063	basosquamous carcinoma
+8096/0	Intraepidermal epithelioma of Jadassohn		0.55	7039	Borst-Jadassohn intraepidermal carcinoma
+8097/3	Basal cell carcinoma, nodular	Basal cell carcinoma, micronodular	0.56	4280	nodular basal cell carcinoma
+8104/0	Pilar sheath acanthoma	Tumor of follicular infundibulum	0.77	4322	pilar sheath acanthoma
+8110/3	Pilomatrical carcinoma	Matrical carcinoma|Pilomatricoma, malignant|Pilomatrix carcinoma|Pilomatrixoma, malignant	0.56	5376	skin pilomatrix carcinoma
+8120/0	Urothelial papilloma, NOS	Papilloma of bladder|Transitional cell papilloma, NOS|Transitional cell papilloma, benign|Transitional papilloma	0.77	2670	transitional papilloma
+8120/3	Transitional cell carcinoma, NOS	Squamotransitional carcinoma|Transitional carcinoma|Urothelial carcinoma, NOS	0.55	2671	transitional cell carcinoma
+8121/3	Schneiderian carcinoma	Cylindrical cell carcinoma	0.78	4003	Schneiderian carcinoma
+8122/3	Urothelial carcinoma, sarcomatoid 	Transitional cell carcinoma, sarcomatoid|Transitional cell carcinoma, spindle cell|Urothelial carcinoma, spindle cell	0.55	4014	sarcomatoid transitional cell carcinoma
+8123/3	Basaloid carcinoma		0.56	5522	basaloid squamous cell carcinoma
+8124/3	Cloacogenic carcinoma		0.77	7173	cloacogenic carcinoma
+8130/1	Papillary urothelial neoplasm of low malignant potential	Papillary transitional cell neoplasm of low malignant potential	0.56	6239	non-invasive bladder papillary urothelial neoplasm
+8130/3	Papillary urothelial carcinoma	Papillary transitional cell carcinoma	0.56	4012	papillary transitional carcinoma
+8140/3	Adenocarcinoma, NOS	Acinar adenocarcinoma of prostate|Adenocarcinoma, usual type|Carcinoma of Skene, Cowper and Littre glands|Endolymphatic sac tumor|Parathyroid carcinoma	0.77	1540	parathyroid carcinoma
+8141/3	Scirrhous adenocarcinoma	Carcinoma with productive fibrosis|Scirrhous carcinoma	0.77	4024	scirrhous adenocarcinoma
+8142/3	Linitis plastica		0.77	4023	linitis plastica
+8148/2	Glandular intraepithelial neoplasia, high grade	Biliary intraepithelial neoplasia, grade 3 (BilIN-3)|Biliary intraepithelial neoplasia, high grade|Esophageal glandular dysplasia (intraepithelial neoplasia), high grade|Esophageal intraepithelial neoplasia, high grade|Flat intraepithelial neoplasia, high grade|Glandular intraepithelial neoplasia, grade III|PIN III|Prostatic intraepithelial neoplasia, grade III|Prostatic intraepithelial neoplasia, high grade	0.56	8634	prostate carcinoma in situ
+8150/3	Pancreatic neuroendocrine tumor, nonfunctioning	Islet cell adenocarcinoma|Islet cell adenoma|Islet cell adenomatosis|Islet cell carcinoma|Islet cell tumor, NOS|Nesidioblastoma|Pancreatic endocrine tumor, NOS|Pancreatic endocrine tumor, nonfunctioning	0.56	3892	insulinoma
+8153/3	Gastrinoma	G cell tumor|Gastrin cell tumor	0.76	5577	gastrinoma
+8154/3	Mixed neuroendocrine non-neuroendocrine neoplasm (MiNEN)	Mixed acinar-endocrine carcinoma|Mixed acinar-endocrine-ductal carcinoma|Mixed acinar-neuroendocrine carcinoma|Mixed ductal-endocrine carcinoma|Mixed ductal-neuroendocrine carcinoma|Mixed endocrine and exocrine adenocarcinoma|Mixed islet cell and exocrine adenocarcinoma|Mixed pancreatic endocrine and exocrine tumor, malignant	0.77	7716	mixed ductal-endocrine carcinoma
+8155/3	Vipoma		0.74	5574	VIPoma
+8156/3	Somatostatinoma	Somatostatin cell tumor	0.76	4430	somatostatinoma
+8160/0	Bile duct adenoma	Cholangioma	0.77	5381	bile duct adenoma
+8160/3	Cholangiocarcinoma	Bile duct adenocarcinoma|Bile duct carcinoma	0.77	4896	bile duct adenocarcinoma
+8161/0	Bile duct cystadenoma		0.77	5384	bile duct cystadenoma
+8161/3	Bile duct cystadenocarcinoma		0.77	4075	bile duct cystadenocarcinoma
+8162/3	Perihilar cholangiocarcinoma	Klatskin tumor	0.56	4927	Klatskin's tumor
+8170/0	Liver cell adenoma	Hepatocellular adenoma|Hepatoma, benign	0.77	0050868	hepatocellular adenoma
+8171/3	Hepatocellular carcinoma, fibrolamellar		0.56	5015	fibrolamellar carcinoma
+8172/3	Hepatocellular carcinoma, scirrhous	Sclerosing hepatic carcinoma	0.77	5026	sclerosing hepatic carcinoma
+8174/3	Hepatocellular carcinoma, clear cell type		0.56	5016	hepatocellular clear cell carcinoma
+8190/3	Trabecular adenocarcinoma	Trabecular carcinoma	0.56	3965	Merkel cell carcinoma
+8200/3	Adenoid cystic carcinoma	Adenocarcinoma, cylindroid|Adenocystic carcinoma|Bronchial adenoma, cylindroid|Cylindroma, NOS|Thymic carcinoma with adenoid cystic carcinoma-like features	0.77	0080202	adenoid cystic carcinoma
+8201/3	Cribriform carcinoma, NOS	Adenocarcinoma, cribriform comedo type|Cribriform comedo type carcinoma|Ductal carcinoma, cribriform type	0.55	5675	cribriform carcinoma
+8202/0	Microcystic adenoma		0.77	5403	microcystic adenoma
+8204/0	Lactating adenoma		0.56	7539	pregnancy adenoma
+8211/3	Tubular adenocarcinoma	Tubular carcinoma	0.77	4929	tubular adenocarcinoma
+8215/3	Adenocarcinoma of anal glands	Adenocarcinoma of anal ducts	0.55	7531	anal gland adenocarcinoma
+8247/3	Merkel cell carcinoma	Merkel cell tumor|Primary cutaneous neuroendocrine carcinoma	0.78	3965	Merkel cell carcinoma
+8251/0	Alveolar adenoma		0.56	8003	alveoli adenoma
+8260/0	Papillary adenoma, NOS	Glandular papilloma	0.55	3172	papillary adenoma
+8260/3	Papillary adenocarcinoma, NOS	Papillary carcinoma of thyroid|Papillary renal cell carcinoma	0.77	4465	papillary renal cell carcinoma
+8262/3	Villous adenocarcinoma		0.77	4917	villous adenocarcinoma
+8264/0	Papillomatosis, glandular	Biliary papillomatosis	0.77	5468	biliary papillomatosis
+8270/0	Chromophobe adenoma		0.77	3828	chromophobe adenoma
+8270/3	Chromophobe carcinoma	Chromophobe adenocarcinoma	0.55	4471	chromophobe renal cell carcinoma
+8271/0	Lactotroph adenoma	Prolactinoma	0.76	5394	prolactinoma
+8272/0	Pituitary adenoma, NOS	Corticotroph adenoma|Gonodotroph adenoma|Null cell adenoma|Pituitary adenoma, ectopic|Plurihormonal adenoma|Somatotroph adenoma|Thyrotroph adenoma	0.56	7004	ACTH-secreting pituitary adenoma
+8280/0	Acidophil adenoma	Eosinophil adenoma	0.77	5392	acidophil adenoma
+8281/0	Mixed acidophil-basophil adenoma		0.55	7179	mixed eosinophil-basophil adenoma
+8290/0	Oxyphilic adenoma	Follicular adenoma, oxyphilic cell|Hurthle cell adenoma|Hurthle cell tumor|Oncocytic adenoma|Oncocytic papillary cystadenoma|Oncocytoma|Spindle cell oncocytoma	0.77	5389	oxyphilic adenoma
+8300/0	Basophil adenoma	Mucoid cell adenoma	0.77	4542	basophil adenoma
+8300/3	Basophil carcinoma	Basophil adenocarcinoma|Mucoid cell adenocarcinoma	0.56	4915	basophilic adenocarcinoma
+8310/0	Clear cell adenoma		0.77	5390	clear cell adenoma
+8312/3	Renal cell carcinoma, NOS	Grawitz tumor|Hypernephroma|Renal cell adenocarcinoma|Renal cell carcinoma, unclassified	0.54	4450	renal cell carcinoma
+8313/0	Clear cell adenofibroma	Clear cell cystadenofibroma	0.77	5477	clear cell adenofibroma
+8314/3	Lipid-rich carcinoma		0.77	5658	lipid-rich carcinoma
+8315/3	Glycogen-rich carcinoma	Glycogen-rich clear cell carcinoma	0.56	5310	glycogen-rich clear cell breast carcinoma
+8318/3	Renal cell carcinoma, sarcomatoid	Renal cell carcinoma, spindle cell	0.55	4473	sarcomatoid renal cell carcinoma
+8319/3	Collecting duct carcinoma	Bellini duct carcinoma|Renal carcinoma, collecting duct type	0.77	4464	collecting duct carcinoma
+8320/3	Granular cell carcinoma	Granular cell adenocarcinoma	0.77	4903	granular cell carcinoma
+8321/0	Chief cell adenoma		0.77	7607	chief cell adenoma
+8322/0	Water-clear cell adenoma		0.77	5401	water-clear cell adenoma
+8322/3	Water-clear cell adenocarcinoma	Water-clear cell carcinoma	0.56	4468	clear cell adenocarcinoma
+8323/0	Mixed cell adenoma		0.77	5385	mixed cell adenoma
+8324/0	Lipoadenoma	Adenolipoma	0.76	5398	lipoadenoma
+8325/0	Metanephric adenoma		0.77	6404	metanephric adenoma
+8330/1	Atypical follicular adenoma		0.77	8292	atypical follicular adenoma
+8331/3	Follicular adenocarcinoma, well differentiated	Follicular carcinoma, well differentiated	0.56	3962	thyroid gland follicular carcinoma
+8332/3	Follicular adenocarcinoma, trabecular	Follicular adenocarcinoma, moderately differentiated|Follicular carcinoma, moderately differentiated|Follicular carcinoma, trabecular	0.56	3964	trabecular follicular adenocarcinoma
+8333/0	Microfollicular adenoma, NOS	Fetal adenoma	0.77	8102	fetal adenoma
+8334/0	Macrofollicular adenoma	Colloid adenoma	0.77	8419	colloid adenoma
+8345/3	Medullary thyroid carcinoma	C cell carcinoma|Medullary carcinoma with amyloid stroma|Parafollicular cell carcinoma	0.56	3973	thyroid gland medullary carcinoma
+8350/3	Nonencapsulated sclerosing carcinoma	Nonencapsulated sclerosing adenocarcinoma|Nonencapsulated sclerosing tumor|Papillary carcinoma, diffuse sclerosing	0.77	5914	nonencapsulated sclerosing carcinoma
+8370/3	Adrenal cortical carcinoma	Adrenal cortical adenocarcinoma|Adrenal cortical tumor, malignant	0.77	3959	adrenal cortical adenocarcinoma
+8400/0	Sweat gland adenoma	Sweat gland tumor, benign|Syringadenoma, NOS	0.56	3896	hidradenoma
+8400/3	Sweat gland adenocarcinoma	Sweat gland carcinoma|Sweat gland tumor, malignant	0.77	5667	sweat gland carcinoma
+8401/0	Apocrine adenoma	Apocrine cystadenoma	0.77	3895	apocrine adenoma
+8401/3	Apocrine adenocarcinoma	Apocrine carcinoma	0.77	4933	apocrine adenocarcinoma
+8402/0	Hidradenoma, NOS	Clear cell hidradenoma|Eccrine acrospiroma|Nodular hidradenoma	0.77	2061	nodular hidradenoma
+8403/0	Spiradenoma, NOS	Eccrine spiradenoma	0.56	5444	spiradenoma
+8403/3	Malignant eccrine spiradenoma	Malignant neoplasm arising from pre-existing cylindroma|Malignant neoplasm arising from pre-existing spiradenocylindroma|Malignant neoplasm arising from pre-existing spiradenoma	0.55	7960	malignant spiradenoma
+8404/0	Hidrocystoma	Eccrine cystadenoma|Hidrocystadenoma	0.76	3893	hidrocystoma
+8405/0	Papillary hidradenoma	Hidradenoma papilliferum	0.77	5439	papillary hidradenoma
+8406/0	Syringocystadenoma papilliferum	Papillary syringadenoma|Papillary syringocystadenoma|Sialadenoma papilliferum	0.77	5445	syringocystadenoma papilliferum
+8407/3	Microcystic adnexal carcinoma	Sclerosing sweat duct carcinoma|Syringomatous carcinoma	0.56	5569	malignant syringoma
+8408/0	Eccrine papillary adenoma		0.77	5446	eccrine papillary adenoma
+8408/3	Digital papillary adenocarcinoma	Aggressive digital papillary adenoma|Eccrine papillary adenocarcinoma	0.77	5591	eccrine papillary adenocarcinoma
+8410/0	Sebaceoma	Sebaceous adenoma|Sebaceous epithelioma	0.77	2648	sebaceous adenoma
+8410/3	Sebaceous carcinoma	Sebaceous adenocarcinoma	0.77	4840	sebaceous carcinoma
+8413/3	Eccrine adenocarcinoma		0.77	4920	eccrine adenocarcinoma
+8420/0	Ceruminous adenoma		0.56	7549	ceruminoma
+8420/3	Ceruminous adenocarcinoma	Ceruminous carcinoma	0.77	6446	ceruminous adenocarcinoma
+8430/3	Mucoepidermoid carcinoma		0.77	4531	mucoepidermoid carcinoma
+8441/3	Serous carcinoma, NOS	Papillary serous adenocarcinoma|Papillary serous cystadenocarcinoma|Serous adenocarcinoma, NOS|Serous cystadenocarcinoma, NOS|Serous papillary adenocarcinoma, NOS|Serous surface papillary carcinoma	0.77	2632	papillary serous adenocarcinoma
+8460/3	Low grade serous carcinoma	Micropapillary serous carcinoma	0.56	2632	papillary serous adenocarcinoma
+8461/0	Serous surface papilloma		0.77	2614	serous surface papilloma
+8480/3	Mucinous adenocarcinoma	Acinar adenocarcinoma, mucinous variant|Colloid adenocarcinoma|Colloid carcinoma|Gelatinous adenocarcinoma|Gelatinous carcinoma|Mucinous carcinoma|Mucinous tubular and spindle cell carcinoma|Mucoid adenocarcinoma|Mucoid carcinoma|Mucous adenocarcinoma|Mucous carcinoma|Pseudomyxoma peritonei with unknown primary site	0.77	3030	mucinous adenocarcinoma
+8480/6	Pseudomyxoma peritonei		0.77	3559	pseudomyxoma peritonei
+8481/3	Mucin-producing adenocarcinoma	Mucin-producing carcinoma|Mucin-secreting adenocarcinoma|Mucin-secreting carcinoma	0.56	3030	mucinous adenocarcinoma
+8490/3	Signet ring cell carcinoma	Acinar adenocarcinoma, signet ring-like variant|Mucinous carcinoma, signet ring cell type|Poorly cohesive carcinoma|Signet ring cell adenocarcinoma|Signet ring cell/histiocytoid carcinoma	0.77	3493	signet ring cell adenocarcinoma
+8490/6	Metastatic signet ring cell carcinoma	Krukenberg tumor	0.56	9597	Krukenberg carcinoma
+8503/0	Intraductal papilloma	Duct adenoma, NOS|Ductal papilloma|Intracystic papillary neoplasm with intermediate grade intraepithelial neoplasia|Intracystic papillary neoplasm with low grade intraepithelial neoplasia|Intraductal papillary neoplasm with intermediate grade neoplasia|Intraductal papillary neoplasm with low grade intraepithelial neoplasia|Intraductal papillary neoplasm, NOS|Intraductal papilloma with atypical ductal hyperplasia|Intraductal tubular-papillary neoplasm, low grade|Intraglandular papillary neoplasm with low grade intraepithelial neoplasia	0.77	1627	intraductal papilloma
+8503/3	Intraductal papillary adenocarcinoma with invasion	Infiltrating and papillary adenocarcinoma|Infiltrating papillary adenocarcinoma|Intracystic papillary neoplasm with associated invasive carcinoma|Intraductal papillary neoplasm with associated invasive carcinoma|Papillary carcinoma of breast	0.56	3112	papillary adenocarcinoma
+8504/0	Intracystic papillary adenoma	Intracystic papilloma	0.77	2682	intracystic papillary adenoma
+8506/0	Adenoma of nipple	Subareolar duct papillomatosis	0.77	7533	subareolar duct papillomatosis
+8550/0	Acinar cell adenoma	Acinar adenoma|Acinic cell adenoma	0.55	657	adenoma
+8550/3	Acinar cell carcinoma	Acinar adenocarcinoma, NOS|Acinar carcinoma|Acinic cell adenocarcinoma	0.77	3025	acinar cell carcinoma
+8551/3	Acinar cell cystadenocarcinoma	Acinar adenocarcinoma of lung	0.77	7729	acinar cell cystadenocarcinoma
+8560/3	Adenosquamous carcinoma	Mixed adenocarcinoma and epidermoid carcinoma|Mixed adenocarcinoma and squamous cell carcinoma|Squamoid eccrine ductal carcinoma	0.77	4830	adenosquamous carcinoma
+8562/3	Epithelial-myoepithelial carcinoma		0.77	5309	epithelial-myoepithelial carcinoma
+8570/3	Adenocarcinoma with squamous metaplasia	Adenoacanthoma|Endometrioid carcinoma with squamous differentiation	0.55	5524	adenoid squamous cell carcinoma
+8576/3	Hepatoid adenocarcinoma	Hepatoid carcinoma	0.77	0060534	hepatoid adenocarcinoma
+8581/3	Thymoma, type A	Thymoma, medullary|Thymoma, spindle cell	0.56	3279	spindle cell thymoma
+8582/3	Thymoma, type AB	Thymoma, mixed type	0.56	3280	mixed type thymoma
+8583/3	Thymoma, type B1	Thymoma, lymphocyte-rich|Thymoma, lymphocytic|Thymoma, organoid|Thymoma, predominantly cortical	0.56	6917	predominantly cortical thymoma
+8584/3	Thymoma, type B2	Thymoma, cortical	0.56	6530	cortical thymoma
+8585/3	Thymoma, type B3	Thymoma, atypical|Thymoma, epithelial|Well differentiated thymic carcinoma	0.56	7926	epithelial malignant thymoma
+8586/3	Thymic carcinoma, NOS	Thymoma, type C	0.56	4554	type C thymoma
+859-867	Specialized gonadal neoplasms		0.56	192	sex cord-gonadal stromal tumor
+8620/3	Adult granulosa cell tumor of ovary	Granulosa cell carcinoma|Granulosa cell tumor, adult type|Granulosa cell tumor, sarcomatoid	0.56	2999	granulosa cell tumor
+8671/0	Adrenal rest tumor		0.77	1786	adrenal rest tumor
+8693/3	Extra-adrenal paraganglioma, NOS	Chemodectoma|Composite paraganglioma|Laryngeal paraganglioma|Nonchromaffin paraganglioma, NOS|Vagal paraganglioma	0.54	0050773	paraganglioma
+8710/3	Glomangiosarcoma	Glomoid sarcoma	0.76	5233	glomangiosarcoma
+8711/1	Glomangiomatosis	Glomus tumor of uncertain malignant potential	0.76	6906	glomangiomatosis
+8712/0	Glomangioma		0.76	2436	glomangioma
+8713/0	Glomangiomyoma		0.76	8020	glomangiomyoma
+8720/0	Pigmented nevus, NOS	Combined nevus|Conjunctival nevus|Deep penetrating nevus|Genital nevus|Hairy nevus|Melanocytic nevus, NOS|Meyerson nevus|Nevus spilus|Nevus, NOS	0.77	0050906	conjunctival nevus
+8721/3	Nodular melanoma		0.55	10047	nodular malignant melanoma
+8728/0	Meningeal melanocytosis	Diffuse melanocytosis	0.56	6379	diffuse meningeal melanocytosis
+8728/1	Meningeal melanocytoma		0.77	5900	meningeal melanocytoma
+8728/3	Meningeal melanomatosis		0.77	8243	meningeal melanomatosis
+8730/3	Amelanotic melanoma		0.77	4359	amelanotic melanoma
+8744/3	Acral melanoma	Acral lentiginous melanoma, malignant	0.55	6367	acral lentiginous melanoma
+8761/3	Malignant melanoma arising in giant congenital nevus	Malignant melanoma in congenital melanocytic nevus|Malignant melanoma in giant pigmented nevus	0.56	0070327	melanoma in congenital melanocytic nevus
+8770/3	Malignant Spitz tumor	Mixed epithelioid and spindle cell melanoma|Spitz melanoma|Spitzoid melanoma	0.77	0070326	spitzoid melanoma
+8771/3	Epithelioid cell melanoma		0.77	4360	epithelioid cell melanoma
+8801/3	Spindle cell sarcoma	Spindle cell sarcoma, undifferentiated	0.77	4235	spindle cell sarcoma
+8803/3	Small cell sarcoma	Round cell sarcoma, NOS|Round cell sarcoma, undifferentiated	0.77	3098	small cell sarcoma
+8804/3	Epithelioid sarcoma, NOS	Epithelioid cell sarcoma|Epithelioid sarcoma, undifferentiated	0.55	6193	epithelioid sarcoma
+8806/3	Desmoplastic small round cell tumor		0.77	6785	desmoplastic small round cell tumor
+8811/3	Myxofibrosarcoma	Fibromyxosarcoma	0.76	0080534	myxofibrosarcoma
+8814/3	Infantile fibrosarcoma	Congenital fibrosarcoma	0.77	8418	congenital fibrosarcoma
+8815/3	Solitary fibrous tumor, malignant	Hemangiopericytoma, malignant|Solitary fibrous tumor/Hemangiopericytoma, grade 3	0.51	264	hemangiopericytoma
+8818/0	Fibrous dysplasia		0.77	0080031	fibrous dysplasia
+8824/0	Myofibroma	Dermatomyofibroma|Myopericytoma	0.76	4386	myofibroma
+8824/1	Myofibromatosis	Congenital generalized fibromatosis|Infantile myofibromatosis	0.77	0080109	infantile myofibromatosis
+8825/1	Myofibroblastic tumor, NOS	Inflammatory myofibroblastic tumor	0.77	0050905	inflammatory myofibroblastic tumor
+8828/0	Nodular fasciitis	Proliferative fasciitis|Proliferative myositis	0.77	9599	proliferative fasciitis
+8830/3	Malignant fibrous histiocytoma	Fibroxanthoma, malignant|Undifferentiated high grade pleomorphic sarcoma of bone	0.77	1907	malignant fibrous histiocytoma
+8831/0	Histiocytoma, NOS	Deep benign fibrous histiocytoma|Deep histiocytoma|Juvenile histiocytoma|Reticulohistiocytoma|Reticulohistocytosis	0.56	4394	reticulohistiocytic granuloma
+8832/0	Dermatofibroma, NOS	Cutaneous histiocytoma, NOS|Dermatofibroma lenticulare|Pleomorphic fibroma|Sclerosing hemangioma|Sclerosing pneumocytoma|Subepidermal nodular fibrosis	0.77	495	sclerosing hemangioma
+8840/3	Myxosarcoma	Low grade fibromyxoid sarcoma|Sclerosing epithelioid fibrosarcoma	0.76	4136	myxosarcoma
+885-888	Lipomatous neoplasms		0.56	3315	lipoma
+8850/0	Lipoma, NOS	Thymolipoma	0.56	1975	thymus lipoma
+8850/1	Atypical lipomatous tumor	Atypical lipoma|Liposarcoma, well differentiated, superficial	0.55	5690	well-differentiated liposarcoma
+8851/1	Lipofibromatosis		0.54	0080109	infantile myofibromatosis
+8851/3	Liposarcoma, well differentiated, NOS	Inflammatory liposarcoma|Lipoma-like liposarcoma|Liposarcoma, differentiated|Sclerosing liposarcoma	0.77	8233	inflammatory liposarcoma
+8852/3	Myxoid liposarcoma	Myxoliposarcoma	0.77	5363	myxoid liposarcoma
+8853/3	Round cell liposarcoma		0.56	5692	cellular myxoid liposarcoma
+8854/0	Pleomorphic lipoma		0.77	10192	pleomorphic lipoma
+8854/3	Pleomorphic liposarcoma		0.77	5702	pleomorphic liposarcoma
+8855/3	Mixed liposarcoma		0.77	5703	mixed liposarcoma
+8856/0	Intramuscular lipoma	Infiltrating angiolipoma|Infiltrating lipoma	0.77	3615	infiltrating angiolipoma
+8857/0	Spindle cell lipoma		0.77	10184	spindle cell lipoma
+8857/3	Fibroblastic liposarcoma		0.77	5698	fibroblastic liposarcoma
+8858/3	Dedifferentiated liposarcoma		0.77	0080531	dedifferentiated liposarcoma
+8860/0	Angiomyolipoma		0.76	3314	angiomyolipoma
+8862/0	Chondroid lipoma		0.77	10208	chondroid lipoma
+889-892	Myomatous neoplasms		0.56	461	muscle benign neoplasm
+8890/0	Leiomyoma, NOS	Cotyledonoid leiomyoma|Dissecting leiomyoma|Fibroid uterus|Fibromyoma|Leiomyofibroma|Leiomyoma, apoplectic|Leiomyoma, hydropic|Lipoleiomyoma|Lipomatous leiomyoma|Myolipoma|Plexiform leiomyoma	0.56	4386	myofibroma
+8890/1	Leiomyomatosis, NOS	Intravascular leiomyomatosis|Intravenous leiomyomatosis|Leiomyomatosis, peritonealis disseminata	0.77	5729	intravenous leiomyomatosis
+8891/3	Epithelioid leiomyosarcoma		0.77	5264	epithelioid leiomyosarcoma
+8892/0	Cellular leiomyoma		0.77	5139	cellular leiomyoma
+8893/0	Bizarre leiomyoma	Atypical leiomyoma|Pleomorphic leiomyoma|Symplastic leiomyoma	0.77	5127	bizarre leiomyoma
+8894/0	Angioleiomyoma	Angiomyoma|Vascular leiomyoma	0.76	4265	angiomyoma
+8895/0	Myoma		0.76	2691	myoma
+8895/3	Myosarcoma		0.54	4045	muscle cancer
+8896/3	Myxoid leiomyosarcoma		0.77	5268	myxoid leiomyosarcoma
+8901/3	Pleomorphic rhabdomyosarcoma, adult type	Pleomorphic rhabdomyosarcoma, NOS|Rhabdomyosarcoma, pleomorphic type	0.56	3250	pleomorphic rhabdomyosarcoma
+8902/3	Mixed type rhabdomyosarcoma	Mixed embryonal rhabdomyosarcoma and alveolar rhabdomyosarcoma	0.77	4065	mixed type rhabdomyosarcoma
+8910/3	Embryonal rhabdomyosarcoma, NOS	Botryoid sarcoma|Embryonal rhabdomyosarcoma, pleomorphic|Rhabdomyosarcoma, embryonal type|Sarcoma botryoides	0.56	3255	botryoid rhabdomyosarcoma
+8912/3	Spindle cell rhabdomyosarcoma	Rhabdomyosarcoma, spindle cell/sclerosing type|Sclerosing rhabdomyosarcoma	0.77	3260	spindle cell rhabdomyosarcoma
+8920/3	Alveolar rhabdomyosarcoma		0.77	4051	alveolar rhabdomyosarcoma
+8921/3	Ectomesenchymoma	Rhabdomyosarcoma with ganglionic differentiation	0.76	4055	ectomesenchymoma
+8930/0	Endometrial stromal nodule		0.77	1373	endometrial stromal nodule
+8930/3	Endometrial stromal sarcoma, NOS	Endometrial sarcoma, NOS|Endometrial stromal sarcoma, high grade|Endometrioid stromal sarcoma, high grade	0.55	4226	endometrial stromal sarcoma
+8932/0	Adenomyoma, NOS	Atypical polypoid adenomyoma	0.77	4993	atypical polypoid adenomyoma
+8933/3	Adenosarcoma		0.76	1974	adenosarcoma
+8936/3	Gastrointestinal stromal tumor	GANT|GIST|Gastrointestinal autonomic nerve tumor|Gastrointestinal pacemaker cell tumor|Gastrointestinal stromal sarcoma	0.77	9253	gastrointestinal stromal tumor
+8940/0	Pleomorphic adenoma	Chondroid syringoma, NOS|Mixed tumor, NOS|Mixed tumor, salivary gland type, NOS	0.77	452	pleomorphic adenoma
+8941/3	Carcinoma ex pleomorphic adenoma	Carcinoma in pleomorphic adenoma	0.55	297	pleomorphic adenoma carcinoma
+8950/3	Mullerian mixed tumor		0.55	4236	carcinosarcoma
+8951/3	Mesodermal mixed tumor		0.56	4236	carcinosarcoma
+8959/0	Benign cystic nephroma	Adult cystic nephroma|Mixed epithelial and stromal tumor|Pediatric cystic nephroma	0.77	2673	adult cystic nephroma
+8959/3	Malignant cystic nephroma	Malignant multilocular cystic nephroma	0.77	7571	malignant cystic nephroma
+8963/3	Rhabdoid tumor, NOS	Malignant rhabdoid tumor|Rhabdoid sarcoma	0.56	3672	rhabdoid cancer
+8964/3	Clear cell sarcoma of kidney		0.56	4880	kidney clear cell sarcoma
+8971/3	Pancreatoblastoma		0.76	6823	pancreatoblastoma
+8972/3	Pulmonary blastoma	Pneumoblastoma	0.77	4765	pulmonary blastoma
+8973/3	Pleuropulmonary blastoma		0.77	4769	pleuropulmonary blastoma
+8982/0	Myoepithelioma, NOS	Ectomesenchymal chondromyxoid tumor|Myoepithelial adenoma|Myoepithelial tumor	0.56	2661	myoepithelioma
+8982/3	Myoepithelial carcinoma	Malignant myoepithelioma|Myoepithelioma, infiltrating	0.77	4838	myoepithelial carcinoma
+8990/3	Mesenchymoma, malignant	Mixed mesenchymal sarcoma|Phosphaturic mesenchymal tumor, malignant	0.56	5758	malignant mesenchymoma
+9012/0	Pericanalicular fibroadenoma		0.56	2639	breast pericanalicular fibroadenoma
+9013/0	Adenofibroma, NOS	Cystadenofibroma, NOS|Metanephric adenofibroma|Nephrogenic adenofibroma|Papillary adenofibroma	0.77	2698	nephrogenic adenofibroma
+9016/0	Giant fibroadenoma		0.55	7223	breast giant fibroadenoma
+9020/3	Phyllodes tumor, malignant	Cystosarcoma phyllodes, malignant|Periductal stromal tumor, low grade	0.56	3016	breast malignant phyllodes tumor
+9030/0	Juvenile fibroadenoma		0.56	1618	breast fibroadenoma
+9040/0	Synovioma, benign		0.56	2701	nodular tenosynovitis
+9041/3	Synovial sarcoma, spindle cell	Synovial sarcoma, monophasic fibrous	0.56	5487	spindle cell synovial sarcoma
+9042/3	Synovial sarcoma, epithelioid cell		0.56	5494	epithelioid cell synovial sarcoma
+9043/3	Synovial sarcoma, biphasic		0.56	5492	biphasic synovial sarcoma
+9044/3	Clear cell sarcoma, NOS	Malignant melanoma of soft parts	0.55	4233	clear cell sarcoma
+9051/0	Fibrous mesothelioma, benign		0.55	2653	benign fibrous mesothelioma
+9051/3	Fibrous mesothelioma, malignant	Desmoplastic mesothelioma|Fibrous mesothelioma, NOS|Sarcomatoid mesothelioma|Spindled mesothelioma	0.77	4488	sarcomatoid mesothelioma
+9053/3	Mesothelioma, biphasic, malignant	Mesothelioma, biphasic, NOS	0.56	4486	malignant biphasic mesothelioma
+906-909	Germ cell neoplasms		0.55	2994	germ cell cancer
+9060/3	Dysgerminoma		0.76	4441	dysgerminoma
+9063/3	Spermatocytic seminoma	Spermatocytic tumor|Spermatocytoma	0.76	5834	spermatocytoma
+9064/3	Germinoma	Germ cell tumor, NOS	0.76	3304	germinoma
+9071/3	Yolk sac tumor, NOS	Embryonal carcinoma, infantile|Endodermal sinus tumor|Hepatoid yolk sac tumor|Orchioblastoma|Polyvesicular vitelline tumor|Yolk sac tumor, post-pubertal type|Yolk sac tumor, pre-pubertal type	0.77	1911	endodermal sinus tumor
+9073/1	Gonadoblastoma	Gonocytoma	0.76	3301	gonadoblastoma
+9080/0	Teratoma, benign	Adult cystic teratoma|Adult teratoma, NOS|Cystic teratoma, NOS|Mature teratoma, NOS|Teratoma, differentiated	0.77	7079	adult cystic teratoma
+9080/3	Teratoma, malignant, NOS	Embryonal teratoma|Immature teratoma, NOS|Immature teratoma, malignant|Teratoblastoma, malignant	0.56	5563	malignant teratoma
+9081/3	Teratocarcinoma	Mixed embryonal carcinoma and teratoma|Teratocarcinosarcoma	0.76	3305	teratocarcinoma
+9083/3	Malignant teratoma, intermediate		0.55	7202	intermediate malignant teratoma
+9085/3	Mixed germ cell tumor	Mixed teratoma and seminoma	0.55	3306	mixed germ cell cancer
+9090/3	Struma ovarii, malignant		0.56	5208	malignant struma ovarii
+910	Trophoblastic neoplasms		0.77	4085	trophoblastic neoplasm
+9100/3	Choriocarcinoma, NOS	Chorioepithelioma|Chorionepithelioma	0.56	3594	choriocarcinoma
+9104/1	Placental site trophoblastic tumor		0.77	3596	placental site trophoblastic tumor
+911	Mesonephromas		0.56	4468	clear cell adenocarcinoma
+9110/0	Adenoma of rete ovarii	Mesonephric adenoma|Mesonephroma, benign|Wolffian duct adenoma	0.78	2616	Wolffian duct adenoma
+9110/3	Mesonephroma, malignant	Adenocarcinoma of rete ovarii|Mesonephric adenocarcinoma|Mesonephroma, NOS|Wolffian duct carcinoma	0.56	4468	clear cell adenocarcinoma
+912-916	Blood vessel tumors		0.56	175	vascular cancer
+9120/0	Hemangioma, NOS	Angioma, NOS|Cherry hemangioma|Chorioangioma|Glomeruloid hemangioma|Hobnail hemangioma|Microvenular hemangioma|Sinusoidal hemangioma|Spindle cell hemangioma	0.77	486	glomeruloid hemangioma
+9120/3	Hemangiosarcoma	Angiosarcoma	0.76	0001816	angiosarcoma
+9121/0	Cavernous hemangioma		0.77	483	cavernous hemangioma
+9122/0	Venous hemangioma		0.77	467	venous hemangioma
+9123/0	Racemose hemangioma	Arteriovenous hemangioma	0.56	11294	arteriovenous malformation
+9125/0	Epithelioid hemangioma	Cutaneous epithelioid angiomatoid nodule|Histiocytoid hemangioma	0.77	474	histiocytoid hemangioma
+9131/0	Capillary hemangioma	Congenital hemangioma, NOS|Congenital hemangioma, non-involuting|Congenital hemangioma, rapidly involuting|Hemangioma simplex|Infantile hemangioma|Juvenile hemangioma|Lobular capillary hemangioma|Plexiform hemangioma	0.77	2725	capillary hemangioma
+9132/0	Intramuscular hemangioma	Intramuscular angioma	0.77	468	intramuscular hemangioma
+9140/3	Kaposi sarcoma	Multiple hemorrhagic sarcoma	0.56	8632	Kaposi's sarcoma
+9141/0	Angiokeratoma		0.76	479	angiokeratoma
+9142/0	Verrucous keratotic hemangioma	Verrucous venous malformation	0.77	470	verrucous keratotic hemangioma
+9161/1	Hemangioblastoma	Angioblastoma	0.76	5241	hemangioblastoma
+9170/3	Lymphangiosarcoma	Lymphangioendothelial sarcoma|Lymphangioendothelioma, malignant	0.76	2689	lymphangiosarcoma
+9171/0	Capillary lymphangioma		0.77	2286	capillary lymphangioma
+9173/0	Cystic lymphangioma	Cystic hygroma|Hygroma, NOS	0.77	3081	cystic lymphangioma
+9174/1	Lymphangioleiomyomatosis	Lymphangiomyomatosis	0.76	3319	lymphangioleiomyomatosis
+9181/3	Chondroblastic osteosarcoma		0.77	3372	chondroblastic osteosarcoma
+9182/3	Fibroblastic osteosarcoma	Osteofibrosarcoma	0.56	7603	fibrosarcomatous osteosarcoma
+9183/3	Telangiectatic osteosarcoma		0.56	6951	telangiectatic osteogenic sarcoma
+9185/3	Small cell osteosarcoma	Round cell osteosarcoma	0.56	3377	small cell osteogenic sarcoma
+9186/3	Central osteosarcoma, NOS	Conventional central osteosarcoma|Medullary osteosarcoma	0.77	3378	conventional central osteosarcoma
+9192/3	Parosteal osteosarcoma	Juxtacortical osteosarcoma	0.77	3373	juxtacortical osteosarcoma
+9193/3	Periosteal osteosarcoma		0.56	6489	periosteal osteogenic sarcoma
+9195/3	Intracortical osteosarcoma		0.56	7602	intracortical osteogenic sarcoma
+9221/0	Periosteal chondroma	Juxtacortical chondroma	0.77	2601	juxtacortical chondroma
+9221/3	Periosteal chondrosarcoma	Juxtacortical chondrosarcoma	0.77	5859	periosteal chondrosarcoma
+9231/3	Myxoid chondrosarcoma		0.77	5861	myxoid chondrosarcoma
+9240/3	Mesenchymal chondrosarcoma		0.77	4545	mesenchymal chondrosarcoma
+9242/3	Clear cell chondrosarcoma		0.77	5867	clear cell chondrosarcoma
+9250/3	Giant cell tumor of bone, malignant	Giant cell sarcoma of bone|Osteoclastoma, malignant	0.56	4719	bone giant cell sarcoma
+9251/3	Malignant giant cell tumor of soft parts		0.77	5638	malignant giant cell tumor of soft parts
+9252/0	Tenosynovial giant cell tumor, NOS	Fibrous histiocytoma of tendon sheath|Giant cell tumor of tendon sheath, NOS|Tenosynovial giant cell tumor, localised	0.55	314	tenosynovial giant cell tumor
+9252/1	Tenosynovial giant cell tumor, diffuse	Pigmented villonodular synovitis	0.77	2702	pigmented villonodular synovitis
+9261/3	Adamantinoma of long bones		0.55	2776	adamantinoma
+9262/0	Ossifying fibroma	Fibro-osteoma|Osteofibroma	0.77	180	ossifying fibroma
+9351/1	Craniopharyngioma, adamantinomatous		0.51	3846	adamantinous craniopharyngioma
+9352/1	Craniopharyngioma, papillary		0.51	3847	papillary craniopharyngioma
+9360/1	Pinealoma		0.56	5032	pineal gland cancer
+9362/3	Pineoblastoma	Mixed pineal tumor|Mixed pineocytoma-pineoblastoma|Pineal parenchymal tumor of intermediate differentiation|Transitional pineal tumor	0.77	5030	pineal parenchymal tumor of intermediate differentiation
+9363/0	Melanotic neuroectodermal tumor	Melanoameloblastoma|Melanotic progonoma|Retinal anlage tumor	0.77	166	melanotic neuroectodermal tumor
+9364/3	Ewing sarcoma	Ewing tumor|Neuroectodermal tumor, NOS|PPNET|Peripheral neuroectodermal tumor|Peripheral primitive neuroectodermal tumor	0.78	3369	Ewing sarcoma
+9365/3	Askin tumor		0.56	0050608	Askin's tumor
+9371/3	Chondroid chordoma		0.77	4152	chondroid chordoma
+9373/0	Parachordoma		0.76	2647	parachordoma
+9380/3	Glioma, malignant	Glioma, NOS	0.51	3070	high grade glioma
+9381/3	Gliomatosis cerebri		0.77	6128	gliomatosis cerebri
+9382/3	Oligoastrocytoma, NOS	Anaplastic oligoastrocytoma|Mixed glioma	0.77	5076	mixed glioma
+9383/1	Subependymoma	Mixed subependymoma-ependymoma|Subependymal astrocytoma, NOS|Subependymal glioma	0.77	4843	subependymal glioma
+9384/1	Subependymal giant cell astrocytoma		0.77	5077	subependymal giant cell astrocytoma
+9385/3	Diffuse midline glioma, H3 K27M-mutant	Diffuse intrinsic pontine glioma, H3 K27M-mutant	0.77	0080684	diffuse midline glioma, H3 K27M-mutant
+9390/1	Atypical choroid plexus papilloma		0.77	3544	atypical choroid plexus papilloma
+9390/3	Choroid plexus carcinoma	Choroid plexus papilloma, anaplastic|Choroid plexus papilloma, malignant	0.77	5648	choroid plexus carcinoma
+9391/3	Ependymoma, NOS	Cellular ependymoma|Clear cell ependymoma|Epithelial ependymoma|Tanycytic ependymoma	0.77	5500	cellular ependymoma
+9392/3	Ependymoma, anaplastic	Ependymoblastoma	0.76	4794	ependymoblastoma
+9393/3	Papillary ependymoma		0.77	5505	papillary ependymoma
+9394/1	Myxopapillary ependymoma		0.77	5075	myxopapillary ependymoma
+9400/3	Astrocytoma, NOS	Astrocytic glioma|Astrocytoma, low grade|Astroglioma|Cystic astrocytoma|Diffuse astrocytoma, IDH-mutant|Diffuse astrocytoma, IDH-wildtype|Diffuse astrocytoma, NOS|Diffuse astrocytoma, low grade	0.56	4857	diffuse astrocytoma
+9410/3	Protoplasmic astrocytoma		0.77	7008	protoplasmic astrocytoma
+9413/0	Dysembryoplastic neuroepithelial tumor		0.77	2679	dysembryoplastic neuroepithelial tumor
+9420/3	Fibrillary astrocytoma	Fibrous astrocytoma	0.77	6726	fibrillary astrocytoma
+9421/1	Pilocytic astrocytoma	Juvenile astrocytoma|Piloid astrocytoma|Spongioblastoma, NOS	0.77	4851	pilocytic astrocytoma
+9424/3	Pleomorphic xanthoastrocytoma, NOS	Anaplastic pleomorphic xanthoastrocytoma	0.77	0080854	anaplastic pleomorphic xanthoastrocytoma
+9425/3	Pilomyxoid astrocytoma		0.77	4845	pilomyxoid astrocytoma
+9430/3	Astroblastoma		0.76	7305	astroblastoma
+9440/3	Glioblastoma, NOS	Diffuse intrinsic pontine glioma|Diffuse midline glioma, NOS|Epithelioid glioblastoma|Glioblastoma multiforme|Glioblastoma, IDH-wildtype|Glioblastoma, primary, NOS|Spongioblastoma multiforme	0.55	3068	glioblastoma
+9441/3	Giant cell glioblastoma	Monstrocellular sarcoma	0.77	3074	giant cell glioblastoma
+9442/1	Gliofibroma		0.76	4856	gliofibroma
+9442/3	Gliosarcoma	Glioblastoma with sarcomatous component	0.76	3071	gliosarcoma
+9444/1	Chordoid glioma	Chordoid glioma of third ventricle	0.77	3774	chordoid glioma
+9470/3	Medulloblastoma, NOS	Classic medulloblastoma|Melanotic medulloblastoma	0.77	3868	melanotic medulloblastoma
+9472/3	Medullomyoblastoma		0.76	3861	medullomyoblastoma
+9473/3	CNS embryonal tumor, NOS	CPNET|Central primitive neuroectodermal tumor|PNET, NOS|Primitive neuroectodermal tumor, NOS|Supratentorial PNET	0.56	0050902	medulloblastoma
+9474/3	Large cell medulloblastoma	Anaplastic medulloblastoma	0.77	3857	large cell medulloblastoma
+9490/0	Ganglioneuroma		0.76	4817	ganglioneuroma
+9490/3	Ganglioneuroblastoma	CNS ganglioneuroblastoma	0.76	4163	ganglioneuroblastoma
+9501/3	Medulloepithelioma, NOS	Diktyoma, malignant	0.56	4790	medulloepithelioma
+9506/1	Central neurocytoma	Cerebellar liponeurocytoma|Extraventricular neurocytoma|Lipomatous medulloblastoma|Medullocytoma|Neurocytoma, NOS|Neurolipocytoma	0.77	14174	central neurocytoma
+9507/0	Pacinian tumor		0.78	2669	Pacinian tumor
+9508/3	Atypical teratoid/rhabdoid tumor	CNS embryonal tumor with rhabdoid features	0.56	2129	atypical teratoid rhabdoid tumor
+9522/3	Olfactory neuroblastoma	Esthesioneuroblastoma	0.77	369	olfactory neuroblastoma
+9523/3	Olfactory neuroepithelioma	Esthesioneuroepithelioma	0.56	369	olfactory neuroblastoma
+953	Meningiomas		0.76	3565	meningioma
+9530/0	Meningioma, NOS	Lymphoplasmacyte-rich meningioma|Metaplastic meningioma|Microcystic meningioma|Secretory meningioma	0.77	4591	lymphoplasmacyte-rich meningioma
+9530/3	Meningioma, malignant	Leptomeningeal sarcoma|Meningeal sarcoma|Meningioma, anaplastic|Meningothelial sarcoma	0.56	7689	leptomeninges sarcoma
+9531/0	Meningothelial meningioma	Endotheliomatous meningioma|Syncytial meningioma	0.77	7212	meningothelial meningioma
+9532/0	Fibrous meningioma	Fibroblastic meningioma	0.77	7211	fibrous meningioma
+9533/0	Psammomatous meningioma		0.77	7210	psammomatous meningioma
+9534/0	Angiomatous meningioma		0.77	6548	angiomatous meningioma
+9537/0	Transitional meningioma	Mixed meningioma	0.77	7213	transitional meningioma
+9538/1	Clear cell meningioma	Chordoid meningioma	0.77	4210	clear cell meningioma
+9538/3	Papillary meningioma	Rhabdoid meningioma	0.77	5058	rhabdoid meningioma
+9539/3	Meningeal sarcomatosis		0.56	7613	sarcomatosis of the meninges
+9540/3	Malignant peripheral nerve sheath tumor, NOS	MPNST with glandular differentiation|MPNST with mesenchymal differentiation|MPNST with perineurial differentiation|MPNST, NOS|Melanotic MPNST|Melanotic psammomatous MPNST|Neurofibrosarcoma|Neurogenic sarcoma|Neurosarcoma	0.76	3512	neurofibrosarcoma
+9542/3	Malignant peripheral nerve sheath tumor, epithelioid	Epithelioid MPNST	0.55	8353	epithelioid malignant peripheral nerve sheath tumor
+9550/0	Plexiform neurofibroma	Plexiform neuroma	0.77	5151	plexiform neurofibroma
+9560/0	Schwannoma, NOS	Acoustic neuroma|Ancient schwannoma|Cellular schwannoma|Degenerated schwannoma|Neurilemoma, NOS|Neurinoma|Plexiform schwannoma|Psammomatous schwannoma	0.77	12689	acoustic neuroma
+9560/1	Melanotic schwannoma	Pigmented schwannoma	0.56	3205	melanotic neurilemmoma
+9561/3	Malignant peripheral nerve sheath tumor with rhabdomyoblastic differentiation	MPNST with rhabdomyoblastic differentiation|Malignant schwannoma with rhabdomyoblastic differentiation|Triton tumor, malignant	0.56	6707	malignant triton tumor
+9571/0	Perineurioma, NOS	Intraneural perineurioma|Soft tissue perineurioma	0.77	4696	intraneural perineurioma
+9580/3	Granular cell tumor, malignant	Granular cell myoblastoma, malignant	0.55	5042	malignant granular cell myoblastoma
+9581/3	Alveolar soft part sarcoma		0.77	4239	alveolar soft part sarcoma
+9590/3	Malignant lymphoma, NOS	Lymphoma, NOS|Microglioma	0.56	3234	central nervous system lymphoma
+9591/3	Malignant lymphoma, non-Hodgkin, NOS	B-cell lymphoma, NOS|Hairy cell leukemia variant|Lymphosarcoma, NOS|Lymphosarcoma, diffuse|Malignant lymphoma, cleaved cell, NOS|Malignant lymphoma, diffuse, NOS|Malignant lymphoma, lymphocytic, intermediate differentiation, nodular|Malignant lymphoma, lymphocytic, poorly differentiated, diffuse|Malignant lymphoma, non-cleaved cell, NOS|Malignant lymphoma, small cell, noncleaved, diffuse|Malignant lymphoma, small cleaved cell, NOS|Malignant lymphoma, small cleaved cell, diffuse|Malignant lymphoma, undifferentiated cell type, NOS|Malignant lymphoma, undifferentiated cell, non-Burkitt|Non-Hodgkin lymphoma, NOS|Reticulosarcoma, NOS|Reticulosarcoma, diffuse|Reticulum cell sarcoma, NOS|Reticulum cell sarcoma, diffuse|Splenic B-cell lymphoma/leukemia, unclassifiable|Splenic diffuse red pulp small B-cell lymphoma	0.56	713	HCL-V
+965-966	Hodgkin lymphomas		0.56	8567	Hodgkin's lymphoma
+9651/3	Hodgkin lymphoma, lymphocyte-rich	Classical Hodgkin lymphoma, lymphocyte-rich|Hodgkin disease, lymphocyte predominance, NOS|Hodgkin disease, lymphocyte predominance, diffuse|Hodgkin disease, lymphocytic-histiocytic predominance	0.56	8543	Hodgkin's lymphoma, lymphocytic-histiocytic predominance
+9661/3	Hodgkin granuloma		0.56	8651	Hodgkin's granuloma
+967-972	Non-hodgkin lymphomas		0.77	0060060	non-Hodgkin lymphoma
+9671/3	Lymphoplasmacytic lymphoma	Immunocytoma|Malignant lymphoma, lymphoplasmacytoid|Malignant lymphoma, plasmacytoid|Plasmacytic lymphoma	0.77	0050747	lymphoplasmacytic lymphoma
+9673/3	Mantle cell lymphoma	Malignant lymphoma, centrocytic|Malignant lymphoma, lymphocytic, intermediate differentiation, diffuse|Malignant lymphomatous polyposis|Mantle zone lymphoma	0.77	0050746	mantle cell lymphoma
+9687/3	Burkitt lymphoma, NOS	Acute leukemia, Burkitt type|Acute lymphoblastic leukemia, mature B-cell type|B-ALL|Burkitt cell leukemia|Burkitt tumor|Burkitt-like lymphoma with 11q aberration|Burkitt-like lymphoma, NOS|FAB L3|Malignant lymphoma, small noncleaved, Burkitt type|Malignant lymphoma, undifferentiated, Burkitt type	0.56	0080630	B-lymphoblastic leukemia/lymphoma
+9699/3	Marginal zone B-cell lymphoma, NOS	BALT lymphoma|Bronchus-associated lymphoid tissue lymphoma|Extranodal marginal zone lymphoma of mucosa-associated lymphoid tissue|MALT lymphoma|Marginal zone lymphoma, NOS|Monocytoid B-cell lymphoma|Mucosa-associated lymphoid tissue lymphoma|Nodal marginal zone lymphoma|Primary choroidal lymphoma|SALT lymphoma|Skin-associated lymphoid tissue lymphoma	0.78	0050909	MALT lymphoma
+9700/3	Mycosis fungoides	Granulomatous slack skin|Pagetoid reticulosis	0.77	8691	mycosis fungoides
+9701/3	Sezary syndrome	Sezary disease	0.56	8541	Sezary's disease
+9705/3	Angioimmunoblastic T-cell lymphoma	Angioimmunoblastic lymphoma|Peripheral T-cell lymphoma, AILD (Angioimmunoblastic Lymphadenopathy with Dysproteinemia)	0.77	0111147	angioimmunoblastic T-cell lymphoma
+9715/3	Anaplastic large cell lymphoma, ALK negative	Breast implant-associated anaplastic large cell lymphoma	0.77	0070333	breast implant-associated anaplastic large cell lymphoma
+973	Plasma cell neoplasms		0.77	6536	plasma cell neoplasm
+9731/3	Plasmacytoma, NOS	Plasma cell tumor|Plasmacytoma of bone|Solitary myeloma|Solitary plasmacytoma	0.56	3721	plasmacytoma
+9732/3	Plasma cell myeloma	Multiple myeloma|Myeloma, NOS|Myelomatosis	0.77	9538	multiple myeloma
+9733/3	Plasma cell leukemia	Plasmacytic leukemia	0.77	9513	plasma cell leukemia
+9734/3	Plasmacytoma, extramedullary	Extraosseous plasmacytoma	0.55	3720	extramedullary plasmacytoma
+9735/3	Plasmablastic lymphoma		0.77	0080779	plasmablastic lymphoma
+974	Mast cell neoplasms		0.77	3664	mast cell neoplasm
+9740/1	Mastocytoma, NOS	Cutaneous mastocytosis, NOS|Diffuse cutaneous mastocytosis|Extracutaneous mastocytoma|Mast cell tumor, NOS|Solitary mastocytoma of skin|Urticaria pigmentosa	0.77	3665	diffuse cutaneous mastocytosis
+9741/1	Indolent systemic mastocytosis		0.77	4660	indolent systemic mastocytosis
+9741/3	Malignant mastocytosis	Aggressive systemic mastocytosis|Systemic mastocytosis with AHNMD|Systemic mastocytosis with associated hematological clonal non-mast cell disorder|Systemic tissue mast cell disease	0.77	4798	aggressive systemic mastocytosis
+9749/3	Erdheim-Chester disease		0.78	4329	Erdheim-Chester disease
+9750/3	Malignant histiocytosis	Histiocytic medullary reticulosis	0.55	3354	fibrosarcoma of bone
+9751/3	Langerhans cell histiocytosis, disseminated	Acute progressive histiocytosis X|Eosinophilic granuloma|Hand-Schuller-Christian disease|Histiocytosis X, NOS|Langerhans cell granulomatosis|Letterer-Siwe disease|Nonlipid reticuloendotheliosis	0.56	2571	Langerhans-cell histiocytosis
+9756/3	Langerhans cell sarcoma		0.78	7146	Langerhans cell sarcoma
+9757/3	Interdigitating dendritic cell sarcoma	Dendritic cell sarcoma, NOS|Indeterminate dendritic cell tumor|Interdigitating cell sarcoma	0.77	7848	interdigitating dendritic cell sarcoma
+9758/3	Follicular dendritic cell sarcoma	Follicular dendritic cell tumor	0.77	6262	follicular dendritic cell sarcoma
+9761/3	Waldenstrom macroglobulinemia		0.55	0060901	Waldenstroem's macroglobulinemia
+9762/3	Heavy chain disease, NOS	Alpha heavy chain disease|Franklin disease|Gamma heavy chain disease|Mu heavy chain disease	0.77	0060127	gamma heavy chain disease
+9765/1	Monoclonal gammopathy of undetermined significance, NOS	MGUS|Monoclonal gammopathy, NOS	0.56	7442	monoclonal gammopathy of uncertain significance
+980-994	Leukemias		0.76	1240	leukemia
+9801/3	Acute leukemia, NOS	Blast cell leukemia|Stem cell leukemia|Undifferentiated leukemia	0.55	12603	acute leukemia
+981-983	Lymphoid leukemias		0.77	1037	lymphoid leukemia
+9823/3	B-cell chronic lymphocytic leukemia/small lymphocytic lymphoma	Chronic lymphatic leukemia|Chronic lymphocytic leukemia|Chronic lymphocytic leukemia, B-cell type|Chronic lymphoid leukemia|Malignant lymphoma, lymphocytic, NOS|Malignant lymphoma, lymphocytic, diffuse, NOS|Malignant lymphoma, lymphocytic, well differentiated, diffuse|Malignant lymphoma, small B lymphocytic, NOS|Malignant lymphoma, small cell diffuse|Malignant lymphoma, small cell, NOS|Malignant lymphoma, small lymphocytic, NOS|Malignant lymphoma, small lymphocytic, diffuse	0.77	1040	chronic lymphocytic leukemia
+9827/3	Adult T-cell leukemia/lymphoma (HTLV-1 positive)	Adult T-cell leukemia|Adult T-cell lymphoma|Adult T-cell lymphoma/leukemia	0.77	0050523	adult T-cell leukemia
+984-993	Myeloid leukemias		0.77	8692	myeloid leukemia
+9840/3	Acute erythroid leukemia	AML M6|Acute erythremia|Acute erythremic myelosis|Acute myeloid leukemia, M6 type|Di Guglielmo disease|Erythremic myelosis, NOS|Erythroleukemia|FAB M6|M6A|M6B	0.77	0080780	acute erythroid leukemia
+9860/3	Myeloid leukemia, NOS	Aleukemic granulocytic leukemia|Aleukemic monocytic leukemia|Aleukemic myelogenous leukemia|Aleukemic myeloid leukemia|Chronic monocytic leukemia|Eosinophilic leukemia, NOS|Granulocytic leukemia, NOS|Monocytic leukemia, NOS|Myelocytic leukemia, NOS|Myelogenous leukemia, NOS|Myelomonocytic leukemia, NOS|Non-lymphocytic leukemia, NOS|Subacute granulocytic leukemia|Subacute monocytic leukemia|Subacute myelogenous leukemia|Subacute myeloid leukemia	0.77	8593	chronic monocytic leukemia
+9861/3	Acute myeloid leukemia, NOS	Acute granulocytic leukemia|Acute myelocytic leukemia|Acute myelogenous leukemia|Acute non-lymphocytic leukemia	0.55	9119	acute myeloid leukemia
+9870/3	Acute basophilic leukemia		0.77	0080795	acute basophilic leukemia
+9872/3	Acute myeloid leukemia, minimal differentiation	Acute myeloblastic leukemia|FAB M0	0.55	9119	acute myeloid leukemia
+9891/3	Acute monocytic leukemia	Acute monoblastic and monocytic leukemia|Acute monoblastic leukemia|FAB M5|Monoblastic leukemia, NOS	0.77	8864	acute monocytic leukemia
+9898/1	Transient abnormal myelopoiesis		0.55	0060888	transient myeloproliferative syndrome
+9898/3	Myeloid leukemia associated with Down syndrome		0.77	0080798	myeloid leukemia associated with Down Syndrome
+9930/3	Myeloid sarcoma	Chloroma|Granulocytic sarcoma	0.77	8683	myeloid sarcoma
+9948/3	Aggressive NK-cell leukemia		0.77	1035	aggressive NK-cell leukemia
+995-996	Myeloproliferative neoplasms		0.77	2226	myeloproliferative neoplasm
+9950/3	Polycythemia vera	Chronic erythremia|Polycythemia rubra vera|Proliferative polycythemia	0.77	8997	polycythemia vera
+9961/3	Primary myelofibrosis	Agnogenic myeloid metaplasia|Chronic idiopathic myelofibrosis|Megakaryocytic myelosclerosis|Myelofibrosis as a result of myeloproliferative disease|Myelofibrosis with myeloid metaplasia|Myelosclerosis with myeloid metaplasia	0.56	4971	myelofibrosis
+9962/3	Essential thrombocythemia	Essential hemorrhagic thrombocythemia|Idiopathic hemorrhagic thrombocythemia|Idiopathic thrombocythemia	0.77	2224	essential thrombocythemia
+9963/3	Chronic neutrophilic leukemia		0.77	0080187	chronic neutrophilic leukemia
+9964/3	Chronic eosinophilic leukemia	Hypereosinophilic syndrome	0.77	0080367	chronic eosinophilic leukemia
+998-999	Myelodysplastic syndromes		0.77	0050908	myelodysplastic syndrome
