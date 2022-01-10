@@ -8,6 +8,11 @@
       }
     ]
   },
+  "Python": {
+    "Version": "3.9.9",
+    "Type": "virtualenv",
+    "Name": "./pyenv"
+  },
   "Packages": {
     "DBI": {
       "Package": "DBI",
