@@ -87,4 +87,10 @@ WHERE {
         )
     }
 
+    # identiy axioms with multiple restrictions
+    OPTIONAL {
+        FILTER( ?type = owl:Class && isBlank(?intersect_target) )
+        BIND ( "...complex axiom..." AS ?intOf_member )
+    }
+
 } GROUP BY ?class ?eq_class
