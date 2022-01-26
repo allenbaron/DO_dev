@@ -7,6 +7,8 @@ PREFIX owl: <http://www.w3.org/2002/07/owl#>
 
 SELECT ?id ?label ?eq_class ?intersect_target ?parentish_label ?onProperty ?onProp_label
         ?some ?some_label ?some_type
+        # only multi-restriction axioms will have these
+        ?intersect_target2 ?onProperty2 ?onProp_label2 ?some2 ?some_label2 ?some_type2
 WHERE {
     # identify all equivalentClass axioms
     ?class oboInOwl:id ?id ;
@@ -15,33 +17,66 @@ WHERE {
     # get all members of intersection (assumed type)
     ?eq_class owl:intersectionOf / ( rdf:first | (rdf:rest/rdf:first)+ ) ?intersect_target .
     ?intersect_target a ?type .
-    
-    # get labels for defined class members
+
+    # get labels for classes
     OPTIONAL {
-        FILTER( ?type = owl:Class )
+        FILTER( ?type = owl:Class && !isBlank(?intersect_target) )
         ?intersect_target rdfs:label ?parentish_label
     }
 
     # get details from Restrictions
     OPTIONAL {
+
         FILTER( ?type = owl:Restriction )
         ?intersect_target owl:onProperty ?onProperty ;
                             owl:someValuesFrom ?some .
         ?onProperty rdfs:label ?onProp_label .
-        
+
         # get labels for defined classes
         OPTIONAL {
             FILTER( !isBlank(?some) )
             ?some rdfs:label ?some_label .
         }
-        
+
         # get grouping type for blank classes (unions/intersections)
         OPTIONAL {
             FILTER( isBlank(?some) )
             ?some ?some_type ?BLANK_set . 
             VALUES ?some_type { owl:unionOf owl:intersectionOf }
         }
-        
+
+    }
+
+    # step into axioms with multiple restrictions (blank class) & get all the same details
+    OPTIONAL {
+
+        FILTER( ?type = owl:Class && isBlank(?intersect_target) )
+        ?intersect_target (owl:intersectionOf|owl:unionOf) / ( rdf:first | (rdf:rest/rdf:first)+ ) ?intersect_target2 .
+        ?intersect_target2 a ?type2 .
+
+        # get details from Restrictions
+        OPTIONAL {
+
+            FILTER( ?type2 = owl:Restriction )
+            ?intersect_target2 owl:onProperty ?onProperty2 ;
+                                owl:someValuesFrom ?some2 .
+            ?onProperty2 rdfs:label ?onProp_label2 .
+
+            # get labels for defined classes
+            OPTIONAL {
+                FILTER( !isBlank(?some2) )
+                ?some2 rdfs:label ?some_label2 .
+            }
+
+            # get grouping type for blank classes (unions/intersections)
+            OPTIONAL {
+                FILTER( isBlank(?some2) )
+                ?some2 ?some_type2 ?BLANK_set .
+                VALUES ?some_type2 { owl:unionOf owl:intersectionOf }
+            }
+
+        }
+
     }
 
 }
