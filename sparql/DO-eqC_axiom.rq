@@ -58,7 +58,12 @@ WHERE {
             ?some ?set_type ?BLANK_set . 
             VALUES ?set_type { owl:unionOf owl:intersectionOf }
             # format: 'unionOf|intersectionOf'
-            BIND( REPLACE( STR(?set_type), ".*owl#", "" ) AS ?restriction_class )
+            BIND(
+                CONCAT(
+                    REPLACE( STR(?set_type), ".*owl#", "" ),
+                    "..."
+                ) AS ?restriction_class
+            )
         }
         
         # format onProperty label: '<property label> (<property_id>)'
@@ -81,4 +86,5 @@ WHERE {
             ) AS ?intOf_member
         )
     }
+
 } GROUP BY ?class ?eq_class
