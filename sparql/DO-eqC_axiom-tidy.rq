@@ -1,4 +1,6 @@
-# return DO classes that have an equivalent statement
+# return DO classes that have an equivalent statement, with human readable axioms
+# by J. Allen Baron, 2022-01-26
+# related to DO-eqC_axiom.rq
 
 PREFIX rdf: <http://www.w3.org/1999/02/22-rdf-syntax-ns#>
 PREFIX rdfs: <http://www.w3.org/2000/01/rdf-schema#>
