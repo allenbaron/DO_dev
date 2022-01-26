@@ -1,0 +1,47 @@
+# return DO classes that have an equivalent statement
+
+PREFIX rdf: <http://www.w3.org/1999/02/22-rdf-syntax-ns#>
+PREFIX rdfs: <http://www.w3.org/2000/01/rdf-schema#>
+PREFIX oboInOwl: <http://www.geneontology.org/formats/oboInOwl#>
+PREFIX owl: <http://www.w3.org/2002/07/owl#>
+
+SELECT ?id ?label ?eq_class ?intersect_target ?parentish_label ?onProperty ?onProp_label
+        ?some ?some_label ?some_type
+WHERE {
+    # identify all equivalentClass axioms
+    ?class oboInOwl:id ?id ;
+        rdfs:label ?label ;
+        owl:equivalentClass ?eq_class .
+    # get all members of intersection (assumed type)
+    ?eq_class owl:intersectionOf / ( rdf:first | (rdf:rest/rdf:first)+ ) ?intersect_target .
+    ?intersect_target a ?type .
+    
+    # get labels for defined class members
+    OPTIONAL {
+        FILTER( ?type = owl:Class )
+        ?intersect_target rdfs:label ?parentish_label
+    }
+
+    # get details from Restrictions
+    OPTIONAL {
+        FILTER( ?type = owl:Restriction )
+        ?intersect_target owl:onProperty ?onProperty ;
+                            owl:someValuesFrom ?some .
+        ?onProperty rdfs:label ?onProp_label .
+        
+        # get labels for defined classes
+        OPTIONAL {
+            FILTER( !isBlank(?some) )
+            ?some rdfs:label ?some_label .
+        }
+        
+        # get grouping type for blank classes (unions/intersections)
+        OPTIONAL {
+            FILTER( isBlank(?some) )
+            ?some ?some_type ?BLANK_set . 
+            VALUES ?some_type { owl:unionOf owl:intersectionOf }
+        }
+        
+    }
+
+}
