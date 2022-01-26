@@ -5,7 +5,7 @@ PREFIX rdfs: <http://www.w3.org/2000/01/rdf-schema#>
 PREFIX oboInOwl: <http://www.geneontology.org/formats/oboInOwl#>
 PREFIX owl: <http://www.w3.org/2002/07/owl#>
 
-SELECT ?id ?label ?eq_class ?intOf_member
+SELECT ?id ?label (group_concat(?intOf_member) as ?eq_axiom)
 WHERE {
     # identify all equivalentClass axioms
     ?class oboInOwl:id ?id ;
@@ -81,4 +81,4 @@ WHERE {
             ) AS ?intOf_member
         )
     }
-}
+} GROUP BY ?class ?eq_class
