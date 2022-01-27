@@ -1,0 +1,93 @@
+# Return detailed subClassOf Axioms
+# By J. Allen Baron, 2022-01-26
+
+# NOTE:
+# single letter variables are placeholders and ignored
+
+PREFIX owl: <http://www.w3.org/2002/07/owl#>
+PREFIX rdfs: <http://www.w3.org/2000/01/rdf-schema#>
+
+SELECT ?id ?label ?parent ?type
+		?group_type ?group_member ?member_type ?mr_prop ?mr_target ?mc_group_type
+		?pr_prop ?pr_target ?rc_group_type ?rc_group_member ?rc_member_type
+WHERE {
+	?class oboInOwl:id ?id ;
+        rdfs:label ?label ;
+        rdfs:subClassOf ?parent .
+	FILTER( isBlank(?parent) )
+	FILTER( STRSTARTS( STR(?class), "http://purl.obolibrary.org/obo/DOID_" ) )
+	
+	?parent a ?type .
+	
+	# extract info from top-level blank classes
+	OPTIONAL {
+	
+		# identify grouping type and members (likely classes/restrictions)
+		FILTER( ?type = owl:Class )
+		?parent ?group_type ?x ;
+			(owl:intersectionOf|owl:unionOf) / ( rdf:first | (rdf:rest/rdf:first)+ ) ?group_member .
+		VALUES ?group_type { owl:intersectionOf owl:unionOf }
+		?group_member a ?member_type .
+	
+		# list ONLY group type for level-2 blank classes (member class = mc)
+		OPTIONAL {
+			FILTER( isBlank(?group_member) && ?member_type = owl:Class )
+			?group_member ?mc_group_type ?x .
+			VALUES ?mc_group_type { owl:intersectionOf owl:unionOf }
+		}
+	
+		# list directly-linked member restriction (mr) properties and targets
+		OPTIONAL { 
+			FILTER( ?member_type = owl:Restriction )
+			?group_member ?mr_prop ?mr_target
+			VALUES ?member_prop {
+				owl:onProperty
+				owl:someValuesFrom
+				owl:onClass
+				owl:intersectionOf
+				owl:unionOf
+				owl:minQualifiedCardinality
+				owl:qualifiedCardinality
+			}
+		}
+	
+	}
+	
+	# extract info from top-level Restrictions
+	OPTIONAL {
+	
+		# list directly-linked parent restriction (pr) properties and targets
+		FILTER( ?type = owl:Restriction )
+		?parent ?pr_prop ?pr_target .
+		VALUES ?pr_prop {
+			owl:onProperty
+			owl:someValuesFrom
+			owl:onClass
+			owl:intersectionOf
+			owl:unionOf
+			owl:minQualifiedCardinality
+			owl:qualifiedCardinality
+		}
+	
+		# extract info from level-2
+		?pr_target a ?pr_target_type .
+	
+		# list ONLY group type for level-2 blank classes (member class = mc)
+		OPTIONAL {
+			FILTER( isBlank(?pr_target) && ?pr_target_type = owl:Class )
+			?pr_target ?rc_group_type ?x .
+			VALUES ?rc_group_type { owl:intersectionOf owl:unionOf }
+		}
+	
+		# identify grouping type for level-2 blank classes and members (likely classes/restrictions)
+		OPTIONAL { 
+			FILTER( isBlank(?pr_target) && ?pr_target_type = owl:Class )
+			?pr_target ?rc_group_type ?x ;
+				(owl:intersectionOf|owl:unionOf) / ( rdf:first | (rdf:rest/rdf:first)+ ) ?rc_group_member .
+			VALUES ?rc_group_type { owl:intersectionOf owl:unionOf }
+			?rc_group_member a ?rc_member_type .
+		}
+	
+	}
+	
+}
