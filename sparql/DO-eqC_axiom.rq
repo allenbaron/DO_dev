@@ -31,7 +31,7 @@ WHERE {
         FILTER( ?type = owl:Restriction )
         ?intersect_target owl:onProperty ?onProperty ;
                             owl:someValuesFrom ?some .
-        ?onProperty rdfs:label ?onProp_label .
+        OPTIONAL { ?onProperty rdfs:label ?onProp_label . }
 
         # get labels for defined classes
         OPTIONAL {
@@ -61,7 +61,7 @@ WHERE {
             FILTER( ?type2 = owl:Restriction )
             ?intersect_target2 owl:onProperty ?onProperty2 ;
                                 owl:someValuesFrom ?some2 .
-            ?onProperty2 rdfs:label ?onProp_label2 .
+            OPTIONAL { ?onProperty2 rdfs:label ?onProp_label2 . }
 
             # get labels for defined classes
             OPTIONAL {
