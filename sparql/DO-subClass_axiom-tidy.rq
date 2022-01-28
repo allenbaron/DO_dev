@@ -17,7 +17,7 @@ WHERE {
 
 	?parent a ?type .
 
-	############## extract info from top-level blank classes (c) ###############
+############### extract info from top-level blank classes (c) #################
 	OPTIONAL {
 		FILTER( ?type = owl:Class )
 		# identify group type
@@ -166,12 +166,12 @@ WHERE {
 
 	}
 
-	# extract info from top-level Restrictions
+############### extract info from top-level Restrictions (r) #################
 	OPTIONAL {
-		# list directly-linked parent restriction (pr) properties and targets
+		# list directly-linked properties and targets
 		FILTER( ?type = owl:Restriction )
 		BIND( "" AS ?group ) # needed to avoid errors in SELECT CONCAT() stmt
-		# owl:onProperty handler
+		##### owl:onProperty handler
 		OPTIONAL {
 			?parent owl:onProperty ?r_prop .
 			OPTIONAL { ?r_prop rdfs:label ?rp_label . }
@@ -186,7 +186,7 @@ WHERE {
 				) AS ?rp
 			)
 		}
-		# owl:someValuesFrom handler
+		##### owl:someValuesFrom handler
 		OPTIONAL {
 			?parent owl:someValuesFrom ?r_some .
 			# for defined classes
@@ -204,7 +204,7 @@ WHERE {
 					) AS ?r_target
 				)
 			}
-			# for level-2 blank classes (rc), use group type (as if it were the member)
+			## for level-2 blank classes (rc), use group type (as if it were the member)
 			OPTIONAL {
 				FILTER( isBlank(?r_some) )
 				# identify group type
@@ -220,7 +220,7 @@ WHERE {
 				# ?r_some (owl:intersectionOf|owl:unionOf) / ( rdf:first | (rdf:rest/rdf:first)+ ) ?rs_member .
 			}
 		}
-		# owl:onClass handler
+		##### owl:onClass handler
 		OPTIONAL {
 			?parent owl:onClass ?r_onClass .
 			# get qualifier
@@ -247,7 +247,7 @@ WHERE {
 					) AS ?ro_target
 				)
 			}
-			# for level-2 blank classes (rc), use group type (as if it were the member)
+			## for level-2 blank classes (rc), use group type (as if it were the member)
 			OPTIONAL {
 				FILTER( isBlank(?r_onClass) )
 				# identify group type
