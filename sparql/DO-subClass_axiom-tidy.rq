@@ -1,0 +1,283 @@
+# Return detailed subClassOf Axioms
+# By J. Allen Baron, 2022-01-26
+
+# NOTE:
+# single letter variables are placeholders and ignored
+
+PREFIX owl: <http://www.w3.org/2002/07/owl#>
+PREFIX rdfs: <http://www.w3.org/2000/01/rdf-schema#>
+
+SELECT ?id ?label ( CONCAT( ?group, GROUP_CONCAT(?member) ) AS ?subClassOf )
+WHERE {
+	?class oboInOwl:id ?id ;
+        rdfs:label ?label ;
+        rdfs:subClassOf ?parent .
+	FILTER( isBlank(?parent) )
+	FILTER( STRSTARTS( STR(?class), "http://purl.obolibrary.org/obo/DOID_" ) )
+	
+	?parent a ?type .
+	
+	############## extract info from top-level blank classes (c) ###############
+	OPTIONAL {
+		FILTER( ?type = owl:Class )
+		# identify group type
+		OPTIONAL {
+			?parent owl:intersectionOf ?c .
+			BIND( "intersectionOf: " AS ?group )
+		}
+		OPTIONAL {
+			?parent owl:unionOf ?c .
+			BIND( "unionOf: " AS ?group )
+		}
+	
+		# identify members (lvl2) 
+		?parent (owl:intersectionOf|owl:unionOf) / ( rdf:first | (rdf:rest/rdf:first)+ ) ?c_member .
+		?c_member a ?cm_type .
+		
+		#### for level-2 defined classes, use label ####
+		OPTIONAL {
+			FILTER( ?cm_type = owl:Class && !isBlank(?c_member) )
+			OPTIONAL { ?c_member rdfs:label ?cm_label . }
+			# format: '<label> (<clipped URI>)'
+			BIND(
+				CONCAT(
+					"[",
+					?cm_label,
+					" (",
+					REPLACE( STR(?c_member), ".*/", "" ),
+					")]"
+				) AS ?member
+			)
+		}
+		
+		#### for level-2 blank classes (cc), use group type (as if it were the member) ####
+		OPTIONAL {
+			FILTER( ?cm_type = owl:Class && isBlank(?c_member) )
+			OPTIONAL {
+				?c_member owl:intersectionOf ?cc .
+				BIND( REPLACE( STR(?cc), "(N[0-9a-z]{5}).*", "[intersectionOf:$0]" ) AS ?member )
+			}
+			OPTIONAL {
+				?c_member owl:unionOf ?cc .
+				BIND( REPLACE( STR(?cc), "(N[0-9a-z]{5}).*", "[unionOf:$0]" ) AS ?member )
+			}
+		}
+		
+		#### for level-2 restrictions (cr): list properties and targets (lvl3) ####
+		OPTIONAL {
+			FILTER( ?cm_type = owl:Restriction )
+			# owl:onProperty handler
+			OPTIONAL {
+				?c_member owl:onProperty ?cr_prop .
+        		OPTIONAL { ?cr_prop rdfs:label ?crp_label . }
+				# format: '<label> (<clipped URI>)'
+				BIND( 
+					CONCAT(
+						"'",
+						?crp_label,
+						" (",
+						REPLACE( STR(?cr_prop), ".*/", "" ),
+						")'"
+					) AS ?crp
+				)
+			}
+			# owl:someValuesFrom handler
+			OPTIONAL {
+				?c_member owl:someValuesFrom ?cr_some .
+				# for defined classes
+		        OPTIONAL {
+		            FILTER( !isBlank(?cr_some) )
+		            ?cr_some rdfs:label ?crs_label .
+					# format: '<label> (<clipped URI>)'
+		            BIND(
+		                CONCAT(
+							"some '",
+		                    ?crs_label,
+		                    " (",
+		                    REPLACE( STR(?cr_some), ".*[/#]", "" ),
+		                    ")'"
+		                ) AS ?cr_target
+		            )
+		        }
+				# for level-3 blank classes (crc), use group type (as if it were the member)
+				OPTIONAL {
+					FILTER( isBlank(?cr_some) )
+					# identify group type
+					OPTIONAL {
+						?cr_some owl:intersectionOf ?crc
+						BIND( REPLACE( STR(?crc), "(N[0-9a-z]{5}).*", "some 'intersectionOf:$0'" ) AS ?member )
+					}
+					OPTIONAL {
+						?cr_some owl:unionOf ?crc
+						BIND( REPLACE( STR(?crc), "(N[0-9a-z]{5}).*", "some 'unionOf:$0'" ) AS ?member )
+					}
+					# # identify members 
+					# ?cr_some (owl:intersectionOf|owl:unionOf) / ( rdf:first | (rdf:rest/rdf:first)+ ) ?crs_member .
+				}
+			}
+			# owl:onClass handler
+			OPTIONAL {
+				?c_member owl:onClass ?cr_onClass .
+				# get qualifier
+				OPTIONAL {
+					?c_member owl:minQualifiedCardinality ?cr_n .
+					BIND( CONCAT( "min ", STR(?cr_n) ) AS ?cro_qual )
+				}
+				OPTIONAL {
+					?c_member owl:qualifiedCardinality ?cr_n .
+					BIND( CONCAT( "exactly ", STR(?cr_n) ) AS ?cro_qual )
+				}
+				# for defined classes, use label
+		        OPTIONAL {
+		            FILTER( !isBlank(?cr_onClass) )
+		            ?cr_onClass rdfs:label ?cro_label .
+					# format: '<label> (<clipped URI>)'
+		            BIND(
+		                CONCAT(
+							"'",
+		                    ?cro_label,
+		                    " (",
+		                    REPLACE( STR(?cr_onClass), ".*[/#]", "" ),
+		                    ")'"
+		                ) AS ?cro_target
+		            )
+		        }
+				# for level-3 blank classes (crc), use group type (as if it were the member)
+				OPTIONAL {
+					FILTER( isBlank(?cr_onClass) )
+					# identify group type
+					OPTIONAL {
+						?cr_onClass owl:intersectionOf ?crc
+						BIND( REPLACE( STR(?crc), "(N[0-9a-z]{5}).*", "'intersectionOf:$0'" ) AS ?cro_target )
+					}
+					OPTIONAL {
+						?cr_onClass owl:unionOf ?crc
+						BIND( REPLACE( STR(?crc), "(N[0-9a-z]{5}).*", "'unionOf:$0'" ) AS ?cro_target )
+					}
+					# # identify members 
+					# ?cr_onClass (owl:intersectionOf|owl:unionOf) / ( rdf:first | (rdf:rest/rdf:first)+ ) ?cro_member .
+				}
+				# create full onClass label
+				BIND( CONCAT( ?cro_qual, ?cro_target ) AS ?cr_target )
+			}
+			# create full restriction label
+			BIND( CONCAT( "[", ?crp, " ", ?cr_target, "]" ) AS ?member )
+		}
+		
+	}
+	
+	# extract info from top-level Restrictions
+	OPTIONAL {
+		# list directly-linked parent restriction (pr) properties and targets
+		FILTER( ?type = owl:Restriction )
+		BIND( "" AS ?group )
+	# 	OPTIONAL { ?parent owl:onProperty ?pr_onProp . }
+	# 
+	# 	# owl:someValuesFrom handler
+	# 	OPTIONAL {
+	# 		?parent owl:someValuesFrom ?pr_some .
+	# 		# for blank classes:
+	# 		OPTIONAL {
+	# 			FILTER( isBlank(?pr_some) )
+	# 			# identify group type
+	# 			OPTIONAL {
+	# 				?pr_some owl:intersectionOf ?var4
+	# 				BIND( owl:intersectionOf AS ?pr_some_group )
+	# 			}
+	# 			OPTIONAL {
+	# 				?pr_some owl:unionOf ?var4
+	# 				BIND( owl:unionOf AS ?pr_some_group )
+	# 			}
+	# 			# identify members 
+	# 			?pr_some (owl:intersectionOf|owl:unionOf) / ( rdf:first | (rdf:rest/rdf:first)+ ) ?pr_some_member .
+	# 		}
+	# 	}
+	# 
+	# 	# owl:onClass handler
+	# 	OPTIONAL { 
+	# 		?parent owl:onClass ?pr_onClass .
+	# 		# for blank classes:
+	# 		OPTIONAL {
+	# 			FILTER( isBlank(?pr_onClass) )
+	# 			# identify group type
+	# 			OPTIONAL {
+	# 				?pr_onClass owl:intersectionOf ?var6
+	# 				BIND( owl:intersectionOf AS ?pr_onClass_group )
+	# 			}
+	# 			OPTIONAL {
+	# 				?pr_onClass owl:unionOf ?var6
+	# 				BIND( owl:unionOf AS ?pr_onClass_group )
+	# 			}
+	# 			# identify members 
+	# 			?pr_onClass (owl:intersectionOf|owl:unionOf) / ( rdf:first | (rdf:rest/rdf:first)+ ) ?pr_onClass_member .
+	# 		}
+	# 	}
+
+		# drop these --> they don't exist at this level, they are down 1 more
+		# OPTIONAL { 
+		# 	?parent owl:intersectionOf ?pr_group_member .
+		# 	BIND( owl:intersectionOf AS ?pr_group )
+		# }
+		# OPTIONAL { 
+		# 	?parent owl:unionOf ?pr_group_member .
+		# 	BIND( owl:unionOf AS ?pr_group )
+		# }
+		
+		# drop these --> not that important
+		# OPTIONAL { 
+		# 	?parent owl:minQualifiedCardinality ?pr_target .
+		# 	BIND( owl:minQualifiedCardinality AS ?pr_prop )
+		# }
+		# OPTIONAL { 
+		# 	?parent owl:qualifiedCardinality ?pr_target .
+		# 	BIND( owl:qualifiedCardinality AS ?pr_prop )
+		# }
+		
+		# list directly-linked parent restriction (pr) properties and targets
+		# 	--> same as series of OPTIONALs above but MUCH SLOWER!!!
+		# ?parent ?pr_prop ?pr_target .
+		# VALUES ?pr_prop {
+		# 	owl:onProperty
+		# 	owl:someValuesFrom
+		# 	owl:onClass
+		# 	owl:intersectionOf
+		# 	owl:unionOf
+		# 	owl:minQualifiedCardinality
+		# 	owl:qualifiedCardinality
+		# }
+	
+		# # extract info from level-2
+		# ?pr_target a ?pr_target_type .
+		# 
+		# # list ONLY group type for level-2 blank classes (member class = mc)
+		# OPTIONAL {
+		# 	FILTER( isBlank(?pr_target) && ?pr_target_type = owl:Class )
+		# 	OPTIONAL {
+		# 		?pr_target owl:intersectionOf ?pr_some
+		# 		BIND( owl:intersectionOf AS ?group_type )
+		# 	}
+		# 	OPTIONAL {
+		# 		?pr_target owl:unionOf ?pr_some
+		# 		BIND( owl:unionOf AS ?group_type )
+		# 	}
+		# }
+	
+		# # identify group type for level-2 blank classes and members (likely classes/restrictions)
+		# OPTIONAL { 
+		# 	FILTER( isBlank(?pr_target) && ?pr_target_type = owl:Class )
+		# 	OPTIONAL {
+		# 		?pr_target owl:intersectionOf ?pr_some
+		# 		BIND( owl:intersectionOf AS ?group_type )
+		# 	}
+		# 	OPTIONAL {
+		# 		?pr_target owl:unionOf ?pr_some
+		# 		BIND( owl:unionOf AS ?group_type )
+		# 	}
+		# 	?pr_target (owl:intersectionOf|owl:unionOf) / ( rdf:first | (rdf:rest/rdf:first)+ ) ?rc_group_member .
+		# 	?rc_group_member a ?rc_member_type .
+		# }
+	}
+	
+}
+# create full lvl-1 class label
+GROUP BY ?class ?parent
