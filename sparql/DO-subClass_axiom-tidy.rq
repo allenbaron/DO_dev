@@ -171,7 +171,6 @@ WHERE {
 		# list directly-linked parent restriction (pr) properties and targets
 		FILTER( ?type = owl:Restriction )
 		BIND( "" AS ?group ) # needed to avoid errors in SELECT CONCAT() stmt
-
 		# owl:onProperty handler
 		OPTIONAL {
 			?parent owl:onProperty ?r_prop .
@@ -187,45 +186,84 @@ WHERE {
 				) AS ?rp
 			)
 		}
-
 		# owl:someValuesFrom handler
 		OPTIONAL {
-			?parent owl:someValuesFrom ?pr_some .
-			# for blank classes:
+			?parent owl:someValuesFrom ?r_some .
+			# for defined classes
 			OPTIONAL {
-				FILTER( isBlank(?pr_some) )
+				FILTER( !isBlank(?r_some) )
+				?r_some rdfs:label ?rs_label .
+				# format: '<label> (<clipped URI>)'
+				BIND(
+					CONCAT(
+						"some '",
+						?rs_label,
+						" (",
+						REPLACE( STR(?r_some), ".*[/#]", "" ),
+						")'"
+					) AS ?r_target
+				)
+			}
+			# for level-2 blank classes (rc), use group type (as if it were the member)
+			OPTIONAL {
+				FILTER( isBlank(?r_some) )
 				# identify group type
 				OPTIONAL {
-					?pr_some owl:intersectionOf ?var4
-					BIND( owl:intersectionOf AS ?pr_some_group )
+					?r_some owl:intersectionOf ?rc
+					BIND( REPLACE( STR(?rc), "(N[0-9a-z]{5}).*", "some 'intersectionOf:$1'" ) AS ?member )
 				}
 				OPTIONAL {
-					?pr_some owl:unionOf ?var4
-					BIND( owl:unionOf AS ?pr_some_group )
+					?cr_some owl:unionOf ?rc
+					BIND( REPLACE( STR(?rc), "(N[0-9a-z]{5}).*", "some 'unionOf:$1'" ) AS ?member )
 				}
-				# identify members
-				?pr_some (owl:intersectionOf|owl:unionOf) / ( rdf:first | (rdf:rest/rdf:first)+ ) ?pr_some_member .
+				# # identify members
+				# ?r_some (owl:intersectionOf|owl:unionOf) / ( rdf:first | (rdf:rest/rdf:first)+ ) ?rs_member .
 			}
 		}
-
 		# owl:onClass handler
 		OPTIONAL {
-			?parent owl:onClass ?pr_onClass .
-			# for blank classes:
+			?parent owl:onClass ?r_onClass .
+			# get qualifier
 			OPTIONAL {
-				FILTER( isBlank(?pr_onClass) )
+				?parent owl:minQualifiedCardinality ?r_n .
+				BIND( CONCAT( "min ", STR(?r_n) ) AS ?ro_qual )
+			}
+			OPTIONAL {
+				?parent owl:qualifiedCardinality ?r_n .
+				BIND( CONCAT( "exactly ", STR(?r_n) ) AS ?ro_qual )
+			}
+			# for defined classes, use label
+			OPTIONAL {
+				FILTER( !isBlank(?r_onClass) )
+				?r_onClass rdfs:label ?ro_label .
+				# format: '<label> (<clipped URI>)'
+				BIND(
+					CONCAT(
+						"'",
+						?ro_label,
+						" (",
+						REPLACE( STR(?r_onClass), ".*[/#]", "" ),
+						")'"
+					) AS ?ro_target
+				)
+			}
+			# for level-2 blank classes (rc), use group type (as if it were the member)
+			OPTIONAL {
+				FILTER( isBlank(?r_onClass) )
 				# identify group type
 				OPTIONAL {
-					?pr_onClass owl:intersectionOf ?var6
-					BIND( owl:intersectionOf AS ?pr_onClass_group )
+					?r_onClass owl:intersectionOf ?rc
+					BIND( REPLACE( STR(?rc), "(N[0-9a-z]{5}).*", "'intersectionOf:$1'" ) AS ?ro_target )
 				}
 				OPTIONAL {
-					?pr_onClass owl:unionOf ?var6
-					BIND( owl:unionOf AS ?pr_onClass_group )
+					?r_onClass owl:unionOf ?rc
+					BIND( REPLACE( STR(?rc), "(N[0-9a-z]{5}).*", "'unionOf:$1'" ) AS ?ro_target )
 				}
-				# identify members
-				?pr_onClass (owl:intersectionOf|owl:unionOf) / ( rdf:first | (rdf:rest/rdf:first)+ ) ?pr_onClass_member .
+				# # identify members
+				# ?r_onClass (owl:intersectionOf|owl:unionOf) / ( rdf:first | (rdf:rest/rdf:first)+ ) ?ro_member .
 			}
+			# create full onClass label
+			BIND( CONCAT( ?ro_qual, ?ro_target ) AS ?r_target )
 		}
 
 		drop these --> they don't exist at this level, they are down 1 more
