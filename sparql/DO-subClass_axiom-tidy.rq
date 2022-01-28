@@ -171,7 +171,22 @@ WHERE {
 		# list directly-linked parent restriction (pr) properties and targets
 		FILTER( ?type = owl:Restriction )
 		BIND( "" AS ?group ) # needed to avoid errors in SELECT CONCAT() stmt
-		OPTIONAL { ?parent owl:onProperty ?pr_onProp . }
+
+		# owl:onProperty handler
+		OPTIONAL {
+			?parent owl:onProperty ?r_prop .
+			OPTIONAL { ?r_prop rdfs:label ?rp_label . }
+			# format: '<label> (<clipped URI>)'
+			BIND(
+				CONCAT(
+					"'",
+					?rp_label,
+					" (",
+					REPLACE( STR(?r_prop), ".*/", "" ),
+					")'"
+				) AS ?rp
+			)
+		}
 
 		# owl:someValuesFrom handler
 		OPTIONAL {
