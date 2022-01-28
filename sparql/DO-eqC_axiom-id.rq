@@ -1,0 +1,19 @@
+# return count of equivalent classes for each DO term
+# by J. Allen Baron, 2022-01-28
+# related to DO-eqC_axiom.rq
+
+PREFIX rdf: <http://www.w3.org/1999/02/22-rdf-syntax-ns#>
+PREFIX rdfs: <http://www.w3.org/2000/01/rdf-schema#>
+PREFIX oboInOwl: <http://www.geneontology.org/formats/oboInOwl#>
+PREFIX owl: <http://www.w3.org/2002/07/owl#>
+
+SELECT ?id ?label (GROUP_CONCAT( ?members; separator = "|" ) AS ?eq_id)
+WHERE {
+    # identify all equivalentClass axioms
+    ?class oboInOwl:id ?id ;
+        rdfs:label ?label ;
+        owl:equivalentClass ?eq_class .
+
+    # get all members of group
+    ?eq_class (owl:intersectionOf|owl:unionOf) / ( rdf:first | (rdf:rest/rdf:first)+ ) ?members .
+} GROUP BY ?eq_class
