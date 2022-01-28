@@ -170,7 +170,7 @@ WHERE {
 	OPTIONAL {
 		# list directly-linked parent restriction (pr) properties and targets
 		FILTER( ?type = owl:Restriction )
-		BIND( "" AS ?group )
+		BIND( "" AS ?group ) # needed to avoid errors in SELECT CONCAT() stmt
 	# 	OPTIONAL { ?parent owl:onProperty ?pr_onProp . }
 	# 
 	# 	# owl:someValuesFrom handler
