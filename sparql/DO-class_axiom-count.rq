@@ -7,17 +7,25 @@ PREFIX rdfs: <http://www.w3.org/2000/01/rdf-schema#>
 PREFIX oboInOwl: <http://www.geneontology.org/formats/oboInOwl#>
 PREFIX owl: <http://www.w3.org/2002/07/owl#>
 
-SELECT ?id ?label ( COUNT(?eq_class) AS ?eq_axioms ) ( COUNT(?subClassOf) AS ?subClass_axioms )
+SELECT ?id ?label ?type ( COUNT(?axiom) AS ?n_axiom )
 
 WHERE {
     # identify all equivalentClass axioms
     ?class oboInOwl:id ?id ;
         rdfs:label ?label .
     FILTER( STRSTARTS( STR(?class), "http://purl.obolibrary.org/obo/DOID_" ) )
-    OPTIONAL { ?class owl:equivalentClass ?eq_class . }
-    OPTIONAL {
-        ?class rdfs:subClassOf ?subClassOf .
-        FILTER( isBlank(?subClassOf) )
+
+    # find equivalentClass axioms
+    {
+        ?class owl:equivalentClass ?axiom .
+        BIND( "equivalentClass" AS ?type )
+     }
+    UNION
+    # find subClassOf axioms
+    {
+        ?class rdfs:subClassOf ?axiom .
+        FILTER( isBlank(?axiom) )
+        BIND( "subClassOf" AS ?type )
     }
 
-} GROUP BY ?class
+} GROUP BY ?class ?type
