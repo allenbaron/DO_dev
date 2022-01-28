@@ -55,11 +55,11 @@ WHERE {
 			FILTER( ?cm_type = owl:Class && isBlank(?c_member) )
 			OPTIONAL {
 				?c_member owl:intersectionOf ?cc .
-				BIND( REPLACE( STR(?cc), "(N[0-9a-z]{5}).*", "[intersectionOf:$0]" ) AS ?member )
+				BIND( REPLACE( STR(?cc), "(N[0-9a-z]{5}).*", "[intersectionOf:$1]" ) AS ?member )
 			}
 			OPTIONAL {
 				?c_member owl:unionOf ?cc .
-				BIND( REPLACE( STR(?cc), "(N[0-9a-z]{5}).*", "[unionOf:$0]" ) AS ?member )
+				BIND( REPLACE( STR(?cc), "(N[0-9a-z]{5}).*", "[unionOf:$1]" ) AS ?member )
 			}
 		}
 		
@@ -105,11 +105,11 @@ WHERE {
 					# identify group type
 					OPTIONAL {
 						?cr_some owl:intersectionOf ?crc
-						BIND( REPLACE( STR(?crc), "(N[0-9a-z]{5}).*", "some 'intersectionOf:$0'" ) AS ?member )
+						BIND( REPLACE( STR(?crc), "(N[0-9a-z]{5}).*", "some 'intersectionOf:$1'" ) AS ?member )
 					}
 					OPTIONAL {
 						?cr_some owl:unionOf ?crc
-						BIND( REPLACE( STR(?crc), "(N[0-9a-z]{5}).*", "some 'unionOf:$0'" ) AS ?member )
+						BIND( REPLACE( STR(?crc), "(N[0-9a-z]{5}).*", "some 'unionOf:$1'" ) AS ?member )
 					}
 					# # identify members 
 					# ?cr_some (owl:intersectionOf|owl:unionOf) / ( rdf:first | (rdf:rest/rdf:first)+ ) ?crs_member .
@@ -148,11 +148,11 @@ WHERE {
 					# identify group type
 					OPTIONAL {
 						?cr_onClass owl:intersectionOf ?crc
-						BIND( REPLACE( STR(?crc), "(N[0-9a-z]{5}).*", "'intersectionOf:$0'" ) AS ?cro_target )
+						BIND( REPLACE( STR(?crc), "(N[0-9a-z]{5}).*", "'intersectionOf:$1'" ) AS ?cro_target )
 					}
 					OPTIONAL {
 						?cr_onClass owl:unionOf ?crc
-						BIND( REPLACE( STR(?crc), "(N[0-9a-z]{5}).*", "'unionOf:$0'" ) AS ?cro_target )
+						BIND( REPLACE( STR(?crc), "(N[0-9a-z]{5}).*", "'unionOf:$1'" ) AS ?cro_target )
 					}
 					# # identify members 
 					# ?cr_onClass (owl:intersectionOf|owl:unionOf) / ( rdf:first | (rdf:rest/rdf:first)+ ) ?cro_member .
