@@ -210,11 +210,11 @@ WHERE {
 				# identify group type
 				OPTIONAL {
 					?r_some owl:intersectionOf ?rc
-					BIND( REPLACE( STR(?rc), "(N[0-9a-z]{5}).*", "some 'intersectionOf:$1'" ) AS ?member )
+					BIND( REPLACE( STR(?rc), "(N[0-9a-z]{5}).*", "some 'intersectionOf:$1'" ) AS ?r_target )
 				}
 				OPTIONAL {
 					?cr_some owl:unionOf ?rc
-					BIND( REPLACE( STR(?rc), "(N[0-9a-z]{5}).*", "some 'unionOf:$1'" ) AS ?member )
+					BIND( REPLACE( STR(?rc), "(N[0-9a-z]{5}).*", "some 'unionOf:$1'" ) AS ?r_target )
 				}
 				# # identify members
 				# ?r_some (owl:intersectionOf|owl:unionOf) / ( rdf:first | (rdf:rest/rdf:first)+ ) ?rs_member .
