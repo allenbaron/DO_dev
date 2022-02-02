@@ -105,3 +105,36 @@ The approach most likely to succeed, be simple, and fast is direct extraction fr
 
 
 ## Final Approach: Direct Extraction from doid-edit.owl
+
+### Considerations
+
+I have a Python script with code that iterates through tags of a git repo. This was made for getting DO release information but is not generalizable as is. If possible, I'd prefer to do this in R because I just am not familiar enough with Python to get this done within the next 2 business days, which is the time I have remaining to extract this data. I might be able to write it as another python module inside the DO.utils R package but the interface between R and Python via `reticulate` is still pretty hard to manage/understand. The tidyverse team appears to use the R package `gert` for git management and, on quick glance, that looks like it could work.
+
+
+### Methods
+
+1. Create R function to read in doid-edit.owl file as lines.
+2. Create R `extract_*_axiom()` family of functions to do just that.
+
+As I started writing functions to iterate through git tags utilizing `gert` I discovered that it lacks the ability to checkout tags. While I found a workaround, creating temporary branches and checking those out, I then discovered that I could not easily sort tags by date. To do so requires `git_tag_list()` followed by iterating through the listed commits and extracting info with `git_commit_info()`. While this does get that information I need, that last function is extremely slow. It would take minutes just to get the tag date (and this takes no observable time in the python implementation).
+
+[2022-01-29] Given the challenges with using `gert` for iteration through git tags, I've decided to try my hand at python. The interface between R and Python via `reticulate` is way too confusing to be manageable at this point so I think my best bet is to create a stand alone Python package.
+
+3. Create placeholder files for a basic Python package, currently called "pyDOID".
+4. Create the `DOrepo` class that builds on the `git.Repo` class provided by GitPython.
+5. Convert the code that iterates through git tags from the script to the `tag_iterate()` method of `DOrepo`.
+
+At this point I realized it would likely be easier to create an interface between R and Python with a single Python package and I was already migrating or creating in pyDOID much of the functionality I'd intended to put in those DO.utils modules, so I decided to migrate their functionality to this package. They were not required to validate class axioms but the methods were already fully written and were added with little to no modification.
+
+5. Create owl module inside pyDOID and the owl xml class.
+6. Migrate `rdflib`-based functions from DO.utils python module 'py_rdf' to the owl module.
+
+Back to procedures directly relevant to class axioms...
+
+7. Create the owl functional class for handling the doid-edit.owl file.
+8. Define owl functional `extract_class_axioms()` method.
+9. Make pyDOID a working python package by adding dependencies and install directives, as well as, fixing errors.
+
+At this point I had the ability to iterate through tags and extract class axioms from doid-edit.owl, so I installed pyDOID in a virtual environment (`pip install -e pyDOID` along with it's dependencies) and wrote a script in this project (`scripts/DO_tags-extract_class_axioms.py`) to combine these functionalities and accomplish the class axiom extraction.
+
+**SUCCESS** (executed with the working directory set to `scripts`)
