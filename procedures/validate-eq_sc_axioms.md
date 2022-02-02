@@ -138,3 +138,8 @@ Back to procedures directly relevant to class axioms...
 At this point I had the ability to iterate through tags and extract class axioms from doid-edit.owl, so I installed pyDOID in a virtual environment (`pip install -e pyDOID` along with it's dependencies) and wrote a script in this project (`scripts/DO_tags-extract_class_axioms.py`) to combine these functionalities and accomplish the class axiom extraction.
 
 **SUCCESS** (executed with the working directory set to `scripts`)
+
+
+#### Organize & Analyze Extracted Data
+
+To analyze the extracted data and reorganize it in a way that would be reviewable by a person, I switched back to R and wrote the Rmarkdown notebook `notebooks/DO-class_axiom-analysis`.
