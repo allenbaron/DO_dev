@@ -12,6 +12,12 @@ output:
 library(here)
 library(tidyverse)
 library(googlesheets4)
+library(DO.utils)
+# temporary workaround to load py_rdf
+py_rdf <- reticulate::import_from_path(
+    "py_rdf",
+    system.file("python", package = "DO.utils", mustWork = TRUE)
+)
 ```
 
 ```{r custom_functions, include = FALSE}
@@ -50,6 +56,13 @@ arrange_by_tag <- function(df) {
         dplyr::arrange(datetime) %>%
         dplyr::select(-datetime)
 }
+```
+
+
+Results are saved to Google Sheet [class_axioms-by_release](https://docs.google.com/spreadsheets/d/1qqq4W7SFmWQ5RjTK5SHFEwErj9-vVNd0MH3vuj4ElJE/edit?usp=sharing).
+
+```{r}
+axiom_gs <- "https://docs.google.com/spreadsheets/d/1qqq4W7SFmWQ5RjTK5SHFEwErj9-vVNd0MH3vuj4ElJE/edit?usp=sharing"
 ```
 
 
@@ -179,13 +192,12 @@ So the **unusual characters in axioms are attributable to:**
 
 # Tidy & Write to Google Sheets
 
-**NEED UPDATED APPROACH/OUTPUT**
-_These sheets are NOT easily read or reviewed... too many releases included._
+
 
 ```{r}
-axiom_tidy <- dplyr::left_join(raw_data, tag_order, by = "tag") %>%
+axiom_tidy <- dplyr::left_join(axiom_raw, tag_df, by = "tag") %>%
     dplyr::mutate(index = "x") %>%
-    pivot_wider(
+    tidyr::pivot_wider(
         id_cols = c(id, type, axiom),
         names_from = tag,
         values_from = index
@@ -193,20 +205,86 @@ axiom_tidy <- dplyr::left_join(raw_data, tag_order, by = "tag") %>%
 ```
 
 
-```{r}
+```{r results = "hide"}
 googlesheets4::write_sheet(
     dplyr::filter(axiom_tidy, type == "equivalentClass"),
-    "https://docs.google.com/spreadsheets/d/1qqq4W7SFmWQ5RjTK5SHFEwErj9-vVNd0MH3vuj4ElJE/edit?usp=sharing",
+    axiom_gs,
     "equivalentClass"
 )
 
 googlesheets4::write_sheet(
     dplyr::filter(axiom_tidy, type == "subClassOf"),
-    "https://docs.google.com/spreadsheets/d/1qqq4W7SFmWQ5RjTK5SHFEwErj9-vVNd0MH3vuj4ElJE/edit?usp=sharing",
+    axiom_gs,
     "subClassOf"
 )
 ```
 
+_**NOTE:** These sheets are NOT easily read or reviewed... too many releases included._
 
 
+# Subset to Review Recent Releases
 
+It is challenging to look at the entire set of releases. To gain more insight, I subset to releases over the last 5 months (Sep-Jan). **NOTE** that there was an error with numerous "has_symptom" axioms in the `v2021-11-16` release, so that release is excluded.
+
+I also add whether the DOID is obsolete or not in the latest release and exclude those that are obsolete from the results for review because those axioms would disappear as part of the obsoletion process.
+
+```{r do_owl}
+# get DOID labels & obsolete status from latest release
+###### v2022-01-31 release MUST be checked out!!! ######
+do_owl <- py_rdf$read("../Ontologies/HumanDiseaseOntology/src/ontology/doid.owl")
+do_terms <- py_rdf$sparql_query(
+    do_owl,
+    query = 'PREFIX rdfs: <http://www.w3.org/2000/01/rdf-schema#>
+    PREFIX owl: <http://www.w3.org/2002/07/owl#>
+    PREFIX oboInOwl: <http://www.geneontology.org/formats/oboInOwl#>
+
+    SELECT ?id ?obsolete
+    WHERE {
+        ?s a owl:Class .
+        FILTER (CONTAINS(STR(?s), "DOID"))
+    	OPTIONAL { ?s oboInOwl:id ?id . }
+        OPTIONAL {
+            ?s owl:deprecated ?obsolete .
+            BIND( true AS ?obs )
+        }
+    }'
+) %>%
+    tibble::as_tibble() %>%
+    tidyr::unnest(obsolete, keep_empty = TRUE) %>%
+    tidyr::replace_na(replace = list(obsolete = FALSE)) %>%
+    dplyr::mutate(id = stringr::str_replace(id, "DOID:", "obo:DOID_"))
+```
+
+```{r mark_obs}
+recent_releases <- c("v2021-09-30", "v2021-10-11", "v2021-11-17",
+                     "v2021-12-15", "v2022-01-31")
+
+axiom_recent <- axiom_tidy %>%
+    dplyr::select(id, type, axiom, dplyr::one_of(recent_releases)) %>%
+    # remove axioms not in these releases
+    dplyr::filter(
+        dplyr::if_any(dplyr::starts_with("v"), ~!is.na(.x))
+    ) %>%
+    dplyr::arrange(id, axiom) %>%
+    dplyr::left_join(do_terms, by = "id") %>%
+    dplyr::filter(!obsolete) %>%
+    dplyr::select(-obsolete)
+```
+
+
+```{r message = FALSE, results = "hide"}
+axiom_recent %>%
+    dplyr::filter(type == "equivalentClass") %>%
+    googlesheets4::write_sheet(axiom_gs, "equivalentClass_Sep21-Jan22")
+
+axiom_recent %>%
+    dplyr::filter(type == "subClassOf") %>%
+    googlesheets4::write_sheet(axiom_gs, "subClassOf_Sep21-Jan22")
+```
+
+## Observations
+
+Exploring the data in the google sheet, I observed the following:
+
+- Of the `equivalentClass` axioms, 3 appear to have been removed/lost and are not in the latest release and 2 others were removed but added back.
+- Of the `subClassOf` axioms, 23 appear to have been removed/lost and are not in the latest release and there are none that have been lost and added back.
