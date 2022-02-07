@@ -1,0 +1,20 @@
+# Return detailed subClassOf Axioms
+# By J. Allen Baron, 2022-01-26
+
+# NOTE:
+# single letter variables are placeholders and ignored
+
+PREFIX owl: <http://www.w3.org/2002/07/owl#>
+PREFIX rdfs: <http://www.w3.org/2000/01/rdf-schema#>
+
+SELECT ?id ?label ( COUNT(?parent) AS ?axiom_n )
+        ( COUNT( DISTINCT(?parent) ) AS ?axiom_ndistinct )
+WHERE {
+	?class oboInOwl:id ?id ;
+        rdfs:label ?label ;
+        rdfs:subClassOf ?parent .
+	FILTER( isBlank(?parent) )
+	FILTER( STRSTARTS( STR(?class), "http://purl.obolibrary.org/obo/DOID_" ) )
+}
+# create full lvl-1 class label
+GROUP BY ?class

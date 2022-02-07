@@ -1,0 +1,31 @@
+# return count of all class axioms (split by type) for all DO term
+# by J. Allen Baron, 2022-01-28
+# related to DO-eqC_axiom.rq
+
+PREFIX rdf: <http://www.w3.org/1999/02/22-rdf-syntax-ns#>
+PREFIX rdfs: <http://www.w3.org/2000/01/rdf-schema#>
+PREFIX oboInOwl: <http://www.geneontology.org/formats/oboInOwl#>
+PREFIX owl: <http://www.w3.org/2002/07/owl#>
+
+SELECT ?id ?label ?type ( COUNT(?axiom) AS ?n_axiom )
+
+WHERE {
+    # identify all equivalentClass axioms
+    ?class oboInOwl:id ?id ;
+        rdfs:label ?label .
+    FILTER( STRSTARTS( STR(?class), "http://purl.obolibrary.org/obo/DOID_" ) )
+
+    # find equivalentClass axioms
+    {
+        ?class owl:equivalentClass ?axiom .
+        BIND( "equivalentClass" AS ?type )
+     }
+    UNION
+    # find subClassOf axioms
+    {
+        ?class rdfs:subClassOf ?axiom .
+        FILTER( isBlank(?axiom) )
+        BIND( "subClassOf" AS ?type )
+    }
+
+} GROUP BY ?class ?type

@@ -1,0 +1,98 @@
+# return DO classes that have an equivalent statement, with human readable axioms
+# by J. Allen Baron, 2022-01-26
+# related to DO-eqC_axiom.rq
+
+PREFIX rdf: <http://www.w3.org/1999/02/22-rdf-syntax-ns#>
+PREFIX rdfs: <http://www.w3.org/2000/01/rdf-schema#>
+PREFIX oboInOwl: <http://www.geneontology.org/formats/oboInOwl#>
+PREFIX owl: <http://www.w3.org/2002/07/owl#>
+
+SELECT ?id ?label (group_concat(?intOf_member) as ?eq_axiom)
+WHERE {
+    # identify all equivalentClass axioms
+    ?class oboInOwl:id ?id ;
+        rdfs:label ?label ;
+        owl:equivalentClass ?eq_class .
+    # get all members of intersection (assumed type)
+    ?eq_class owl:intersectionOf / ( rdf:first | (rdf:rest/rdf:first)+ ) ?intersect_target .
+    ?intersect_target a ?type .
+    
+    # get labels for defined class members
+    OPTIONAL {
+        FILTER( ?type = owl:Class )
+        ?intersect_target rdfs:label ?parentish_label
+        # format: '<label> (<id>)'
+        BIND(
+            CONCAT(
+                ?parentish_label,
+                " (",
+                REPLACE( STR(?intersect_target), ".*/", "" ),
+                ")"
+            ) AS ?intOf_member
+        )
+    }
+
+    # get details from Restrictions
+    OPTIONAL {
+        FILTER( ?type = owl:Restriction )
+        ?intersect_target owl:onProperty ?onProperty ;
+                            owl:someValuesFrom ?some .
+        OPTIONAL { ?onProperty rdfs:label ?onProp_label . }
+        
+        # get labels for defined classes
+        OPTIONAL {
+            FILTER( !isBlank(?some) )
+            ?some rdfs:label ?some_label .
+            # format: '<label> (<id>)'
+            BIND(
+                CONCAT(
+                    ?some_label,
+                    " (",
+                    REPLACE( STR(?some), ".*/", "" ),
+                    ")"
+                ) AS ?restriction_class
+            )
+        }
+        
+        # get grouping type for blank classes (unions/intersections)
+        OPTIONAL {
+            FILTER( isBlank(?some) )
+            ?some ?set_type ?BLANK_set . 
+            VALUES ?set_type { owl:unionOf owl:intersectionOf }
+            # format: 'unionOf|intersectionOf'
+            BIND(
+                CONCAT(
+                    REPLACE( STR(?set_type), ".*owl#", "" ),
+                    "..."
+                ) AS ?restriction_class
+            )
+        }
+        
+        # format onProperty label: '<property label> (<property_id>)'
+        BIND( 
+            CONCAT(
+                ?onProp_label,
+                " (",
+                REPLACE( STR(?onProperty), ".*/", "" ),
+                ")"
+            ) AS ?onProp_label_full
+        )
+        
+        # create full restriction label
+        BIND(
+            CONCAT(
+                "AND ",
+                ?onProp_label_full,
+                " SOME ",
+                ?restriction_class
+            ) AS ?intOf_member
+        )
+    }
+
+    # identiy axioms with multiple restrictions
+    OPTIONAL {
+        FILTER( ?type = owl:Class && isBlank(?intersect_target) )
+        BIND ( "...complex axiom..." AS ?intOf_member )
+    }
+
+} GROUP BY ?class ?eq_class

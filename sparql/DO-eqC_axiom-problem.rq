@@ -1,0 +1,51 @@
+# Identify potential problems in DO equivalentClass axioms
+# by J. Allen Baron, 2022-01-26
+# related to DO-eqC_axiom.rq
+
+PREFIX rdf: <http://www.w3.org/1999/02/22-rdf-syntax-ns#>
+PREFIX rdfs: <http://www.w3.org/2000/01/rdf-schema#>
+PREFIX oboInOwl: <http://www.geneontology.org/formats/oboInOwl#>
+PREFIX owl: <http://www.w3.org/2002/07/owl#>
+
+SELECT ?id ?label ?eq_class ?severity ?details
+WHERE {
+    {
+        SELECT ?id ?label ?eq_class
+        WHERE {
+            ?class oboInOwl:id ?id ;
+                rdfs:label ?label ;
+                owl:equivalentClass ?eq_class .
+        }
+    }
+    
+    # 1. ERROR: eqClass axioms without intersectionOf
+    {
+        ?eq_class ?pred ?obj .
+        FILTER( NOT EXISTS { ?eq_class owl:intersectionOf|rdf:type ?obj . } )
+        BIND( "error" AS ?severity )
+        BIND( CONCAT( "no_intersectionOf -- ", STR(?pred), " ", STR(?obj) ) AS ?details )
+    }
+    UNION
+    # 2. WARNING: intersectionOf children that are not restriction/class
+    {
+        ?eq_class owl:intersectionOf / ( rdf:first | (rdf:rest/rdf:first)+ ) ?obj .
+        ?obj a ?obj_type .
+        FILTER( !REGEX( STR(?obj_type), "Restriction|Class" ) )
+        BIND( "warning" AS ?severity )
+        BIND( CONCAT( "not_restriction/class -- ", STR(?obj_type) ) AS ?details )
+    }
+    UNION
+    # 3. WARNING: restriction children that are not onProperty/someValuesFrom
+    {
+        ?eq_class owl:intersectionOf / ( rdf:first | (rdf:rest/rdf:first)+ ) ?obj .
+        # ?obj a owl:Restriction .
+        ?obj ?restriction_type ?obj2 .
+        FILTER( NOT EXISTS { ?obj owl:onProperty|rdf:type|owl:someValuesFrom ?obj2 . } )
+        MINUS {
+            ?eq_class owl:intersectionOf / ( rdf:first | (rdf:rest/rdf:first)+ ) ?obj .
+            FILTER( NOT EXISTS { ?obj a owl:Restriction } )
+        }
+        BIND( "warning" AS ?severity )
+        BIND( CONCAT( "not_property/some -- ", STR(?restriction_type), " ", STR(?obj2) ) AS ?details )  
+    }
+} 

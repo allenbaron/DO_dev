@@ -1,0 +1,290 @@
+---
+title: "Analysis of EQ/subClassOf axiom changes in releases"
+output:
+    html_notebook:
+        toc: true
+        toc_float: true
+        df_print: paged
+        code_folding: hide
+---
+
+```{r setup, include = FALSE}
+library(here)
+library(tidyverse)
+library(googlesheets4)
+library(DO.utils)
+# temporary workaround to load py_rdf
+py_rdf <- reticulate::import_from_path(
+    "py_rdf",
+    system.file("python", package = "DO.utils", mustWork = TRUE)
+)
+```
+
+```{r custom_functions, include = FALSE}
+# identify unexpected id/axiom values
+identify_unexpected <- function(df, id = id, axiom = axiom) {
+    filter(
+        df,
+        stringr::str_detect({{ id }}, "[^A-Za-z0-9:()_ ]") |
+            stringr::str_detect({{ axiom }}, "[^A-Za-z0-9:()_ ]")
+    )
+}
+identify_unexpected_id <- function(df, id = id, axiom = axiom) {
+    filter(
+        df,
+        stringr::str_detect({{ id }}, "[^A-Za-z0-9:()_ ]")
+    )
+}
+identify_unexpected_axiom <- function(df, id = id, axiom = axiom) {
+    filter(
+        df,
+        stringr::str_detect({{ axiom }}, "[^A-Za-z0-9:()_ ]")
+    )
+}
+
+# replace obo URIs with CURIEs
+obo_uri_to_curie <- function(x) {
+    stringr::str_replace_all(
+        x,
+        "<http://purl.obolibrary.org/obo/([^> ]*)>",
+        "obo:\\1"
+    )
+}
+
+arrange_by_tag <- function(df) {
+    dplyr::left_join(df, tag_df, by = "tag") %>%
+        dplyr::arrange(datetime) %>%
+        dplyr::select(-datetime)
+}
+```
+
+
+Results are saved to Google Sheet [class_axioms-by_release](https://docs.google.com/spreadsheets/d/1qqq4W7SFmWQ5RjTK5SHFEwErj9-vVNd0MH3vuj4ElJE/edit?usp=sharing).
+
+```{r}
+axiom_gs <- "https://docs.google.com/spreadsheets/d/1qqq4W7SFmWQ5RjTK5SHFEwErj9-vVNd0MH3vuj4ElJE/edit?usp=sharing"
+```
+
+
+# Load data
+
+Axiom data was extracted from a local copy of the HumanDiseaseOntology repository using `scripts/DO_tags-extract_class_axiom.py` and saved in `data/DO_release`.
+
+```{r data_paths}
+axiom_path <- here::here("data/DO_release/DO-class_axiom-by_tag-raw.csv")
+tag_path <- here::here("data/DO_release/DO-tags.csv")
+```
+
+```{r load_data}
+axiom_raw <- readr::read_csv(axiom_path, show_col_types = FALSE) %>%
+    dplyr::rename(tag = ...1, index = ...2)
+
+tag_df <- readr::read_csv(
+    tag_path,
+    col_names = c("tag", "datetime"),
+    skip = 1,
+    show_col_types = FALSE
+) %>%
+    dplyr::arrange(datetime)
+```
+
+
+# Examine Data to Identify Issues
+
+Unexpected characters (likely caused by typos) could be a problem. Exploring those in DOIDs and axioms by excluding expected characters...
+
+
+## IDs
+
+```{r}
+# filter by unexpected values in id
+unexpected_id <- axiom_raw %>%
+    identify_unexpected_id()
+unexpected_id
+```
+
+Those mostly look like OBO URIs (which are not a problem).
+
+After converting OBO URIs to CURIEs ...
+
+```{r}
+# these are removed by converting  (so these are fine)
+unexpected_id %>%
+    dplyr::mutate(id = obo_uri_to_curie(id)) %>%
+    identify_unexpected_id()
+```
+
+**...there are no longer any unexpected characters in the IDs**, though there may still be typos.
+
+
+## Axioms
+
+There will probably be OBO URIs here too. Those are excluded at the start.
+```{r}
+unexpected_axiom <- axiom_raw %>%
+    dplyr::mutate(axiom = obo_uri_to_curie(axiom)) %>%
+    identify_unexpected_axiom()
+unexpected_axiom
+```
+
+There are still _a lot_ of unexpected characters. Some appear to be from SO as `so#` (e.g. `derives_from`, `has_origin`). I checked and bith of those are legitimate classes in SO. Are there any more SO classes with `#`?
+
+```{r}
+unexpected_axiom$axiom %>%
+    stringr::str_extract_all("so#[a-zA-z_]+") %>%
+    unlist() %>%
+    unique()
+```
+
+Doesn't look like it. After temporarily removing those...
+```{r}
+unexpected_axiom <- unexpected_axiom %>%
+    dplyr::mutate(axiom = stringr::str_remove_all(axiom, "so#[a-zA-z_]+")) %>%
+    identify_unexpected_axiom()
+unexpected_axiom
+```
+
+...there is much improvement but still a surprising number of unexpected characters. What is that `doid#derives_from`? That doesn't look like something that should be there. What release tags is it associated with?
+
+```{r}
+unexpected_axiom %>%
+    filter(str_detect(axiom, "doid#derives")) %>%
+    count(tag) %>%
+    arrange_by_tag()
+```
+
+It's limited to tags at the end of 2018. I'll verify that those have been fixed in a minute. Right now, I need to see if there are other terms like that.
+
+```{r}
+unexpected_axiom$axiom %>%
+    stringr::str_extract_all("doid#[a-zA-z_]+") %>%
+    unlist() %>%
+    unique()
+```
+
+Yep. And is that in current use?
+
+```{r}
+unexpected_axiom %>%
+    filter(str_detect(axiom, "doid#has")) %>%
+    count(tag) %>%
+    arrange_by_tag()
+```
+
+Nope. It's also from the end of 2018. _That must've been a mess to fix._
+
+If I temporarily remove them...
+```{r}
+unexpected_axiom %>%
+    dplyr::mutate(axiom = stringr::str_remove_all(axiom, "doid#[a-zA-z_]+")) %>%
+    identify_unexpected_axiom()
+```
+
+...only some unexpected `/` remain, which are likely typos.
+
+So the **unusual characters in axioms are attributable to:**
+
+1. OBO URIs instead of CURIEs
+2. SO classes with `#`
+3. Temporary DO classes with `#`
+4. A `/` typo.
+
+
+# Tidy & Write to Google Sheets
+
+
+
+```{r}
+axiom_tidy <- dplyr::left_join(axiom_raw, tag_df, by = "tag") %>%
+    dplyr::mutate(index = "x") %>%
+    tidyr::pivot_wider(
+        id_cols = c(id, type, axiom),
+        names_from = tag,
+        values_from = index
+    )
+```
+
+
+```{r results = "hide"}
+googlesheets4::write_sheet(
+    dplyr::filter(axiom_tidy, type == "equivalentClass"),
+    axiom_gs,
+    "equivalentClass"
+)
+
+googlesheets4::write_sheet(
+    dplyr::filter(axiom_tidy, type == "subClassOf"),
+    axiom_gs,
+    "subClassOf"
+)
+```
+
+_**NOTE:** These sheets are NOT easily read or reviewed... too many releases included._
+
+
+# Subset to Review Recent Releases
+
+It is challenging to look at the entire set of releases. To gain more insight, I subset to releases over the last 5 months (Sep-Jan). **NOTE** that there was an error with numerous "has_symptom" axioms in the `v2021-11-16` release, so that release is excluded.
+
+I also add whether the DOID is obsolete or not in the latest release and exclude those that are obsolete from the results for review because those axioms would disappear as part of the obsoletion process.
+
+```{r do_owl}
+# get DOID labels & obsolete status from latest release
+###### v2022-01-31 release MUST be checked out!!! ######
+do_owl <- py_rdf$read("../Ontologies/HumanDiseaseOntology/src/ontology/doid.owl")
+do_terms <- py_rdf$sparql_query(
+    do_owl,
+    query = 'PREFIX rdfs: <http://www.w3.org/2000/01/rdf-schema#>
+    PREFIX owl: <http://www.w3.org/2002/07/owl#>
+    PREFIX oboInOwl: <http://www.geneontology.org/formats/oboInOwl#>
+
+    SELECT ?id ?obsolete
+    WHERE {
+        ?s a owl:Class .
+        FILTER (CONTAINS(STR(?s), "DOID"))
+    	OPTIONAL { ?s oboInOwl:id ?id . }
+        OPTIONAL {
+            ?s owl:deprecated ?obsolete .
+            BIND( true AS ?obs )
+        }
+    }'
+) %>%
+    tibble::as_tibble() %>%
+    tidyr::unnest(obsolete, keep_empty = TRUE) %>%
+    tidyr::replace_na(replace = list(obsolete = FALSE)) %>%
+    dplyr::mutate(id = stringr::str_replace(id, "DOID:", "obo:DOID_"))
+```
+
+```{r mark_obs}
+recent_releases <- c("v2021-09-30", "v2021-10-11", "v2021-11-17",
+                     "v2021-12-15", "v2022-01-31")
+
+axiom_recent <- axiom_tidy %>%
+    dplyr::select(id, type, axiom, dplyr::one_of(recent_releases)) %>%
+    # remove axioms not in these releases
+    dplyr::filter(
+        dplyr::if_any(dplyr::starts_with("v"), ~!is.na(.x))
+    ) %>%
+    dplyr::arrange(id, axiom) %>%
+    dplyr::left_join(do_terms, by = "id") %>%
+    dplyr::filter(!obsolete) %>%
+    dplyr::select(-obsolete)
+```
+
+
+```{r message = FALSE, results = "hide"}
+axiom_recent %>%
+    dplyr::filter(type == "equivalentClass") %>%
+    googlesheets4::write_sheet(axiom_gs, "equivalentClass_Sep21-Jan22")
+
+axiom_recent %>%
+    dplyr::filter(type == "subClassOf") %>%
+    googlesheets4::write_sheet(axiom_gs, "subClassOf_Sep21-Jan22")
+```
+
+## Observations
+
+Exploring the data in the google sheet, I observed the following:
+
+- Of the `equivalentClass` axioms, 3 appear to have been removed/lost and are not in the latest release and 2 others were removed but added back.
+- Of the `subClassOf` axioms, 23 appear to have been removed/lost and are not in the latest release and there are none that have been lost and added back.
