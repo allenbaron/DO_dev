@@ -101,13 +101,12 @@ Discussion with Lynn has led to a modified proposal for identifying potential ma
 
 Mapping will take place in two phases:
 
+
 ### Phase 1:
 
 1. Use _ONLY_ preferred ICD-O terms (with ", NOS" removed, since DO always drops this) from the 'preferred terms' sheet as input for GILDA "grounding" (i.e. matching).
 2. Copy leukemia & brain matches found to appropriate sheets for ClinGen review
 3. Personally curate remaining matches.
-
-
 
 
 ### Phase 2 (if desired):
@@ -118,11 +117,11 @@ Mapping will take place in two phases:
 4. Personally curate remaining matches.
 
 
-### PHASE 1
+## PHASE 1 - GILDA Execution
 
 - I modified Charlie's script to accomplish this and saved it as `scripts/mapping_ICDO-preferred_only.py`.
 - I reduced the 'preferred terms' sheet to two columns ("ICDO3.2" & "Term (NOS removed)") and saved it as `ICDO_3.2_2021-preferred_only.tsv`. I used R to preserve data types as "text" and created the file to minimize customization of the python script.
-- I executed the script with PyCharm with the `DO_dev` as the working directory and the parameters: `data/mapping/ICDO_3.2_2021-preferred_only.tsv` `data/mapping/biomappings-ICDO_2021_preferred-DOID.tsv`.
+- I executed the script with PyCharm with the `DO_dev` root as the working directory and the parameters: `data/mapping/ICDO_3.2_2021-preferred_only.tsv` `data/mapping/biomappings-ICDO_2021_preferred-DOID.tsv`.
 
 [2022-01-07] I found a need for more data manipulation than I'm familiar with in Python, so I wrote `script/mapping_ICDO.R` to do this work. Before completing everything, I migrated the R functions, which wrap PyOBO, to DO.utils.
 
@@ -134,10 +133,18 @@ I completed PHASE 1 and save the data to Google sheets including:
 4. ROBOT template for addition of exact matches to DO was created.
 
 
-#### Results - Statistics
+### Results - Statistics
 
 Match_Type                  | `preferred terms` | leukemia | brain
 ----------------------------|-------------------|----------|-------
 exact match via biomappings |        313        |     8    |   23
 recommended by biomappings  |        132        |     NA   |    3
 NA                          |        699        |     51   |   40
+
+
+## PHASE 1 (additional) - Fuzzy String Execution
+
+GILDA identified some good matches but missed a number that are sufficiently similar that we anticipate fuzzy string matching could identify them. We have, therefore, decided to supplement with it.
+
+1. Test speed of matching 5 ICD-O terms with all DO cancer terms, to determine feasibility (`scripts/mapping_ICDO-fz.R`).
+    - **RESULT:** It is feasible. All 5 found matches with a total time of 0.01-0.032s, which means the full comparison of preferred ICD-O terms with preferred DO cancer terms should take no more than 2.5-8s.
