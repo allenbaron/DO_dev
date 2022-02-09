@@ -104,6 +104,18 @@ system.time(
 # Tidy and save data ------------------------------------------------------
 
 tidy_df <- icdo_do %>%
+    # calculate score between 0 & 1
+    #   - "(... + 1)" to avoid 1/0 error, "dist/
+    #   - "dist/mean(dist)" to normalize scores
+    #   - "1/" so more changes (higher dist) = lower score
+    dplyr::mutate(
+        score = dplyr::if_else(
+            !is.na(dist),
+            1 / (dist/mean(dist, na.rm = TRUE) + 1),
+            NA_real_
+        ),
+        dist = NULL
+    ) %>%
     dplyr::left_join(
         dplyr::select(icdo_data, -term_no_nos),
         by = c("x" = "term_std")
@@ -115,11 +127,11 @@ tidy_df <- icdo_do %>%
         # icdo info
         icdo_id, icdo_type, icdo_label,
         # match info
-        do_std, dist, icdo_std,
+        do_std, score, icdo_std,
         # do info
         doid, do_type, do_label
     ) %>%
-    dplyr::arrange(icdo_id, icdo_type, dist, do_type, doid)
+    dplyr::arrange(icdo_id, icdo_type, score, do_type, doid)
 
 
 readr::write_csv(tidy_df, match_res_file)
