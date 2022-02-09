@@ -148,7 +148,21 @@ tidy_df <- icdo_do %>%
         # do info
         doid, do_type, do_label
     ) %>%
-    dplyr::arrange(dplyr::desc(score), icdo_id, icdo_type, do_type, doid)
+    # sort by best scoring ICD-O terms, keeping all matches together
+    dplyr::group_by(icdo_id) %>%
+    dplyr::arrange(dplyr::desc(score), do_type, icdo_type, doid, .by_group = TRUE) %>%
+    dplyr::mutate(
+        max_score = ifelse(
+            !all(is.na(score)),
+            max(score, na.rm = TRUE),
+            NA_real_
+        )
+    ) %>%
+    dplyr::ungroup() %>%
+    dplyr::arrange(
+        dplyr::desc(max_score), icdo_id, dplyr::desc(score), do_type, doid
+    ) %>%
+    dplyr::select(-max_score)
 
 
 readr::write_csv(tidy_df, match_res_file)
