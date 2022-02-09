@@ -80,7 +80,9 @@ icdo_data <- readxl::read_excel(
     )
 
 
-# Extract DO cancer terms & exact synonyms (release: v2022-01-31)
+# Extract DO cancer terms & exact synonyms (commit: 85b3e650)
+#   Used this commit instead of latest release because synonym errors had to be
+#   corrected.
 do_owl <- py_rdf$read(do_owl_file)
 do_cp <- py_rdf$sparql_query(do_owl, query = sparql_cp) %>%
     tibble::as_tibble() %>%
