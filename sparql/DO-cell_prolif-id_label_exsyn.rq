@@ -7,18 +7,24 @@ PREFIX oboInOwl: <http://www.geneontology.org/formats/oboInOwl#>
 
 SELECT ?id ?type ?label
 WHERE {
-    ?s a owl:Class ;
-        rdfs:subClassOf+ doid:14566 .
-	OPTIONAL { ?s oboInOwl:id ?id . }
-    OPTIONAL {
+    {
+        SELECT ?s ?id
+        WHERE {
+            ?s a owl:Class ;
+                rdfs:subClassOf+ doid:14566 ;
+                oboInOwl:id ?id .
+            FILTER NOT EXISTS { ?s owl:deprecated ?obsolete . }
+        }
+    }
+
+    {
         ?s rdfs:label ?label .
-        BIND( ?l AS ?label )
         BIND( "preferred" AS ?type )
     }
-    OPTIONAL {
-        ?s oboInOwl:hasExactSynonym ?syn .
-        BIND( ?syn AS ?label )
+    UNION
+    {
+        ?s oboInOwl:hasExactSynonym ?label .
         BIND( "exact_synonym" AS ?type )
     }
-    FILTER NOT EXISTS { ?s owl:deprecated ?obsolete . }
-}
+
+} ORDER BY ?id DESC(?type)
