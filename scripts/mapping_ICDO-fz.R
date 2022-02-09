@@ -31,8 +31,6 @@ standardize_label <- function(term) {
 # Goal: Create score between 0 & 1 (1 = best) that reflect quality of match
 # Considerations:
 #   - distance of zero (i.e. perfect match) should always be 1
-#   - should account for differences in string length, with the assumption that
-#       strings with greater differences in length are likely worse matches
 #   - should account for overall string lengths, since changes are more likely
 #       to be necessary even for true matches in longer strings
 # Parameters:
@@ -40,22 +38,12 @@ standardize_label <- function(term) {
 #   - x = first set of strings
 #   - y = second set of strings which x was matched to
 score_match <- function(dist, x, y) {
-
     x_len <- stringr::str_length(x)
     y_len <- stringr::str_length(y)
+    min_len <- dplyr::if_else(x_len < y_len, x_len, y_len)
 
-    # calculate avg string length and difference in string lengths
-    mean_len <- (x_len + y_len) / 2
-    len_diff <- abs(x_len - y_len)
-
-    # normalize factors calculated above to make values more useful
-    norm_mean_len <- mean_len / mean(mean_len, na.rm = TRUE)
-    norm_len_diff <- len_diff / mean(len_diff, na.rm = TRUE)
-
-    # prevent 1/0 errors, ensure perfect matches = 1
-    adj_dist <- dist + 1
-
-    1 / (adj_dist * norm_len_diff / norm_mean_len)
+    # '+ 1' in denom to avoid 1/0 = Inf
+    1 / (dist / min_len + 1)
 }
 
 
@@ -154,7 +142,7 @@ tidy_df <- icdo_do %>%
         # icdo info
         icdo_id, icdo_type, icdo_label,
         # match info
-        do_std, score, icdo_std,
+        icdo_std, score, do_std,
         # do info
         doid, do_type, do_label
     ) %>%
