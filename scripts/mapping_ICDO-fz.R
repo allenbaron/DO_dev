@@ -146,7 +146,7 @@ tidy_df <- icdo_do %>%
         # do info
         doid, do_type, do_label
     ) %>%
-    dplyr::arrange(icdo_id, icdo_type, score, do_type, doid)
+    dplyr::arrange(dplyr::desc(score), icdo_id, icdo_type, do_type, doid)
 
 
 readr::write_csv(tidy_df, match_res_file)
