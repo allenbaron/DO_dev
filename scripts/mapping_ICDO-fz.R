@@ -53,6 +53,7 @@ score_match <- function(dist, x, y) {
 icdo_xl_file <- here::here("data/mapping/2021_ICDO_update_preferred terms.xlsx")
 do_owl_file <- here::here("../Ontologies/HumanDiseaseOntology/src/ontology/doid.owl")
 sparql_cp <- here::here("sparql/DO-cell_prolif-id_label_exsyn.rq")
+sparql_xref <- here::here("sparql/DO-xref.rq")
 
 # Output
 match_res_file <- here::here("data/mapping/do_icdo-fz_match.csv")
@@ -97,6 +98,20 @@ do_cp <- py_rdf$sparql_query(do_owl, query = sparql_cp) %>%
     )
 
 
+# Remove ICD-O & DO terms that are already xrefs --------------------------
+
+do_icdo_xref <- py_rdf$sparql_query(do_owl, query = sparql_xref) %>%
+    tibble::as_tibble() %>%
+    dplyr::filter(stringr::str_detect(xref, "^ICDO")) %>%
+    dplyr::mutate(icdo_id = stringr::str_remove(xref, "ICDO:"))
+
+icdo_data <- icdo_data %>%
+    dplyr::filter(!icdo_id %in% do_icdo_xref$icdo_id)
+
+do_cp <- do_cp %>%
+    dplyr::filter(!doid %in% do_icdo_xref$id)
+
+
 # Complete fuzzy string matching ------------------------------------------
 
 # Set maximum allowable string match distance to 3rd quartile of string length
@@ -119,7 +134,7 @@ system.time(
         unique(do_cp$term_std),
         maxDist = max_dist_3q
     )
-)   # takes ~ 22s
+)   # takes < 15s
 
 
 # Tidy and save data ------------------------------------------------------
