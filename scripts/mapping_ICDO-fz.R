@@ -78,6 +78,11 @@ icdo_data <- readxl::read_excel(
         term_std = standardize_label(term_no_nos),
     # type - to match DO cellular prolif data
         type = stringr::str_to_lower(type)
+    ) %>%
+    # drop related terms & headers
+    dplyr::filter(
+        !stringr::str_detect(icdo_id, "-"),
+        type %in% c("preferred", "synonym")
     )
 
 
