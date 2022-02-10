@@ -29,9 +29,9 @@
       "RemoteHost": "api.github.com",
       "RemoteRepo": "DO.utils",
       "RemoteUsername": "allenbaron",
-      "RemoteRef": "da84213",
-      "RemoteSha": "da842138a412a29f4dcd09b837eb34e1991fa432",
-      "Hash": "7a2264703e7c9456db1cb42548633f27"
+      "RemoteRef": "main",
+      "RemoteSha": "430eca1e78f2dd4242e898471148be5e46a3b44e",
+      "Hash": "48668cc1b2ce24cd484ae1c8366089b5"
     },
     "DT": {
       "Package": "DT",
