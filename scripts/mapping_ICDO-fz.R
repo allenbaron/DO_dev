@@ -46,6 +46,11 @@ score_match <- function(dist, x, y) {
     1 / (dist / min_len + 1)
 }
 
+# get max except where NA (to silence warnings)
+max_na <- function(x) {
+    ifelse(all(is.na(x)), NA_real_, max(x, na.rm = TRUE))
+}
+
 
 # File paths --------------------------------------------------------------
 
@@ -57,7 +62,6 @@ sparql_xref <- here::here("sparql/DO-xref.rq")
 
 # Output
 match_res_file <- here::here("data/mapping/do_icdo-fz_match.csv")
-
 
 
 # Load & standardize data  ------------------------------------------------
@@ -138,51 +142,67 @@ system.time(
         unique(icdo_data$term_std),
         unique(do_cp$term_std),
         maxDist = max_dist_3q
-    )
+    ) %>%
+        # replace distance with score
+        dplyr::mutate(
+            score = score_match(dist, x, table_match),
+            dist = NULL
+        )
 )   # takes < 15s
 
 
-# Tidy and save data ------------------------------------------------------
+# Reduce output to best ICDO-DOID matches, tidy, & save -------------------
 
-tidy_df <- icdo_do %>%
-    # calculate score between 0 & 1
-    #   - "(... + 1)" to avoid 1/0 error, "dist/
-    #   - "dist/mean(dist)" to normalize scores
-    #   - "1/" so more changes (higher dist) = lower score
-    dplyr::mutate(
-        score = score_match(dist, x, table_match),
-        dist = NULL
+# Fill in ICDO & DO preferred terms and synonyms for all standardize results
+icdo_info <- icdo_data %>%
+    dplyr::select(-term_no_nos) %>%
+    tidyr::pivot_wider(
+        id_cols = icdo_id,
+        names_from = type,
+        names_prefix = "icdo_",
+        values_from = icdo_label,
+        values_fn = ~ unique_to_string(.x, delim = " | ")
     ) %>%
     dplyr::left_join(
-        dplyr::select(icdo_data, -term_no_nos),
-        by = c("x" = "term_std")
+        dplyr::select(icdo_data, icdo_id, term_std),
+        by = "icdo_id"
+    )
+
+do_info <- do_cp %>%
+    dplyr::select(doid:do_label) %>%
+    tidyr::pivot_wider(
+        id_cols = doid,
+        names_from = type,
+        names_prefix = "do_",
+        values_from = do_label,
+        values_fn = ~ unique_to_string(.x, delim = " | ")
     ) %>%
-    dplyr::rename(icdo_std = x, icdo_type = type) %>%
-    dplyr::left_join(do_cp, by = c("table_match" = "term_std")) %>%
-    dplyr::rename(do_std = table_match, do_type = type) %>%
-    dplyr::select(
-        # icdo info
-        icdo_id, icdo_type, icdo_label,
-        # match info
-        icdo_std, score, do_std,
-        # do info
-        doid, do_type, do_label
-    ) %>%
-    # sort by best scoring ICD-O terms, keeping all matches together
+    dplyr::left_join(
+        dplyr::select(do_cp, doid, term_std),
+        by = "doid"
+    )
+
+
+# Tidy & reduce
+tidy_df <- icdo_do %>%
+    # add info
+    dplyr::left_join(icdo_info, by = c("x" = "term_std")) %>%
+    dplyr::rename(icdo_std = x) %>%
+    dplyr::left_join(do_info, by = c("table_match" = "term_std")) %>%
+    dplyr::rename(do_std = table_match) %>%
+    # drop duplicates
+    unique() %>%
+    # set up to arrange by best matches
     dplyr::group_by(icdo_id) %>%
-    dplyr::arrange(dplyr::desc(score), do_type, icdo_type, doid, .by_group = TRUE) %>%
-    dplyr::mutate(
-        max_score = ifelse(
-            !all(is.na(score)),
-            max(score, na.rm = TRUE),
-            NA_real_
-        )
-    ) %>%
+    dplyr::mutate(overall_max = max_na(score)) %>%
     dplyr::ungroup() %>%
+    # get only best score for each ICDO-DOID (id, type) pairing
+    dplyr::arrange(dplyr::desc(score)) %>%
+    DO.utils::collapse_col_flex(icdo_std, do_std, score, method = "first") %>%
     dplyr::arrange(
-        dplyr::desc(max_score), icdo_id, dplyr::desc(score), do_type, doid
+        dplyr::desc(overall_max), icdo_id, dplyr::desc(score), doid
     ) %>%
-    dplyr::select(-max_score)
+    dplyr::select(-overall_max)
 
-
+# save
 readr::write_csv(tidy_df, match_res_file)
