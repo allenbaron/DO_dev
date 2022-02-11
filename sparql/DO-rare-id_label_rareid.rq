@@ -1,0 +1,30 @@
+# Return a list of all rare diseases in DO with class IDs, labels, and rare identifier
+
+PREFIX rdfs: <http://www.w3.org/2000/01/rdf-schema#>
+PREFIX owl: <http://www.w3.org/2002/07/owl#>
+PREFIX doid: <http://purl.obolibrary.org/obo/doid#>
+PREFIX oboInOwl: <http://www.geneontology.org/formats/oboInOwl#>
+
+SELECT ?id ?label ?rare_id
+WHERE {
+    {
+        SELECT ?s ?id
+        WHERE {
+            ?s a owl:Class ;
+                oboInOwl:id ?id ;
+                rdfs:label ?label .
+            FILTER NOT EXISTS { ?s owl:deprecated ?obsolete . }
+        }
+    }
+
+    {
+        ?s oboInOwl:hasDbXref ?rare_id .
+        FILTER( REGEX( ?xref, "ORDO|GARD" ) )
+    }
+    UNION
+    {
+        ?s oboInOwl:inSubset doid:DO_rare_slim .
+        BIND( "DO_rare_slim" AS ?rare_id)
+    }
+
+}
