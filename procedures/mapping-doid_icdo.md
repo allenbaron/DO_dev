@@ -146,5 +146,42 @@ NA                          |        699        |     51   |   40
 
 GILDA identified some good matches but missed a number that are sufficiently similar that we anticipate fuzzy string matching could identify them. We have, therefore, decided to supplement with it.
 
-1. Test speed of matching 5 ICD-O terms with all DO cancer terms, to determine feasibility (`scripts/mapping_ICDO-fz.R`).
+1. Create two different SPARQL queries to extract DO cancer slim (`sparql/DO-cancer_slim-id_label.rq`) and DO cellular proliferation branch (`sparql/DO-cell_prolif-id_label.rq`).
+    - Use the DO cellular proliferation query since ICD-O has benign neoplasms.
+2. Test speed of matching 5 ICD-O terms with all DO cancer terms, to determine feasibility (`scripts/mapping_ICDO-fz.R`).
     - **RESULT:** It is feasible. All 5 found matches with a total time of 0.01-0.032s, which means the full comparison of preferred ICD-O terms with preferred DO cancer terms should take no more than 2.5-8s.
+3. Create another SPARQL query to extract DO cellular proliferation branch preferred terms and exact synonyms (`sparql/DO-cell_prolif-id_label_exsyn.rq`).
+4. Update `scripts/mapping_ICDO-fz.R` to accomplish the following:
+    1. Match all ICD-O terms (preferred & synonyms only) to all DO terms (preferred & exact synonyms only) in the cellular proliferation branch.
+    2. Exclude ICD-O and DO terms already part of cross-references in DO.
+    3. Calculate a rough score (between 0 & 1, 1 = best) for matches based on string changes (distance) and string length, in place of distance.
+    4. Return only the best scoring match for each ICD-O to DOID match.
+    5. List only those standardized terms that contributed to the best match, but include all preferred terms and synonyms.
+    6. Sort by best overall matches.
+    7. Save results as .csv file.
+5. I executed the script in #4 and uploaded the resulting .csv file to Google sheets as [DO_icdo-fz_match](https://docs.google.com/spreadsheets/d/161hljPjkwO7t5MxhG7T-MhexTHbhiIvmM9ElXySGbCU/edit?usp=sharing).
+
+
+### Results
+
+Of the 1,143 ICD-O terms, 335 already have xrefs in the DO and 808 ICD-O terms were included for matching. Of those, only 38 did not have matches (these had a mean string length of 65 characters, so the cutoff might have been too low for them), while 789 terms had matches to one or more DOIDs (total matches = 1,282). Of the matches, the score breakdown is as follows:
+
+                |   ICD-O Terms    |   Total matches
+    Score       |  (can be in 1+)  | (can have 1+ matches)  
+----------------|------------------|-------------------
+    1.0 (exact) |       160        |        171
+    0.9-0.99    |        13        |         13
+    0.8         |        68        |         68
+    0.7         |       193        |        226
+    0.6         |       300        |        364
+    0.5         |       216        |        269
+    0.4         |       102        |        117
+    0.3         |        38        |         42
+    0.2         |         7        |          8
+    0.1         |         4        |          4
+    0.0         |         0        |          0
+    NA (none)   |        38        |         38
+----------------|------------------|-------------------
+ TOTAL (no NA)  |     1,101        |      1,282
+
+**NOTE:** 3 of the ICD-O terms in the DO do not appear in this dataset. Were they obsoleted?
