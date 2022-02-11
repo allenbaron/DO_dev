@@ -101,13 +101,12 @@ Discussion with Lynn has led to a modified proposal for identifying potential ma
 
 Mapping will take place in two phases:
 
+
 ### Phase 1:
 
 1. Use _ONLY_ preferred ICD-O terms (with ", NOS" removed, since DO always drops this) from the 'preferred terms' sheet as input for GILDA "grounding" (i.e. matching).
 2. Copy leukemia & brain matches found to appropriate sheets for ClinGen review
 3. Personally curate remaining matches.
-
-
 
 
 ### Phase 2 (if desired):
@@ -118,11 +117,11 @@ Mapping will take place in two phases:
 4. Personally curate remaining matches.
 
 
-### PHASE 1
+## PHASE 1 - GILDA Execution
 
 - I modified Charlie's script to accomplish this and saved it as `scripts/mapping_ICDO-preferred_only.py`.
 - I reduced the 'preferred terms' sheet to two columns ("ICDO3.2" & "Term (NOS removed)") and saved it as `ICDO_3.2_2021-preferred_only.tsv`. I used R to preserve data types as "text" and created the file to minimize customization of the python script.
-- I executed the script with PyCharm with the `DO_dev` as the working directory and the parameters: `data/mapping/ICDO_3.2_2021-preferred_only.tsv` `data/mapping/biomappings-ICDO_2021_preferred-DOID.tsv`.
+- I executed the script with PyCharm with the `DO_dev` root as the working directory and the parameters: `data/mapping/ICDO_3.2_2021-preferred_only.tsv` `data/mapping/biomappings-ICDO_2021_preferred-DOID.tsv`.
 
 [2022-01-07] I found a need for more data manipulation than I'm familiar with in Python, so I wrote `script/mapping_ICDO.R` to do this work. Before completing everything, I migrated the R functions, which wrap PyOBO, to DO.utils.
 
@@ -134,10 +133,55 @@ I completed PHASE 1 and save the data to Google sheets including:
 4. ROBOT template for addition of exact matches to DO was created.
 
 
-#### Results - Statistics
+### Results - Statistics
 
 Match_Type                  | `preferred terms` | leukemia | brain
 ----------------------------|-------------------|----------|-------
 exact match via biomappings |        313        |     8    |   23
 recommended by biomappings  |        132        |     NA   |    3
 NA                          |        699        |     51   |   40
+
+
+## PHASE 1 (additional) - Fuzzy String Execution
+
+GILDA identified some good matches but missed a number that are sufficiently similar that we anticipate fuzzy string matching could identify them. We have, therefore, decided to supplement with it.
+
+1. Create two different SPARQL queries to extract DO cancer slim (`sparql/DO-cancer_slim-id_label.rq`) and DO cellular proliferation branch (`sparql/DO-cell_prolif-id_label.rq`).
+    - Use the DO cellular proliferation query since ICD-O has benign neoplasms.
+2. Test speed of matching 5 ICD-O terms with all DO cancer terms, to determine feasibility (`scripts/mapping_ICDO-fz.R`).
+    - **RESULT:** It is feasible. All 5 found matches with a total time of 0.01-0.032s, which means the full comparison of preferred ICD-O terms with preferred DO cancer terms should take no more than 2.5-8s.
+3. Create another SPARQL query to extract DO cellular proliferation branch preferred terms and exact synonyms (`sparql/DO-cell_prolif-id_label_exsyn.rq`).
+4. Update `scripts/mapping_ICDO-fz.R` to accomplish the following:
+    1. Match all ICD-O terms (preferred & synonyms only) to all DO terms (preferred & exact synonyms only) in the cellular proliferation branch.
+    2. Exclude ICD-O and DO terms already part of cross-references in DO.
+    3. Calculate a rough score (between 0 & 1, 1 = best) for matches based on string changes (distance) and string length, in place of distance.
+    4. Return only the best scoring match for each ICD-O to DOID match.
+    5. List only those standardized terms that contributed to the best match, but include all preferred terms and synonyms.
+    6. Sort by best overall matches.
+    7. Save results as .csv file.
+5. I executed the script in #4 and uploaded the resulting .csv file to Google sheets as [DO_icdo-fz_match](https://docs.google.com/spreadsheets/d/161hljPjkwO7t5MxhG7T-MhexTHbhiIvmM9ElXySGbCU/edit?usp=sharing).
+
+
+### Results
+
+Of the 1,143 ICD-O terms, 335 already have xrefs in the DO and 808 ICD-O terms were included for matching. Of those, only 38 did not have matches (these had a mean string length of 65 characters, so the cutoff might have been too low for them), while 789 terms had matches to one or more DOIDs (total matches = 1,282). Of the matches, the score breakdown is as follows:
+
+                |   ICD-O Terms    |   Total matches
+    Score       |  (can be in 1+)  | (can have 1+ matches)  
+----------------|------------------|-------------------
+    1.0 (exact) |       160        |        171
+    0.9-0.99    |        13        |         13
+    0.8         |        68        |         68
+    0.7         |       193        |        226
+    0.6         |       300        |        364
+    0.5         |       216        |        269
+    0.4         |       102        |        117
+    0.3         |        38        |         42
+    0.2         |         7        |          8
+    0.1         |         4        |          4
+    0.0         |         0        |          0
+    NA (none)   |        38        |         38
+----------------|------------------|-------------------
+ TOTAL (no NA)  |     1,101        |      1,282
+
+**NOTE:** 3 of the ICD-O terms in the DO do not appear in this dataset. Were they obsoleted?
