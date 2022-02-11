@@ -8,7 +8,7 @@ PREFIX oboInOwl: <http://www.geneontology.org/formats/oboInOwl#>
 SELECT ?id ?label ?rare_id
 WHERE {
     {
-        SELECT ?s ?id
+        SELECT ?s ?id ?label
         WHERE {
             ?s a owl:Class ;
                 oboInOwl:id ?id ;
@@ -19,7 +19,7 @@ WHERE {
 
     {
         ?s oboInOwl:hasDbXref ?rare_id .
-        FILTER( REGEX( ?xref, "ORDO|GARD" ) )
+        FILTER( REGEX( ?rare_id, "ORDO|GARD" ) )
     }
     UNION
     {
