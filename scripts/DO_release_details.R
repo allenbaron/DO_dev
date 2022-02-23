@@ -70,5 +70,5 @@ finish <- readline(
 
 # write
 if (finish == "yes") {
-    readr::write_csv(release_df, details_file)
+    readr::write_csv(release_updated, details_file, )
 }
