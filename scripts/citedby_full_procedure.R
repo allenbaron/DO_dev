@@ -5,7 +5,7 @@ library(tidyverse)
 library(keyring)
 library(rentrez)
 library(lubridate)
-library(DO.utils) # requires >= v0.1.6
+library(DO.utils) # requires >= v0.1.7.900
 
 
 # Identify files ----------------------------------------------------------
@@ -36,9 +36,17 @@ if (file.exists(cb_pm_raw_file)) {
     # set API key
     rentrez::set_entrez_key(keyring::key_get("ENTREZ_KEY"))
 
-    pmid_raw <- DO_pubs$pmid[1:8] %>% # exclude 2022 paper, no citations yet
-        citedby_pmid(by_id = TRUE)
-    pmid <- extract_pmid(pmid_raw)
+    pmid_raw <- DO.utils::citedby_pmid(DO.utils::DO_pubs$pmid, by_id = TRUE)
+    # handle 0 results for newest publication
+    pmid <- tryCatch(
+        DO.utils::extract_pmid(pmid_raw),
+        error = function(e) {
+            warning(conditionMessage(e), "; likely the newest, retrying without it")
+            raw <- pmid_raw[-1]
+            class(raw) <- class(pmid_raw)
+            DO.utils::extract_pmid(raw)
+        }
+    )
 
     do_cb_pm_summary_by_id <- pubmed_summary(pmid)
     save(do_cb_pm_summary_by_id, file = cb_pm_raw_file)
@@ -74,8 +82,8 @@ if (file.exists(cb_scop_raw_file)) {
     load(file = cb_scop_raw_file)
 } else {
     do_cb_scop_by_id <- citedby_scopus(
-        title = DO_pubs$title[1:8], # exclude 2022 paper, no citations yet
-        id = DO_pubs$internal_id[1:8],
+        title = DO.utils::DO_pubs$title,
+        id = DO.utils::DO_pubs$internal_id,
         by_id = TRUE,
         # set API key
         api_key = keyring::key_get("Elsevier_API"),
