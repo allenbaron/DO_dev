@@ -94,7 +94,7 @@ if (file.exists(cb_scop_raw_file)) {
         verbose = FALSE
     )
 
-    save(do_cb_scop_by_id, cb_scop_raw_file)
+    save(do_cb_scop_by_id, file = cb_scop_raw_file)
 }
 
 cb_scop_by_id <- as_tibble(do_cb_scop_by_id)
