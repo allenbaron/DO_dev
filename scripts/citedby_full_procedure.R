@@ -48,7 +48,7 @@ if (file.exists(cb_pm_raw_file)) {
         }
     )
 
-    do_cb_pm_summary_by_id <- pubmed_summary(pmid)
+    do_cb_pm_summary_by_id <- DO.utils::pubmed_summary(pmid)
     save(do_cb_pm_summary_by_id, file = cb_pm_raw_file)
 }
 
@@ -62,7 +62,7 @@ cb_pm_merge <- cb_pm_by_id %>%
         by = "cites"
     ) %>%
     dplyr::mutate(
-        pub_type = purrr::map_chr(PubType, vctr_to_string, delim = "|"),
+        pub_type = purrr::map_chr(PubType, DO.utils::vctr_to_string, delim = "|"),
         pub_date = lubridate::date(SortPubDate),
         cites = NULL
     ) %>%
@@ -72,7 +72,9 @@ cb_pm_merge <- cb_pm_by_id %>%
     ) %>%
     dplyr::mutate(source = "pubmed") %>%
     # collapse cited by records that cite multiple DO_pubs
-    collapse_col(cites)
+    DO.utils::collapse_col(cites) %>%
+    # note added time
+    dplyr::mutate(added = lubridate::now(tzone = "UTC"))
 
 
 # Scopus cited by data ----------------------------------------------------
@@ -102,7 +104,6 @@ cb_scop_by_id <- as_tibble(do_cb_scop_by_id)
 # prepare for merge
 cb_scop_merge <- cb_scop_by_id %>%
     dplyr::mutate(
-        scopus_eid = stringr::str_remove(eid, "2-s2.0-"),
         first_author = stringr::str_remove_all(`dc:creator`, "\\."),
         pub_type = paste(
             `prism:aggregationType`,
@@ -113,12 +114,12 @@ cb_scop_merge <- cb_scop_by_id %>%
     ) %>%
     dplyr::select(
         first_author, title = "dc:title", journal = "prism:publicationName",
-        pub_date, doi = "prism:doi", pmid = "pubmed-id", scopus_eid, cites,
+        pub_date, doi = "prism:doi", pmid = "pubmed-id", scopus_eid = eid, cites,
         pub_type, added
     ) %>%
     dplyr::mutate(source = "scopus") %>%
     # collapse cited by records that cite multiple DO_pubs
-    collapse_col(c(cites, added))
+    DO.utils::collapse_col_flex(cites = "unique", added = "first")
 
 
 # PubMed collection data --------------------------------------------------
@@ -176,7 +177,11 @@ col_pm_merge <- col_pm %>%
         first_author = SortFirstAuthor, title = Title, journal = Source,
         pub_date, doi, pmid, pmcid, pub_type
     ) %>%
-    dplyr::mutate(source = "ncbi_col-pubmed")
+    dplyr::mutate(
+        source = "ncbi_col-pubmed",
+        # note added time
+        added = lubridate::now(tzone = "UTC")
+    )
 
 
 # Get Entrez API records for collection records with PubMed Central IDs
@@ -214,7 +219,11 @@ col_pmc_merge <- col_pmc %>%
     ) %>%
     # drop columns without values
     dplyr::select(where(~!all(is.na(.x)))) %>%
-    dplyr::mutate(source = "ncbi_col-pmc")
+    dplyr::mutate(
+        source = "ncbi_col-pmc",
+        # note added time
+        added = lubridate::now(tzone = "UTC")
+    )
 
 
 # Merge -------------------------------------------------------------------
@@ -228,8 +237,7 @@ cb_merge <- cb_pm_merge %>%
             is.na(match_scop),
             source,
             paste(source, "scopus", sep = "; ")
-        ),
-        added = cb_scop_merge$added[match_scop]
+        )
     ) %>%
     dplyr::bind_rows(cb_scop_merge[-na.omit(match_scop), ])
 
