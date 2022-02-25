@@ -6,6 +6,7 @@ library(keyring)
 library(rentrez)
 library(lubridate)
 library(DO.utils) # requires >= v0.1.7.900
+library(googlesheets4)
 
 
 # Identify files ----------------------------------------------------------
@@ -26,6 +27,8 @@ collection_pmc_raw_file <- file.path(
 # final tidied file
 merge_citedby_file <- file.path(citedby_dir, "DO_citedby.csv")
 
+# saved google sheet
+gs <- "https://docs.google.com/spreadsheets/d/1Msse-oQu8kuDBxt3G3cdabFiX8AdwJ9n3-J002Z3QSk/edit?usp=sharing"
 
 # PubMed cited by data ----------------------------------------------------
 
@@ -265,29 +268,69 @@ final_merge <- cb_col_merge1 %>%
             paste(source, "ncbi_col-pmc", sep = "; ")
         )
     ) %>%
-    dplyr::bind_rows(col_pmc_merge[-na.omit(match_pmc), ])
+    dplyr::bind_rows(col_pmc_merge[-na.omit(match_pmc), ]) %>%
+    # final collapse to ensure unique
+    DO.utils::collapse_col_flex(
+        first_author = "unique",
+        pub_date = "first",
+        source = "unique",
+        pub_type = "unique",
+        added = "first"
+    )
 
 # ...and SAVE
 readr::write_csv(final_merge, merge_citedby_file)
 
-# add evaluation columns for curation
-eval_colnames <- c("cite_note", "tool", "tool_name", "research_study",
-                   "bioinformatics_analysis", "analysis_type", "cancer",
-                   "gene/genetic", "drug", "DISEASE", "url", "reference",
-                   "use", "text_note", "tweet")
-eval_cols <- purrr::set_names(
-    rep(NA_character_, length(eval_colnames)),
-        nm = eval_colnames
+# Add new to google sheet (temporary location) ----------------------------
+
+# change sheet location and tidy more for next run in April 2022!!!!
+gs_data <- googlesheets4::read_sheet(
+    gs,
+    "DO_citedby-20211112-for_eval",
+    col_types = "cccccccDccccccccccccccccccccc" # change added to datetime!!
 )
 
-merge_for_eval <- final_merge %>%
-    tibble::add_column(!!!eval_cols)
+updated <- gs_data %>%
+    mutate(
+        added = stringr::str_remove(added, ";.*"),
+        added = lubridate::parse_date_time(added, c("ymdHMS", "mdyHM")),
+        # fix to match how scopus uses it
+        scopus_eid = dplyr::if_else(
+            is.na(scopus_eid),
+            scopus_eid,
+            paste0("2-s2.0-", scopus_eid)
+        )
+    ) %>%
+    tidyr::replace_na(list(added = ymd_hms("2021-11-12 19:32:23"))) %>%
+    dplyr::select(dplyr::one_of(names(gs_data)))
 
-readr::write_csv(
-    merge_for_eval,
-    file.path(citedby_dir, "DO_citedby-for_eval.csv"),
-    na = ""
+# add new publications to list
+new <- match_citations(final_merge, updated) %>%
+    is.na()
+
+updated <- dplyr::bind_rows(
+    updated,
+    dplyr::filter(final_merge, new)
 )
+
+# save to google sheet (w/hyperlinks)
+set_hyperlink <- function(x, type) {
+    link <- DO.utils:::append_to_url(x, url = DO.utils:::get_url(type))
+    dplyr::if_else(
+        is.na(x),
+        x,
+        as.character(glue::glue('=HYPERLINK("{link}", "{x}")'))
+    )
+}
+
+updated <- updated %>%
+    dplyr::mutate(
+       pmid = set_hyperlink(pmid, "pubmed"),
+       doi = set_hyperlink(doi, "doi"),
+       pmcid = set_hyperlink(pmcid, "pmc_article"),
+    )
+
+googlesheets4::write_sheet(updated, gs, "DO_citedby-2022_02_25")
 
 
 # convert IDs to links and save for Excel
