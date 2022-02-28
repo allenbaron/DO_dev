@@ -4247,7 +4247,13 @@ PMID: 34698891
 789. Chen JH, Wang LL, Tao L, Qi B, Wang Y, Guo YJ, Miao L. Identification of MYH6 as 
 the potential gene for human ischaemic cardiomyopathy. J Cell Mol Med. 2021
 Nov;25(22):10736-10746. doi: 10.1111/jcmm.17015. Epub 2021 Oct 26. PubMed
-[citation] PMID: 34697898
+[citation] PMID: 34697898, PMCID: PMC8581323
+
+790. Lin Z, Xie R, Zhong C, Huang J, Shi P, Yao H. Recent progress (2015-2020) in the 
+investigation of the pharmacological effects and mechanisms of ginsenoside Rb(1),
+a main active ingredient in Panax ginseng Meyer. J Ginseng Res. 2022
+Jan;46(1):39-53. doi: 10.1016/j.jgr.2021.07.008. Epub 2021 Jul 30. Review. PubMed
+[citation] PMID: 35058726, PMCID: PMC8753521
 
 
 
