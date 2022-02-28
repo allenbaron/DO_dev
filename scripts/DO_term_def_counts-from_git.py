@@ -1,64 +1,60 @@
 # Python script to execute DO release reports (term, def counts) on all
 #   releases.
-# Created: 2021-08-06
+# Created: 2021-08-06; Updated: 2022-02-28
 
 import os
 from datetime import datetime
-from git import Repo
-import rdflib
+import pyDOID
 import pandas as pd
 
 start = datetime.now()
 
-do_dir = '../Ontologies/HumanDiseaseOntology/'
-release_stat_dir = "data/DO_release"
-
-do_repo = Repo(do_dir)
-do_tags = do_repo.tags
-
+# set file input/output
+do_dir = '~/Documents/Ontologies/HumanDiseaseOntology/'
 doid_owl = os.path.join(do_dir, 'src/ontology/doid.owl')
 
-q_term = """
+do_dev = '~/Documents/DO_dev/'
+release_stat_dir = os.path.join(do_dev, "data/DO_release")
+release_file = os.path.join(release_stat_dir, 'DO_term_def_counts.csv')
+
+# load repo & identify new tags
+rel_df = pd.read_csv(release_file)
+do_repo = pyDOID.DOrepo(do_dir)
+
+tags = do_repo.tags
+tags_sorted = sorted(do_repo.tags, key=lambda t: t.commit.committed_datetime)
+tag_names = [t.name for t in tags]
+
+new_tag_names = list(set(tag_names).difference(rel_df['tag_name'].to_list()))
+
+# define sparql queries
+q = """
 PREFIX owl: <http://www.w3.org/2002/07/owl#>
 
-SELECT (COUNT(?s) AS ?classes) WHERE {
+SELECT (COUNT(?s) AS ?terms) (COUNT(?d) AS ?defs) WHERE {
 ?s a owl:Class .
+OPTIONAL { ?s obo:IAO_0000115 ?d . }
 FILTER STRSTARTS(str(?s), "http://purl.obolibrary.org/obo/DOID_")
 FILTER NOT EXISTS {?s owl:deprecated ?any}
 }
 """
 
-q_def = """
-PREFIX obo: <http://purl.obolibrary.org/obo/>
-PREFIX owl: <http://www.w3.org/2002/07/owl#>
 
-SELECT (COUNT(?s) AS ?classes) WHERE {
-  ?s a owl:Class .
-  FILTER STRSTARTS(str(?s), "http://purl.obolibrary.org/obo/DOID_") .
-  ?s obo:IAO_0000115 ?definition .
-  FILTER NOT EXISTS {?s owl:deprecated ?any}
-}
-"""
+res_dict = do_repo.tag_iterate(
+    do_repo.doid.query,
+    start=new_tag_names[0],
+    query=q,
+    load=True
+)
 
-do_dict = {}
-
-for t in do_tags:
-    do_repo.git.checkout(t)
-
-    g = rdflib.Graph()
-    g.parse(doid_owl, format='application/rdf+xml')
-
-    r_term = g.query(q_term)
-    r_def = g.query(q_def)
-
-    do_dict[str(t)] = {'terms': int([r[0] for r in r_term][0]), 'defs': int([r[0] for r in r_def][0])}
-
-    g.close()
-
-df = pd.DataFrame.from_dict(do_dict, orient='index')
-
+res_dict
+df = pd.concat(res_dict)
+df = df.droplevel(1)
+df.index.name = "tag_name"
+df = df.reset_index()
 print(df)
 
-df.to_csv(os.path.join(release_stat_dir, 'DO_term_def_counts.csv'))
+df_app = pd.concat([rel_df, df], ignore_index=True)
+df_app.to_csv(release_file, index = False)
 
 print(datetime.now() - start)
