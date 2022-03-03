@@ -17,7 +17,7 @@ library(DO.utils) # v0.1.7.9000
 library(googlesheets4) #v1.0.0
 
 # Functions for creating the cell-based tree (csv/Excel/Google Sheets)
-create_tidygraph <- function(df) {
+create_tidygraph <- function(df, root = "DOID:3070") {
     tg <- df %>%
         dplyr::select(id, parent_id) %>%
         tidygraph::as_tbl_graph() %>%
@@ -29,7 +29,7 @@ create_tidygraph <- function(df) {
 
     label_df <- df %>%
         dplyr::filter(
-            id == "DOID:3070" |
+            id == root |
                 (id %in% in_tg & parent_id %in% in_tg)
         ) %>%
         DO.utils::collapse_col_flex(parent_id, parent_label)
@@ -42,16 +42,16 @@ create_tidygraph <- function(df) {
         )
 }
 
-create_tree_df <- function(tg) {
+create_tree_df <- function(tg, root = "DOID:3070") {
     tg %>%
         tidygraph::activate("nodes") %>%
         dplyr::mutate(
             order = tidygraph::dfs_rank(
-                root = which(tg$id == "DOID:3070"),
+                root = which(tg$id == root),
                 mode = "in"
             ),
             dist = tidygraph::dfs_dist(
-                root = which(tg$id == "DOID:3070"),
+                root = which(tg$id == root),
                 mode = "in"
             ),
             insert = paste0("V", dist)
