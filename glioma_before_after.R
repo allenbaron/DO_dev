@@ -6,12 +6,67 @@
 # J. Allen Baron
 # 2022-03-03
 
+
+# Setup -------------------------------------------------------------------
+
 library(tidyverse) # v1.3.1
 library(reticulate) # v1.24
 p <- reticulate::import("pyDOID") # pyDOID v0.1.0
 library(tidygraph) # v1.2.0
 library(DO.utils) # v0.1.7.9000
 library(googlesheets4) #v1.0.0
+
+# Functions for creating the cell-based tree (csv/Excel/Google Sheets)
+create_tidygraph <- function(df) {
+    tg <- df %>%
+        dplyr::select(id, parent_id) %>%
+        tidygraph::as_tbl_graph() %>%
+        tidygraph::activate("nodes") %>%
+        dplyr::filter(!tidygraph::node_is_sink())
+    in_tg <- tg %>%
+        tibble::as_tibble() %>%
+        .$name
+
+    label_df <- df %>%
+        dplyr::filter(
+            id == "DOID:3070" |
+                (id %in% in_tg & parent_id %in% in_tg)
+        ) %>%
+        DO.utils::collapse_col_flex(parent_id, parent_label)
+
+    tg %>%
+        # add back labels
+        tidygraph::left_join(
+            label_df,
+            by = c("name" = "id")
+        )
+}
+
+create_tree_df <- function(tg) {
+    tg %>%
+        tidygraph::activate("nodes") %>%
+        dplyr::mutate(
+            order = tidygraph::dfs_rank(
+                root = which(tg$id == "DOID:3070"),
+                mode = "in"
+            ),
+            dist = tidygraph::dfs_dist(
+                root = which(tg$id == "DOID:3070"),
+                mode = "in"
+            ),
+            insert = paste0("V", dist)
+        ) %>%
+        tidygraph::arrange(order) %>%
+        tidygraph::as_tibble() %>%
+        dplyr::select(
+            parent_id, parent_label, name,
+            tidyselect::everything()
+        ) %>%
+        tidyr::pivot_wider(
+            names_from = insert,
+            values_from = label
+        )
+}
 
 # Path to DO repo on my local machine
 repo <- p$DOrepo("~/Documents/Ontologies/HumanDiseaseOntology")
@@ -69,59 +124,7 @@ after <- repo$doid$query(q, load = TRUE) %>%
 repo$git$checkout("main")
 
 
-# Format for csv output ---------------------------------------------------
-
-# custom function
-create_tidygraph <- function(df) {
-    tg <- df %>%
-        dplyr::select(id, parent_id) %>%
-        tidygraph::as_tbl_graph() %>%
-        tidygraph::activate("nodes") %>%
-        dplyr::filter(!tidygraph::node_is_sink())
-    in_tg <- tg %>%
-        tibble::as_tibble() %>%
-        .$name
-
-    label_df <- df %>%
-        dplyr::filter(
-            id == "DOID:3070" |
-                (id %in% in_tg & parent_id %in% in_tg)
-        ) %>%
-        DO.utils::collapse_col_flex(parent_id, parent_label)
-
-    tg %>%
-        # add back labels
-        tidygraph::left_join(
-            label_df,
-            by = c("name" = "id")
-        )
-}
-
-create_tree_df <- function(tg) {
-    tg %>%
-        tidygraph::activate("nodes") %>%
-        dplyr::mutate(
-            order = tidygraph::dfs_rank(
-                root = which(tg$id == "DOID:3070"),
-                mode = "in"
-            ),
-            dist = tidygraph::dfs_dist(
-                root = which(tg$id == "DOID:3070"),
-                mode = "in"
-            ),
-            insert = paste0("V", dist)
-        ) %>%
-        tidygraph::arrange(order) %>%
-        tidygraph::as_tibble() %>%
-        dplyr::select(
-            parent_id, parent_label, name,
-            tidyselect::everything()
-        ) %>%
-        tidyr::pivot_wider(
-            names_from = insert,
-            values_from = label
-        )
-}
+# Format for cell-based output ----------------------------------------------
 
 before_tg <- create_tidygraph(before)
 before_tree <- create_tree_df(before_tg)
