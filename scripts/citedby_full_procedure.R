@@ -5,7 +5,8 @@ library(tidyverse)
 library(keyring)
 library(rentrez)
 library(lubridate)
-library(DO.utils) # requires >= v0.1.6
+library(DO.utils) # requires >= v0.1.7.900
+library(googlesheets4)
 
 
 # Identify files ----------------------------------------------------------
@@ -26,6 +27,8 @@ collection_pmc_raw_file <- file.path(
 # final tidied file
 merge_citedby_file <- file.path(citedby_dir, "DO_citedby.csv")
 
+# saved google sheet
+gs <- "https://docs.google.com/spreadsheets/d/1Msse-oQu8kuDBxt3G3cdabFiX8AdwJ9n3-J002Z3QSk/edit?usp=sharing"
 
 # PubMed cited by data ----------------------------------------------------
 
@@ -36,11 +39,19 @@ if (file.exists(cb_pm_raw_file)) {
     # set API key
     rentrez::set_entrez_key(keyring::key_get("ENTREZ_KEY"))
 
-    pmid_raw <- DO_pubs$pmid[1:8] %>% # exclude 2022 paper, no citations yet
-        citedby_pmid(by_id = TRUE)
-    pmid <- extract_pmid(pmid_raw)
+    pmid_raw <- DO.utils::citedby_pmid(DO.utils::DO_pubs$pmid, by_id = TRUE)
+    # handle 0 results for newest publication
+    pmid <- tryCatch(
+        DO.utils::extract_pmid(pmid_raw),
+        error = function(e) {
+            warning(conditionMessage(e), "; likely the newest, retrying without it")
+            raw <- pmid_raw[-1]
+            class(raw) <- class(pmid_raw)
+            DO.utils::extract_pmid(raw)
+        }
+    )
 
-    do_cb_pm_summary_by_id <- pubmed_summary(pmid)
+    do_cb_pm_summary_by_id <- DO.utils::pubmed_summary(pmid)
     save(do_cb_pm_summary_by_id, file = cb_pm_raw_file)
 }
 
@@ -54,7 +65,7 @@ cb_pm_merge <- cb_pm_by_id %>%
         by = "cites"
     ) %>%
     dplyr::mutate(
-        pub_type = purrr::map_chr(PubType, vctr_to_string, delim = "|"),
+        pub_type = purrr::map_chr(PubType, DO.utils::vctr_to_string, delim = "|"),
         pub_date = lubridate::date(SortPubDate),
         cites = NULL
     ) %>%
@@ -64,7 +75,9 @@ cb_pm_merge <- cb_pm_by_id %>%
     ) %>%
     dplyr::mutate(source = "pubmed") %>%
     # collapse cited by records that cite multiple DO_pubs
-    collapse_col(cites)
+    DO.utils::collapse_col(cites) %>%
+    # note added time
+    dplyr::mutate(added = lubridate::now(tzone = "UTC"))
 
 
 # Scopus cited by data ----------------------------------------------------
@@ -74,8 +87,8 @@ if (file.exists(cb_scop_raw_file)) {
     load(file = cb_scop_raw_file)
 } else {
     do_cb_scop_by_id <- citedby_scopus(
-        title = DO_pubs$title[1:8], # exclude 2022 paper, no citations yet
-        id = DO_pubs$internal_id[1:8],
+        title = DO.utils::DO_pubs$title,
+        id = DO.utils::DO_pubs$internal_id,
         by_id = TRUE,
         # set API key
         api_key = keyring::key_get("Elsevier_API"),
@@ -86,7 +99,7 @@ if (file.exists(cb_scop_raw_file)) {
         verbose = FALSE
     )
 
-    save(do_cb_scop_by_id, cb_scop_raw_file)
+    save(do_cb_scop_by_id, file = cb_scop_raw_file)
 }
 
 cb_scop_by_id <- as_tibble(do_cb_scop_by_id)
@@ -94,7 +107,6 @@ cb_scop_by_id <- as_tibble(do_cb_scop_by_id)
 # prepare for merge
 cb_scop_merge <- cb_scop_by_id %>%
     dplyr::mutate(
-        scopus_eid = stringr::str_remove(eid, "2-s2.0-"),
         first_author = stringr::str_remove_all(`dc:creator`, "\\."),
         pub_type = paste(
             `prism:aggregationType`,
@@ -105,12 +117,12 @@ cb_scop_merge <- cb_scop_by_id %>%
     ) %>%
     dplyr::select(
         first_author, title = "dc:title", journal = "prism:publicationName",
-        pub_date, doi = "prism:doi", pmid = "pubmed-id", scopus_eid, cites,
+        pub_date, doi = "prism:doi", pmid = "pubmed-id", scopus_eid = eid, cites,
         pub_type, added
     ) %>%
     dplyr::mutate(source = "scopus") %>%
     # collapse cited by records that cite multiple DO_pubs
-    collapse_col(c(cites, added))
+    DO.utils::collapse_col_flex(cites = "unique", added = "first")
 
 
 # PubMed collection data --------------------------------------------------
@@ -168,7 +180,11 @@ col_pm_merge <- col_pm %>%
         first_author = SortFirstAuthor, title = Title, journal = Source,
         pub_date, doi, pmid, pmcid, pub_type
     ) %>%
-    dplyr::mutate(source = "ncbi_col-pubmed")
+    dplyr::mutate(
+        source = "ncbi_col-pubmed",
+        # note added time
+        added = lubridate::now(tzone = "UTC")
+    )
 
 
 # Get Entrez API records for collection records with PubMed Central IDs
@@ -206,7 +222,11 @@ col_pmc_merge <- col_pmc %>%
     ) %>%
     # drop columns without values
     dplyr::select(where(~!all(is.na(.x)))) %>%
-    dplyr::mutate(source = "ncbi_col-pmc")
+    dplyr::mutate(
+        source = "ncbi_col-pmc",
+        # note added time
+        added = lubridate::now(tzone = "UTC")
+    )
 
 
 # Merge -------------------------------------------------------------------
@@ -220,8 +240,7 @@ cb_merge <- cb_pm_merge %>%
             is.na(match_scop),
             source,
             paste(source, "scopus", sep = "; ")
-        ),
-        added = cb_scop_merge$added[match_scop]
+        )
     ) %>%
     dplyr::bind_rows(cb_scop_merge[-na.omit(match_scop), ])
 
@@ -249,29 +268,69 @@ final_merge <- cb_col_merge1 %>%
             paste(source, "ncbi_col-pmc", sep = "; ")
         )
     ) %>%
-    dplyr::bind_rows(col_pmc_merge[-na.omit(match_pmc), ])
+    dplyr::bind_rows(col_pmc_merge[-na.omit(match_pmc), ]) %>%
+    # final collapse to ensure unique
+    DO.utils::collapse_col_flex(
+        first_author = "unique",
+        pub_date = "first",
+        source = "unique",
+        pub_type = "unique",
+        added = "first"
+    )
 
 # ...and SAVE
 readr::write_csv(final_merge, merge_citedby_file)
 
-# add evaluation columns for curation
-eval_colnames <- c("cite_note", "tool", "tool_name", "research_study",
-                   "bioinformatics_analysis", "analysis_type", "cancer",
-                   "gene/genetic", "drug", "DISEASE", "url", "reference",
-                   "use", "text_note", "tweet")
-eval_cols <- purrr::set_names(
-    rep(NA_character_, length(eval_colnames)),
-        nm = eval_colnames
+# Add new to google sheet (temporary location) ----------------------------
+
+# change sheet location and tidy more for next run in April 2022!!!!
+gs_data <- googlesheets4::read_sheet(
+    gs,
+    "DO_citedby-20211112-for_eval",
+    col_types = "cccccccDccccccccccccccccccccc" # change added to datetime!!
 )
 
-merge_for_eval <- final_merge %>%
-    tibble::add_column(!!!eval_cols)
+updated <- gs_data %>%
+    mutate(
+        added = stringr::str_remove(added, ";.*"),
+        added = lubridate::parse_date_time(added, c("ymdHMS", "mdyHM")),
+        # fix to match how scopus uses it
+        scopus_eid = dplyr::if_else(
+            is.na(scopus_eid),
+            scopus_eid,
+            paste0("2-s2.0-", scopus_eid)
+        )
+    ) %>%
+    tidyr::replace_na(list(added = ymd_hms("2021-11-12 19:32:23"))) %>%
+    dplyr::select(dplyr::one_of(names(gs_data)))
 
-readr::write_csv(
-    merge_for_eval,
-    file.path(citedby_dir, "DO_citedby-for_eval.csv"),
-    na = ""
+# add new publications to list
+new <- match_citations(final_merge, updated) %>%
+    is.na()
+
+updated <- dplyr::bind_rows(
+    updated,
+    dplyr::filter(final_merge, new)
 )
+
+# save to google sheet (w/hyperlinks)
+set_hyperlink <- function(x, type) {
+    link <- DO.utils:::append_to_url(x, url = DO.utils:::get_url(type))
+    dplyr::if_else(
+        is.na(x),
+        x,
+        as.character(glue::glue('=HYPERLINK("{link}", "{x}")'))
+    )
+}
+
+updated <- updated %>%
+    dplyr::mutate(
+       pmid = set_hyperlink(pmid, "pubmed"),
+       doi = set_hyperlink(doi, "doi"),
+       pmcid = set_hyperlink(pmcid, "pmc_article"),
+    )
+
+googlesheets4::write_sheet(updated, gs, "DO_citedby-2022_02_25")
 
 
 # convert IDs to links and save for Excel
