@@ -137,3 +137,36 @@ gs <- "1rwbRy-WmfBPHw4XmPvwoswlHskUR90ilur174PhXN8c"
 googlesheets4::write_sheet(before_tree, gs, sheet = "before")
 googlesheets4::write_sheet(after_tree, gs, sheet = "after")
 
+
+# Capture "after" version of low grade glioma ------------------------------
+#   Same execution, only top-level DOID in query differs
+q_lg <- '
+PREFIX rdfs: <http://www.w3.org/2000/01/rdf-schema#>
+PREFIX owl: <http://www.w3.org/2002/07/owl#>
+PREFIX obo: <http://purl.obolibrary.org/obo/>
+PREFIX oboInOwl: <http://www.geneontology.org/formats/oboInOwl#>
+
+SELECT ?id ?label ?parent_id ?parent_label
+WHERE {
+    ?class a owl:Class ;
+        rdfs:subClassOf* obo:DOID_0080829 ;
+        rdfs:subClassOf ?parent ;
+        oboInOwl:id ?id ;
+        rdfs:label ?label .
+    ?parent oboInOwl:id ?parent_id ;
+        rdfs:label ?parent_label .
+    FILTER(!isblank(?parent))
+}'
+
+repo$git$checkout(release$after)
+after_lg <- repo$doid$query(q_lg, load = TRUE) %>%
+    tibble::as_tibble()
+
+# return head to main (to avoid problems with git repo later)
+repo$git$checkout("main")
+
+after_lg_tg <- create_tidygraph(after_lg, root = "DOID:0080829")
+after_lg_tree <- create_tree_df(after_lg_tg, root = "DOID:0080829")
+
+# write to google sheet
+googlesheets4::write_sheet(after_lg_tree, gs, sheet = "after_low_grade")
