@@ -211,3 +211,61 @@ before_miss <- repo$doid$query(q_missing_before, load = TRUE) %>%
     tidyr::unnest(parent_label, keep_empty = TRUE)
 
 before_miss
+
+
+# Get missing "before" trees ----------------------------------------------
+
+# benign glioma
+q_bg <- '
+PREFIX rdfs: <http://www.w3.org/2000/01/rdf-schema#>
+PREFIX owl: <http://www.w3.org/2002/07/owl#>
+PREFIX obo: <http://purl.obolibrary.org/obo/>
+PREFIX oboInOwl: <http://www.geneontology.org/formats/oboInOwl#>
+
+SELECT ?id ?label ?parent_id ?parent_label
+WHERE {
+    ?class a owl:Class ;
+        rdfs:subClassOf* obo:DOID_0060101 ;
+        rdfs:subClassOf ?parent ;
+        oboInOwl:id ?id ;
+        rdfs:label ?label .
+    ?parent oboInOwl:id ?parent_id ;
+        rdfs:label ?parent_label .
+    FILTER(!isblank(?parent))
+}'
+
+# malignant ependymoma
+q_me <- '
+PREFIX rdfs: <http://www.w3.org/2000/01/rdf-schema#>
+PREFIX owl: <http://www.w3.org/2002/07/owl#>
+PREFIX obo: <http://purl.obolibrary.org/obo/>
+PREFIX oboInOwl: <http://www.geneontology.org/formats/oboInOwl#>
+
+SELECT ?id ?label ?parent_id ?parent_label
+WHERE {
+    ?class a owl:Class ;
+        rdfs:subClassOf* obo:DOID_5074 ;
+        rdfs:subClassOf ?parent ;
+        oboInOwl:id ?id ;
+        rdfs:label ?label .
+    ?parent oboInOwl:id ?parent_id ;
+        rdfs:label ?parent_label .
+    FILTER(!isblank(?parent))
+}'
+
+before_bg <- repo$doid$query(q_bg) %>%
+    tibble::as_tibble()
+before_me <- repo$doid$query(q_me) %>%
+    tibble::as_tibble()
+
+repo$git$checkout("main") # return head to main
+
+before_bg_tg <- create_tidygraph(before_bg, root = "DOID:0060101")
+before_bg_tree <- create_tree_df(before_bg_tg, root = "DOID:0060101")
+
+before_me_tg <- create_tidygraph(before_me, root = "DOID:5074")
+before_me_tree <- create_tree_df(before_me_tg, root = "DOID:5074")
+
+# write to google sheets
+googlesheets4::write_sheet(before_bg_tree, gs, sheet = "before_benign_glioma")
+googlesheets4::write_sheet(before_me_tree, gs, sheet = "before_malignant_ependymoma")
