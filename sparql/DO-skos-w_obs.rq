@@ -1,0 +1,18 @@
+# Return a count of xrefs on non-obsolete classes (all xrefs)
+
+PREFIX rdfs: <http://www.w3.org/2000/01/rdf-schema#>
+PREFIX owl: <http://www.w3.org/2002/07/owl#>
+PREFIX oboInOwl: <http://www.geneontology.org/formats/oboInOwl#>
+PREFIX skos: <http://www.w3.org/2004/02/skos/core#>
+
+SELECT ?id ?label ?obsolete ?skos_type ?skos_ref
+WHERE {
+    ?s a owl:Class .
+    FILTER (CONTAINS(STR(?s), "DOID"))
+	OPTIONAL { ?s oboInOwl:id ?id . }
+    OPTIONAL { ?s rdfs:label ?label . }
+    OPTIONAL { ?s owl:deprecated ?obsolete . }
+    ?s ?skos ?skos_ref .
+    FILTER (CONTAINS(STR(?skos), "skos"))
+    BIND( STRAFTER(STR(?skos), "skos/core#") AS ?skos_type )
+}

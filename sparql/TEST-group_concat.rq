@@ -1,0 +1,18 @@
+# Return a list of all non-obsolete xrefs
+
+PREFIX rdfs: <http://www.w3.org/2000/01/rdf-schema#>
+PREFIX owl: <http://www.w3.org/2002/07/owl#>
+PREFIX oboInOwl: <http://www.geneontology.org/formats/oboInOwl#>
+
+SELECT ?id  (GROUP_CONCAT( ?var; separator = "|" ) AS ?blah)
+WHERE {
+    ?s a owl:Class .
+    FILTER (CONTAINS(STR(?s), "DOID"))
+	OPTIONAL { ?s oboInOwl:id ?id . }
+    OPTIONAL { ?s rdfs:label ?label . }
+    FILTER NOT EXISTS { ?s owl:deprecated ?obsolete . }
+    ?s oboInOwl:hasDbXref ?xref .
+    BIND( CONCAT("[", STR(?xref), "]") AS ?var)
+} GROUP BY ?s
+
+# cannot use a variable as the separator even as STR(?var)

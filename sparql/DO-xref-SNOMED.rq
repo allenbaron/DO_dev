@@ -1,0 +1,16 @@
+PREFIX rdfs: <http://www.w3.org/2000/01/rdf-schema#>
+PREFIX obo: <http://purl.obolibrary.org/obo/>
+PREFIX owl: <http://www.w3.org/2002/07/owl#>
+PREFIX oboInOwl: <http://www.geneontology.org/formats/oboInOwl#>
+
+SELECT ?id ?label ?snomed_id WHERE {
+    ?s a owl:Class .
+    FILTER STRSTARTS(str(?s), "http://purl.obolibrary.org/obo/DOID_")
+    FILTER NOT EXISTS {?s owl:deprecated ?any}
+
+    ?s oboInOwl:hasDbXref ?snomed_id .
+    FILTER STRSTARTS(str(?snomed_id), "SNOMEDCT_US")
+
+    OPTIONAL( ?s oboInOwl:id ?id . )
+    OPTIONAL( ?s rdfs:label ?label . )
+}
