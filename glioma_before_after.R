@@ -170,3 +170,44 @@ after_lg_tree <- create_tree_df(after_lg_tg, root = "DOID:0080829")
 
 # write to google sheet
 googlesheets4::write_sheet(after_lg_tree, gs, sheet = "after_low_grade")
+
+
+# Identify terms in "after" missing from "before" -------------------------
+
+q_missing_before <- '
+PREFIX rdfs: <http://www.w3.org/2000/01/rdf-schema#>
+PREFIX owl: <http://www.w3.org/2002/07/owl#>
+PREFIX obo: <http://purl.obolibrary.org/obo/>
+PREFIX oboInOwl: <http://www.geneontology.org/formats/oboInOwl#>
+
+SELECT ?id ?label ?parent_id ?parent_label
+WHERE {
+    ?class a owl:Class .
+
+    VALUES ?class {
+        obo:DOID_5074 obo:DOID_5889 obo:DOID_5508 obo:DOID_5509
+        obo:DOID_5890 obo:DOID_0080889 obo:DOID_5503 obo:DOID_0080890
+        obo:DOID_0080892 obo:DOID_0080891 obo:DOID_0080879 obo:DOID_0080880
+        obo:DOID_0080875 obo:DOID_0080876 obo:DOID_0080854 obo:DOID_0080881
+        obo:DOID_0080904 obo:DOID_0080877 obo:DOID_0080878 obo:DOID_7154
+        obo:DOID_0080882 obo:DOID_0080888 obo:DOID_4844 obo:DOID_5500
+        obo:DOID_5507 obo:DOID_5075 obo:DOID_5505 obo:DOID_4843
+        obo:DOID_5077 obo:DOID_5504 obo:DOID_4857
+    }
+
+    OPTIONAL { ?class oboInOwl:id ?id . }
+    OPTIONAL { ?class rdfs:label ?label . }
+    OPTIONAL {
+        ?class rdfs:subClassOf ?parent .
+        ?parent oboInOwl:id ?parent_id ;
+            rdfs:label ?parent_label .
+    }
+}'
+
+repo$git$checkout(release$before)
+before_miss <- repo$doid$query(q_missing_before, load = TRUE) %>%
+    tibble::as_tibble() %>%
+    tidyr::unnest(parent_id, keep_empty = TRUE) %>%
+    tidyr::unnest(parent_label, keep_empty = TRUE)
+
+before_miss
