@@ -4,7 +4,8 @@
 #   into Illustrator as text tree.
 #
 # J. Allen Baron
-# 2022-03-03
+# Created: 2022-03-03
+# Last Updated: 2022-03-14
 
 
 # Setup -------------------------------------------------------------------
@@ -70,6 +71,7 @@ create_tree_df <- function(tg, root = "DOID:3070") {
 
 # Path to DO repo on my local machine
 repo <- p$DOrepo("~/Documents/Ontologies/HumanDiseaseOntology")
+gs <- "1rwbRy-WmfBPHw4XmPvwoswlHskUR90ilur174PhXN8c"
 
 
 # Specify releases for checkout ------------------------------------------
@@ -133,7 +135,6 @@ after_tg <- create_tidygraph(after)
 after_tree <- create_tree_df(after_tg)
 
 # write to google sheet
-gs <- "1rwbRy-WmfBPHw4XmPvwoswlHskUR90ilur174PhXN8c"
 googlesheets4::write_sheet(before_tree, gs, sheet = "before")
 googlesheets4::write_sheet(after_tree, gs, sheet = "after")
 
@@ -269,3 +270,75 @@ before_me_tree <- create_tree_df(before_me_tg, root = "DOID:5074")
 # write to google sheets
 googlesheets4::write_sheet(before_bg_tree, gs, sheet = "before_benign_glioma")
 googlesheets4::write_sheet(before_me_tree, gs, sheet = "before_malignant_ependymoma")
+
+
+# Get ICD-O codes ---------------------------------------------------------
+
+# separate before & after queries to account for different trees
+q_icdo_bef <- '
+PREFIX rdfs: <http://www.w3.org/2000/01/rdf-schema#>
+PREFIX owl: <http://www.w3.org/2002/07/owl#>
+PREFIX obo: <http://purl.obolibrary.org/obo/>
+PREFIX oboInOwl: <http://www.geneontology.org/formats/oboInOwl#>
+
+SELECT ?id ?icdo
+WHERE {
+    ?class a owl:Class ;
+        rdfs:subClassOf* ?top_node ;
+        oboInOwl:id ?id .
+
+    VALUES ?top_node {
+        obo:DOID_3070 obo:DOID_0060101 obo:DOID_5074 obo:DOID_4857
+        obo:DOID_5889 obo:DOID_7154
+    }
+
+    OPTIONAL {
+        ?class oboInOwl:hasDbXref ?icdo
+        FILTER(STRSTARTS(STR(?icdo), "ICDO"))
+    }
+}'
+
+q_icdo_aft <- '
+PREFIX rdfs: <http://www.w3.org/2000/01/rdf-schema#>
+PREFIX owl: <http://www.w3.org/2002/07/owl#>
+PREFIX obo: <http://purl.obolibrary.org/obo/>
+PREFIX oboInOwl: <http://www.geneontology.org/formats/oboInOwl#>
+
+SELECT ?id ?icdo
+WHERE {
+    ?class a owl:Class ;
+        rdfs:subClassOf* ?top_node ;
+        oboInOwl:id ?id .
+
+    VALUES ?top_node {
+        obo:DOID_3070 obo:DOID_0080829
+    }
+
+    OPTIONAL {
+        ?class oboInOwl:hasDbXref ?icdo
+        FILTER(STRSTARTS(STR(?icdo), "ICDO"))
+    }
+}'
+
+# execute queries
+repo$git$checkout(release$before)
+icdo_bef <- repo$doid$query(q_icdo_bef, load = TRUE) %>%
+    tibble::as_tibble() %>%
+    tidyr::unnest(icdo, keep_empty = TRUE) %>%
+    dplyr::rename(before = icdo) %>%
+    dplyr::mutate(before = stringr::str_remove(before, "M"))
+
+repo$git$checkout(release$after)
+icdo_aft <- repo$doid$query(q_icdo_aft, load = TRUE) %>%
+    tibble::as_tibble() %>%
+    tidyr::unnest(icdo, keep_empty = TRUE) %>%
+    dplyr::rename(after = icdo)
+
+repo$git$checkout("main") # return head to main
+
+# combine & retain unique
+icdo <- dplyr::full_join(icdo_bef, icdo_aft, by = "id") %>%
+    dplyr::arrange(id)
+
+# write to specified sheet in google sheets
+googlesheets4::write_sheet(icdo, gs, sheet = "icdo_codes")
