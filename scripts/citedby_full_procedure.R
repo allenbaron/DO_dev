@@ -8,16 +8,32 @@ library(lubridate)
 library(DO.utils) # requires >= v0.1.7.900
 library(googlesheets4)
 
+###### MANUAL STEP REQUIRED!!! ######
+# Download data manually to data/citedby_collection.txt by selecting:
+#   'Send to:' > 'File' > 'Summary (text)' (Format drop down) > 'Create File'
+#   URL: https://www.ncbi.nlm.nih.gov/myncbi/browse/collection/49204559/
+#####################################
 
-# Identify files ----------------------------------------------------------
+# improvements needed
+#   1. abbreviated titles for Scopus data
+#   2. retain scopus_eid, citedby, etc for matches (not straight preference)
 
+
+# Files -------------------------------------------------------------------
+
+# Google sheet - Final place for storage & review
+gs <- "1wG-d0wt-9YbwhQTaelxqRzbm4qnu11WDM2rv3THy5mY"
+cb_sheet <- "cited_by"
+
+##### local files ######
 citedby_dir <- here::here("data", "citedby")
+
+# input collection file
+collection_file <- file.path(citedby_dir, "DO_myncbi_collection.txt")
 
 # cited by raw output files
 cb_pm_raw_file <- file.path(citedby_dir, "do_cb_pm_summary_by_id.rda")
 cb_scop_raw_file <- file.path(citedby_dir, "do_cb_scop_by_id.rda")
-
-# collections raw input and output files
 collection_pm_raw_file <- file.path(citedby_dir, "do_collection_pm_summary.rda")
 collection_pmc_raw_file <- file.path(
     citedby_dir,
@@ -27,8 +43,6 @@ collection_pmc_raw_file <- file.path(
 # final tidied file
 merge_citedby_file <- file.path(citedby_dir, "DO_citedby.csv")
 
-# saved google sheet
-gs <- "https://docs.google.com/spreadsheets/d/1Msse-oQu8kuDBxt3G3cdabFiX8AdwJ9n3-J002Z3QSk/edit?usp=sharing"
 
 # PubMed cited by data ----------------------------------------------------
 
@@ -131,15 +145,8 @@ cb_scop_merge <- cb_scop_by_id %>%
 #   not redundant with the PubMed + Scopus cited by results to make this
 #   necessary
 
-# MANUAL STEP REQUIRED!!!
-# Download data manually to data/citedby_collection.txt by selecting:
-#   'Send to:' > 'File' > 'Summary (text)' (Format drop down) > 'Create File'
-#   URL: https://www.ncbi.nlm.nih.gov/myncbi/browse/collection/49204559/
-
 # extract PubMed IDs & get data from Entrez API to make formatting easier
-collection_txt <- read_pubmed_txt(
-    here::here("data", "citedby", "citedby_collection.txt")
-)
+collection_txt <- read_pubmed_txt(collection_file)
 
 collection_id <- tibble::tibble(
     n = 1:length(collection_txt),
@@ -281,73 +288,72 @@ final_merge <- cb_col_merge1 %>%
 # ...and SAVE
 readr::write_csv(final_merge, merge_citedby_file)
 
-# Add new to google sheet (temporary location) ----------------------------
+
+# Access data in DO-uses,  cited_by google sheet --------------------------
 
 # change sheet location and tidy more for next run in April 2022!!!!
 gs_data <- googlesheets4::read_sheet(
     gs,
-    "DO_citedby-20211112-for_eval",
-    col_types = "cccccccDccccccccccccccccccccc" # change added to datetime!!
+    cb_sheet,
+    col_types = "cccccccccccTcccDccccccccccccc" # ensure proper formats!!
 )
 
-updated <- gs_data %>%
-    mutate(
-        added = stringr::str_remove(added, ";.*"),
-        added = lubridate::parse_date_time(added, c("ymdHMS", "mdyHM")),
-        # fix to match how scopus uses it
-        scopus_eid = dplyr::if_else(
-            is.na(scopus_eid),
-            scopus_eid,
-            paste0("2-s2.0-", scopus_eid)
-        )
-    ) %>%
-    tidyr::replace_na(list(added = ymd_hms("2021-11-12 19:32:23"))) %>%
-    dplyr::select(dplyr::one_of(names(gs_data)))
 
-# add new publications to list
-new <- match_citations(final_merge, updated) %>%
+
+# Identify new publications -----------------------------------------------
+
+new <- match_citations(final_merge, gs_data) %>%
     is.na()
+new_df <- dplyr::filter(final_merge, new)
 
-updated <- dplyr::bind_rows(
-    updated,
-    dplyr::filter(final_merge, new)
-)
 
-# save to google sheet (w/hyperlinks)
+# Add new data to GS data & count -----------------------------------------
+
+updated <- dplyr::bind_rows(gs_data, new_df)
+
+to_count <- rep(TRUE, nrow(updated))
+counts <- updated %>%
+    dplyr::select(pmid, pmcid, scopus_eid, doi) %>%
+    purrr::map_int(
+        function(.col) {
+            n <- .col[to_count] %>%
+                stats::na.omit() %>%
+                dplyr::n_distinct()
+            to_count <<- dplyr::if_else(to_count == FALSE, FALSE, is.na(.col))
+            n
+        }
+    )
+counts
+sum(counts)
+nrow(updated)
+
+
+# Append new data to GS ---------------------------------------------------
+
+# custom function to set hyperlinks
 set_hyperlink <- function(x, type) {
     link <- DO.utils:::append_to_url(x, url = DO.utils:::get_url(type))
-    dplyr::if_else(
+    formula <- dplyr::if_else(
         is.na(x),
         x,
         as.character(glue::glue('=HYPERLINK("{link}", "{x}")'))
     )
+    googlesheets4::gs4_formula(formula)
 }
 
-updated <- updated %>%
+# identify columns in GS missing from new data
+cols_missing <- names(gs_data)[!names(gs_data) %in% names(new_df)]
+cols_add <- rep(NA_character_, length(cols_missing))
+names(cols_add) <- cols_missing
+
+# format new data
+new_df <- new_df %>%
     dplyr::mutate(
        pmid = set_hyperlink(pmid, "pubmed"),
        doi = set_hyperlink(doi, "doi"),
        pmcid = set_hyperlink(pmcid, "pmc_article"),
-    )
+    ) %>%
+    tibble::add_column(!!!cols_add) %>%
+    dplyr::select(dplyr::one_of(names(gs_data)))
 
-googlesheets4::write_sheet(updated, gs, "DO_citedby-2022_02_25")
-
-
-# convert IDs to links and save for Excel
-merge_w_links <- final_merge %>%
-    dplyr::mutate(
-        doi = DO.utils:::append_to_url(doi, url = DO.utils:::get_url("doi")),
-        pmid = DO.utils:::append_to_url(pmid, url = DO.utils:::get_url("pubmed")),
-        pmcid = DO.utils:::append_to_url(pmcid, url = DO.utils:::get_url("pmc"))
-    )
-
-readr::write_csv(
-    merge_w_links,
-    file.path(citedby_dir, "DO_citedby-w_links.csv")
-)
-
-# improvements needed
-#   1. abbreviated titles for Scopus data
-#   2. retain scopus_eid, citedby, etc for matches (not straight preference)
-#   3. added date for NCBI records
-#   4. keep only oldest added date for record
+googlesheets4::sheet_append(gs, new_df, cb_sheet)
