@@ -3258,8 +3258,8 @@ Dec;112(6):567-577. doi: 10.1016/j.jnma.2020.05.006. Epub 2020 Jul 2. PubMed
 606. Huang SP, Jiang YF, Yang LJ, Yang J, Liang MT, Zhou HF, Luo J, Yang DP, Mo WJ,
 Chen G, Shi L, Gan TQ. Downregulation of miR-125b-5p and Its Prospective
 Molecular Mechanism in Lung Squamous Cell Carcinoma. Cancer Biother Radiopharm.
-2020 Jul 2. doi: 10.1089/cbr.2020.3657. [Epub ahead of print] PubMed [citation]
-PMID: 32614608
+2022 Mar;37(2):125-140. doi: 10.1089/cbr.2020.3657. Epub 2020 Jul 2. PubMed
+[citation] PMID: 32614608
 
 607. Lu H, Xu D, Wang P, Sun W, Xue X, Hu Y, Xie C, Ma Y. RNA-sequencing and
 bioinformatics analysis of long noncoding RNAs and mRNAs in the
@@ -4240,9 +4240,9 @@ networks in machine learning tasks. PLoS One. 2021 Oct 15;16(10):e0258623. doi:
 PMCID: PMC8519453
 
 788. Ringwald M, Richardson JE, Baldarelli RM, Blake JA, Kadin JA, Smith C, Bult CJ.
-Mouse Genome Informatics (MGI): latest news from MGD and GXD. Mamm Genome. 2021
-Oct 26. doi: 10.1007/s00335-021-09921-0. [Epub ahead of print] PubMed [citation] 
-PMID: 34698891
+Mouse Genome Informatics (MGI): latest news from MGD and GXD. Mamm Genome. 2022
+Mar;33(1):4-18. doi: 10.1007/s00335-021-09921-0. Epub 2021 Oct 26. PubMed
+[citation] PMID: 34698891, PMCID: PMC8913530
 
 789. Chen JH, Wang LL, Tao L, Qi B, Wang Y, Guo YJ, Miao L. Identification of MYH6 as 
 the potential gene for human ischaemic cardiomyopathy. J Cell Mol Med. 2021
@@ -4254,6 +4254,424 @@ investigation of the pharmacological effects and mechanisms of ginsenoside Rb(1)
 a main active ingredient in Panax ginseng Meyer. J Ginseng Res. 2022
 Jan;46(1):39-53. doi: 10.1016/j.jgr.2021.07.008. Epub 2021 Jul 30. Review. PubMed
 [citation] PMID: 35058726, PMCID: PMC8753521
+
+791. Chen Q, Chou WC, Lin Z. Integration of Toxicogenomics and Physiologically Based
+Pharmacokinetic Modeling in Human Health Risk Assessment of Perfluorooctane
+Sulfonate. Environ Sci Technol. 2022 Mar 15;56(6):3623-3633. doi:
+10.1021/acs.est.1c06479. Epub 2022 Feb 23. PubMed [citation] PMID: 35194992
+
+792. Forgetta V, Jiang L, Vulpescu NA, Hogan MS, Chen S, Morris JA, Grinek S, Benner
+C, Jang DK, Hoang Q, Burtt N, Flannick JA, McCarthy MI, Fauman E, Greenwood CMT, 
+Maurano MT, Richards JB. An effector index to predict target genes at GWAS loci. 
+Hum Genet. 2022 Feb 11. doi: 10.1007/s00439-022-02434-z. [Epub ahead of print]
+PubMed [citation] PMID: 35147782
+
+793. Reisle C, Williamson LM, Pleasance E, Davies A, Pellegrini B, Bleile DW, Mungall 
+KL, Chuah E, Jones MR, Ma Y, Lewis E, Beckie I, Pham D, Matiello Pletz R,
+Muhammadzadeh A, Pierce BM, Li J, Stevenson R, Wong H, Bailey L, Reisle A,
+Douglas M, et al. A platform for oncogenomic reporting and interpretation. Nat
+Commun. 2022 Feb 9;13(1):756. doi: 10.1038/s41467-022-28348-y. PubMed [citation] 
+PMID: 35140225, PMCID: PMC8828759
+
+794. Muscolino A, Di Maria A, Rapicavoli RV, Alaimo S, Bellomo L, Billeci F, Borzì S, 
+Ferragina P, Ferro A, Pulvirenti A. NETME: on-the-fly knowledge network
+construction from biomedical literature. Appl Netw Sci. 2022;7(1):1. doi:
+10.1007/s41109-021-00435-x. Epub 2022 Jan 6. PubMed [citation] PMID: 35013714,
+PMCID: PMC8733431
+
+795. Wang L, Shang M, Dai Q, He PA. Prediction of lncRNA-disease association based on 
+a Laplace normalized random walk with restart algorithm on heterogeneous
+networks. BMC Bioinformatics. 2022 Jan 4;23(1):5. doi:
+10.1186/s12859-021-04538-1. PubMed [citation] PMID: 34983367, PMCID: PMC8729064
+
+796. Balick DJ, Jordan DM, Sunyaev S, Do R. Overcoming constraints on the detection of
+recessive selection in human genes from population frequency data. Am J Hum
+Genet. 2022 Jan 6;109(1):33-49. doi: 10.1016/j.ajhg.2021.12.001. Epub 2021 Dec
+23. PubMed [citation] PMID: 34951958, PMCID: PMC8764206
+
+797. Pastrello C, Niu Y, Jurisica I. Pathway Enrichment Analysis of Microarray Data.
+Methods Mol Biol. 2022;2401:147-159. doi: 10.1007/978-1-0716-1839-4_10. PubMed
+[citation] PMID: 34902127
+
+798. Sadeghi S, Lu J, Ngom A. A Network-Based Drug Repurposing Method Via Non-Negative
+Matrix Factorization. Bioinformatics. 2021 Dec 7. pii: btab826. doi:
+10.1093/bioinformatics/btab826. [Epub ahead of print] PubMed [citation] PMID:
+34875000, PMCID: PMC8825773
+
+799. Ding Y, Cui M, Qian J, Wang C, Shen Q, Ren H, Li L, Zhang F, Zhang R. Calculation
+of Similarity Between 26 Autoimmune Diseases Based on Three Measurements
+Including Network, Function, and Semantics. Front Genet. 2021 Nov 11;12:758041.
+doi: 10.3389/fgene.2021.758041. eCollection 2021. PubMed [citation] PMID:
+34858474, PMCID: PMC8632457
+
+800. Schmartz GP, Hartung A, Hirsch P, Kern F, Fehlmann T, Müller R, Keller A. PLSDB: 
+advancing a comprehensive database of bacterial plasmids. Nucleic Acids Res. 2022
+Jan 7;50(D1):D273-D278. doi: 10.1093/nar/gkab1111. PubMed [citation] PMID:
+34850116, PMCID: PMC8728149
+
+801. Trautman A, Linchangco R, Walstead R, Jay JJ, Brouwer C. The Aliment to Bodily
+Condition knowledgebase (ABCkb): a database connecting plants and human health.
+BMC Res Notes. 2021 Nov 27;14(1):433. doi: 10.1186/s13104-021-05835-x. PubMed
+[citation] PMID: 34838100, PMCID: PMC8627056
+
+802. Zhang X, Wu F, Yang N, Zhan X, Liao J, Mai S, Huang Z. In silico Methods for
+Identification of Potential Therapeutic Targets. Interdiscip Sci. 2021 Nov 26.
+doi: 10.1007/s12539-021-00491-y. [Epub ahead of print] Review. PubMed [citation] 
+PMID: 34826045, PMCID: PMC8616973
+
+803. Dafniet B, Cerisier N, Boezio B, Clary A, Ducrot P, Dorval T, Gohier A, Brown D, 
+Audouze K, Taboureau O. Development of a chemogenomics library for phenotypic
+screening. J Cheminform. 2021 Nov 24;13(1):91. doi: 10.1186/s13321-021-00569-1.
+PubMed [citation] PMID: 34819133, PMCID: PMC8611952
+
+804. Lin R, Zhong X, Zhou Y, Geng H, Hu Q, Huang Z, Hu J, Fu XD, Chen L, Chen JY.
+R-loopBase: a knowledgebase for genome-wide R-loop formation and regulation.
+Nucleic Acids Res. 2022 Jan 7;50(D1):D303-D315. doi: 10.1093/nar/gkab1103. PubMed
+[citation] PMID: 34792163, PMCID: PMC8728142
+
+805. Wu J, Zhao M, Li T, Sun J, Chen Q, Yin C, Jia Z, Zhao C, Lin G, Ni Y, Xie G, Shi 
+J, He K. HFIP: an integrated multi-omics data and knowledge platform for the
+precision medicine of heart failure. Database (Oxford). 2021 Nov 13;2021(2021).
+pii: baab076. doi: 10.1093/database/baab076. PubMed [citation] PMID: 34791105,
+PMCID: PMC8607296
+
+806. Urban M, Cuzick A, Seager J, Wood V, Rutherford K, Venkatesh SY, Sahu J, Iyer SV,
+Khamari L, De Silva N, Martinez MC, Pedro H, Yates AD, Hammond-Kosack KE.
+PHI-base in 2022: a multi-species phenotype database for Pathogen-Host
+Interactions. Nucleic Acids Res. 2022 Jan 7;50(D1):D837-D847. doi:
+10.1093/nar/gkab1037. PubMed [citation] PMID: 34788826, PMCID: PMC8728202
+
+807. Conceição SIR, Couto FM. Text Mining for Building Biomedical Networks Using
+Cancer as a Case Study. Biomolecules. 2021 Sep 29;11(10). pii: 1430. doi:
+10.3390/biom11101430. Review. PubMed [citation] PMID: 34680062, PMCID: PMC8533101
+
+808. Baltoumas FA, Zafeiropoulou S, Karatzas E, Paragkamian S, Thanati F, Iliopoulos
+I, Eliopoulos AG, Schneider R, Jensen LJ, Pafilis E, Pavlopoulos GA.
+OnTheFly(2.0): a text-mining web application for automated biomedical entity
+recognition, document annotation, network and functional enrichment analysis. NAR
+Genom Bioinform. 2021 Oct 6;3(4):lqab090. doi: 10.1093/nargab/lqab090.
+eCollection 2021 Dec. PubMed [citation] PMID: 34632381, PMCID: PMC8494211
+
+809. Reyes-Peña C, Tovar M, Bravo M, Motz R. An ontology network for Diabetes Mellitus
+in Mexico. J Biomed Semantics. 2021 Oct 9;12(1):19. doi:
+10.1186/s13326-021-00252-2. PubMed [citation] PMID: 34625104, PMCID: PMC8500829
+
+810. Rosário-Ferreira N, Guimarães V, Costa VS, Moreira IS. SicknessMiner: a
+deep-learning-driven text-mining tool to abridge disease-disease associations.
+BMC Bioinformatics. 2021 Oct 4;22(1):482. doi: 10.1186/s12859-021-04397-w. PubMed
+[citation] PMID: 34607568, PMCID: PMC8491382
+
+811. Liu Z, Liu J, Liu X, Wang X, Xie Q, Zhang X, Kong X, He M, Yang Y, Deng X, Yang
+L, Qi Y, Li J, Liu Y, Yuan L, Diao L, He F, Li D. CTR-DB, an omnibus for
+patient-derived gene expression signatures correlated with cancer drug response. 
+Nucleic Acids Res. 2022 Jan 7;50(D1):D1184-D1199. doi: 10.1093/nar/gkab860.
+PubMed [citation] PMID: 34570230, PMCID: PMC8728209
+
+812. Koşaloğlu-Yalçın Z, Blazeska N, Carter H, Nielsen M, Cohen E, Kufe D,
+Conejo-Garcia J, Robbins P, Schoenberger SP, Peters B, Sette A. The Cancer
+Epitope Database and Analysis Resource: A Blueprint for the Establishment of a
+New Bioinformatics Resource for Use by the Cancer Immunology Community. Front
+Immunol. 2021 Aug 24;12:735609. doi: 10.3389/fimmu.2021.735609. eCollection 2021.
+PubMed [citation] PMID: 34504503, PMCID: PMC8421848
+
+813. Li R, Qu H, Wang S, Chater JM, Wang X, Cui Y, Yu L, Zhou R, Jia Q, Traband R,
+Wang M, Xie W, Yuan D, Zhu J, Zhong WD, Jia Z. CancerMIRNome: an interactive
+analysis and visualization database for miRNome profiles of human cancer. Nucleic
+Acids Res. 2022 Jan 7;50(D1):D1139-D1146. doi: 10.1093/nar/gkab784. PubMed
+[citation] PMID: 34500460, PMCID: PMC8728249
+
+814. Baltoumas FA, Zafeiropoulou S, Karatzas E, Koutrouli M, Thanati F, Voutsadaki K, 
+Gkonta M, Hotova J, Kasionis I, Hatzis P, Pavlopoulos GA. Biomolecule and
+Bioentity Interaction Databases in Systems Biology: A Comprehensive Review.
+Biomolecules. 2021 Aug 20;11(8). pii: 1245. doi: 10.3390/biom11081245. Review.
+PubMed [citation] PMID: 34439912, PMCID: PMC8391349
+
+815. Kafkas Ş, Althubaiti S, Gkoutos GV, Hoehndorf R, Schofield PN. Linking common
+human diseases to their phenotypes; development of a resource for human
+phenomics. J Biomed Semantics. 2021 Aug 23;12(1):17. doi:
+10.1186/s13326-021-00249-x. PubMed [citation] PMID: 34425897, PMCID: PMC8383460
+
+816. Poon CL, Chen CY. Exploring the Impact of Cerebrovascular Disease and Major
+Depression on Non-diseased Human Tissue Transcriptomes. Front Genet. 2021 Jul
+19;12:696836. doi: 10.3389/fgene.2021.696836. eCollection 2021. PubMed [citation]
+PMID: 34349785, PMCID: PMC8327210
+
+817. Figueiredo RQ, Raschka T, Kodamullil AT, Hofmann-Apitius M, Mubeen S,
+Domingo-Fernández D. Towards a global investigation of transcriptomic signatures 
+through co-expression networks and pathway knowledge for the identification of
+disease mechanisms. Nucleic Acids Res. 2021 Aug 20;49(14):7939-7953. doi:
+10.1093/nar/gkab556. PubMed [citation] PMID: 34197603, PMCID: PMC8373148
+
+818. Yan VKC, Li X, Ye X, Ou M, Luo R, Zhang Q, Tang B, Cowling BJ, Hung I, Siu CW,
+Wong ICK, Cheng RCK, Chan EW. Drug Repurposing for the Treatment of COVID-19: A
+Knowledge Graph Approach. Adv Ther (Weinh). 2021 May 20:2100055. doi:
+10.1002/adtp.202100055. [Epub ahead of print] Erratum in: Adv Ther (Weinh). 2021 
+Oct;4(10):2100179. PubMed [citation] PMID: 34179346, PMCID: PMC8212091
+
+819. Vieira LM, Jorge NAN, de Sousa JB, Setubal JC, Stadler PF, Walter MEMT. Competing
+Endogenous RNA in Colorectal Cancer: An Analysis for Colon, Rectum, and
+Rectosigmoid Junction. Front Oncol. 2021 Jun 10;11:681579. doi:
+10.3389/fonc.2021.681579. eCollection 2021. PubMed [citation] PMID: 34178670,
+PMCID: PMC8222815
+
+820. Zuo ZL, Cao RF, Wei PJ, Xia JF, Zheng CH. Double matrix completion for
+circRNA-disease association prediction. BMC Bioinformatics. 2021 Jun 8;22(1):307.
+doi: 10.1186/s12859-021-04231-3. PubMed [citation] PMID: 34103016, PMCID:
+PMC8185931
+
+821. Mohammed Y, Michaud SA, Pětrošová H, Yang J, Ganguly M, Schibli D, Flenniken AM, 
+Nutter LMJ, Adissu HA, Lloyd KCK, McKerlie C, Borchers CH. Proteotyping of
+knockout mouse strains reveals sex- and strain-specific signatures in blood
+plasma. NPJ Syst Biol Appl. 2021 May 28;7(1):25. doi: 10.1038/s41540-021-00184-8.
+PubMed [citation] PMID: 34050187, PMCID: PMC8163790
+
+822. Havrilla JM, Liu C, Dong X, Weng C, Wang K. PhenCards: a data resource linking
+human phenotype information to biomedical knowledge. Genome Med. 2021 May
+25;13(1):91. doi: 10.1186/s13073-021-00909-8. PubMed [citation] PMID: 34034817,
+PMCID: PMC8147460
+
+823. Gaudelet T, Day B, Jamasb AR, Soman J, Regep C, Liu G, Hayter JBR, Vickers R,
+Roberts C, Tang J, Roblin D, Blundell TL, Bronstein MM, Taylor-King JP. Utilizing
+graph machine learning within drug discovery and development. Brief Bioinform.
+2021 Nov 5;22(6). pii: bbab159. doi: 10.1093/bib/bbab159. PubMed [citation] PMID:
+34013350, PMCID: PMC8574649
+
+824. Hayman DJ, Modebadze T, Charlton S, Cheung K, Soul J, Lin H, Hao Y, Miles CG,
+Tsompani D, Jackson RM, Briggs MD, Piróg KA, Clark IM, Barter MJ, Clowry GJ,
+LeBeau FEN, Young DA. Increased hippocampal excitability in miR-324-null mice.
+Sci Rep. 2021 May 17;11(1):10452. doi: 10.1038/s41598-021-89874-1. PubMed
+[citation] PMID: 34001919, PMCID: PMC8129095
+
+825. Pirrò S, Matic I, Colizzi V, Galgani A. The microRNA analysis portal is a
+next-generation tool for exploring and analyzing miRNA-focused data in the
+literature. Sci Rep. 2021 Apr 26;11(1):9007. doi: 10.1038/s41598-021-88617-6.
+PubMed [citation] PMID: 33903708, PMCID: PMC8076240
+
+826. Silberstein M, Nesbit N, Cai J, Lee PH. Pathway analysis for genome-wide genetic 
+variation data: Analytic principles, latest developments, and new opportunities. 
+J Genet Genomics. 2021 Mar 20;48(3):173-183. doi: 10.1016/j.jgg.2021.01.007. Epub
+2021 Feb 26. Review. PubMed [citation] PMID: 33896739, PMCID: PMC8286309
+
+827. Pirch S, Müller F, Iofinova E, Pazmandi J, Hütter CVR, Chiettini M, Sin C, Boztug
+K, Podkosova I, Kaufmann H, Menche J. The VRNetzer platform enables interactive
+network analysis in Virtual Reality. Nat Commun. 2021 Apr 23;12(1):2432. doi:
+10.1038/s41467-021-22570-w. PubMed [citation] PMID: 33893283, PMCID: PMC8065164
+
+828. Zhang J, Liu L, Xu T, Zhang W, Zhao C, Li S, Li J, Rao N, Le TD. miRSM: an R
+package to infer and analyse miRNA sponge modules in heterogeneous data. RNA
+Biol. 2021 Dec;18(12):2308-2320. doi: 10.1080/15476286.2021.1905341. Epub 2021
+Apr 6. PubMed [citation] PMID: 33822666, PMCID: PMC8632112
+
+829. Wang H, Huang L, Chen L, Ji J, Zheng Y, Wang Z. Identification of Novel
+Biomarkers Related to Lung Squamous Cell Carcinoma Using Integrated
+Bioinformatics Analysis. Comput Math Methods Med. 2021 Oct 8;2021:9059116. doi:
+10.1155/2021/9059116. eCollection 2021. PubMed [citation] PMID: 34659450, PMCID: 
+PMC8519687
+
+830. Tastsoglou S, Miliotis M, Kavakiotis I, Alexiou A, Gkotsi EC, Lambropoulou A,
+Lygnos V, Kotsira V, Maroulis V, Zisis D, Skoufos G, Hatzigeorgiou AG. PlasmiR: A
+Manual Collection of Circulating microRNAs of Prognostic and Diagnostic Value.
+Cancers (Basel). 2021 Jul 22;13(15). pii: 3680. doi: 10.3390/cancers13153680.
+PubMed [citation] PMID: 34359584, PMCID: PMC8345031
+
+831. Gao H, Ni Y, Mo X, Li D, Teng S, Huang Q, Huang S, Liu G, Zhang S, Tang Y, Lu L, 
+Liang H. Drug repositioning based on network-specific core genes identifies
+potential drugs for the treatment of autism spectrum disorder in children. Comput
+Struct Biotechnol J. 2021 Jul 1;19:3908-3921. doi: 10.1016/j.csbj.2021.06.046.
+eCollection 2021. PubMed [citation] PMID: 34306572, PMCID: PMC8280514
+
+832. Zhou Y, Xu J, Hou Y, Leverenz JB, Kallianpur A, Mehra R, Liu Y, Yu H, Pieper AA, 
+Jehi L, Cheng F. Network medicine links SARS-CoV-2/COVID-19 infection to brain
+microvascular injury and neuroinflammation in dementia-like cognitive impairment.
+Alzheimers Res Ther. 2021 Jun 9;13(1):110. doi: 10.1186/s13195-021-00850-3.
+PubMed [citation] PMID: 34108016, PMCID: PMC8189279
+
+833. Kumaraswamy BV. Understanding the etiopathogenesis and diagnosis of malignancy in
+the framework of Ayurveda: A review based on experience of working in an
+institute of oncology. Ayu. 2020 Jan-Mar;41(1):58-65. doi: 10.4103/ayu.AYU_45_18.
+Epub 2021 Jul 30. PubMed [citation] PMID: 34566386, PMCID: PMC8415240
+
+834. Wang S, Li J, Wang Y. M2PP: a novel computational model for predicting
+drug-targeted pathogenic proteins. BMC Bioinformatics. 2022 Jan 4;23(1):7. doi:
+10.1186/s12859-021-04522-9. PubMed [citation] PMID: 34983358, PMCID: PMC8728953
+
+835. Le DH. A network-based method for predicting disease-associated enhancers. PLoS
+One. 2021 Dec 8;16(12):e0260432. doi: 10.1371/journal.pone.0260432. eCollection
+2021. PubMed [citation] PMID: 34879086, PMCID: PMC8654176
+
+836. Bayoudhi L, Sassi N, Jaziri W. An Overview of Biomedical Ontologies for Pandemics
+and Infectious Diseases Representation. Procedia Comput Sci. 2021;192:4249-4258. 
+doi: 10.1016/j.procs.2021.09.201. Epub 2021 Oct 1. PubMed [citation] PMID:
+34868401, PMCID: PMC8629358
+
+837. Gillespie M, Jassal B, Stephan R, Milacic M, Rothfels K, Senff-Ribeiro A, Griss
+J, Sevilla C, Matthews L, Gong C, Deng C, Varusai T, Ragueneau E, Haider Y, May
+B, Shamovsky V, Weiser J, Brunson T, Sanati N, Beckman L, Shao X, Fabregat A, et 
+al. The reactome pathway knowledgebase 2022. Nucleic Acids Res. 2022 Jan
+7;50(D1):D687-D692. doi: 10.1093/nar/gkab1028. PubMed [citation] PMID: 34788843, 
+PMCID: PMC8689983
+
+838. Agamah FE, Damena D, Skelton M, Ghansah A, Mazandu GK, Chimusa ER. Network-driven
+analysis of human-Plasmodium falciparum interactome: processes for malaria drug
+discovery and extracting in silico targets. Malar J. 2021 Oct 26;20(1):421. doi: 
+10.1186/s12936-021-03955-0. PubMed [citation] PMID: 34702263, PMCID: PMC8547565
+
+839. Wan L, Song J, He V, Roman J, Whah G, Peng S, Zhang L, He Y. Development of the
+International Classification of Diseases Ontology (ICDO) and its application for 
+COVID-19 diagnostic data analysis. BMC Bioinformatics. 2021 Oct 18;22(Suppl
+6):508. doi: 10.1186/s12859-021-04402-2. PubMed [citation] PMID: 34663204, PMCID:
+PMC8522253
+
+840. Fang H, Jiang L. Genetic Prioritization, Therapeutic Repositioning and
+Cross-Disease Comparisons Reveal Inflammatory Targets Tractable for Kidney Stone 
+Disease. Front Immunol. 2021 Aug 20;12:687291. doi: 10.3389/fimmu.2021.687291.
+eCollection 2021. PubMed [citation] PMID: 34489936, PMCID: PMC8417698
+
+841. Gu S, Zhang G, Si Q, Dai J, Song Z, Wang Y. Web tools to perform long non-coding 
+RNAs analysis in oncology research. Database (Oxford). 2021 Jul 23;2021. pii:
+baab047. doi: 10.1093/database/baab047. Review. PubMed [citation] PMID: 34296748,
+PMCID: PMC8299716
+
+842. AlSaieedi A, Salhi A, Tifratene F, Raies AB, Hungler A, Uludag M, Van Neste C,
+Bajic VB, Gojobori T, Essack M. DES-Tcell is a knowledgebase for exploring
+immunology-related literature. Sci Rep. 2021 Jul 12;11(1):14344. doi:
+10.1038/s41598-021-93809-1. Erratum in: Sci Rep. 2021 Nov 10;11(1):22309. PubMed 
+[citation] PMID: 34253812, PMCID: PMC8275784
+
+843. Ahmed Z, Renart EG, Zeeshan S, Dong X. Advancing clinical genomics and precision 
+medicine with GVViZ: FAIR bioinformatics platform for variable gene-disease
+annotation, visualization, and expression analysis. Hum Genomics. 2021 Jun
+26;15(1):37. doi: 10.1186/s40246-021-00336-1. PubMed [citation] PMID: 34174938,
+PMCID: PMC8235866
+
+844. Wang Z, He Y. Precision omics data integration and analysis with interoperable
+ontologies and their application for COVID-19 research. Brief Funct Genomics.
+2021 Jul 17;20(4):235-248. doi: 10.1093/bfgp/elab029. PubMed [citation] PMID:
+34159360, PMCID: PMC8287950
+
+845. Roychowdhury D, Gupta S, Qin X, Arighi CN, Vijay-Shanker K. emiRIT: a
+text-mining-based resource for microRNA information. Database (Oxford). 2021 May 
+28;2021. pii: baab031. doi: 10.1093/database/baab031. PubMed [citation] PMID:
+34048547, PMCID: PMC8163238
+
+846. Daulatabad SV, Srivastava R, Janga SC. Lantern: an integrative repository of
+functional annotations for lncRNAs in the human genome. BMC Bioinformatics. 2021 
+May 26;22(1):279. doi: 10.1186/s12859-021-04207-3. PubMed [citation] PMID:
+34039271, PMCID: PMC8157669
+
+847. Youlten SE, Kemp JP, Logan JG, Ghirardello EJ, Sergio CM, Dack MRG, Guilfoyle SE,
+Leitch VD, Butterfield NC, Komla-Ebri D, Chai RC, Corr AP, Smith JT, Mohanty ST, 
+Morris JA, McDonald MM, Quinn JMW, McGlade AR, Bartonicek N, Jansson M,
+Hatzikotoulas K, Irving MD, et al. Osteocyte transcriptome mapping identifies a
+molecular landscape controlling skeletal homeostasis and susceptibility to
+skeletal disease. Nat Commun. 2021 May 5;12(1):2444. doi:
+10.1038/s41467-021-22517-1. PubMed [citation] PMID: 33953184, PMCID: PMC8100170
+
+848. Cheng B, Chu X, Yang X, Wen Y, Jia Y, Liang C, Yao Y, Ye J, Cheng S, Liu L, Wu C,
+Zhang F. Dietary Habit Is Associated with Depression and Intelligence: An
+Observational and Genome-Wide Environmental Interaction Analysis in the UK
+Biobank Cohort. Nutrients. 2021 Mar 31;13(4). pii: 1150. doi: 10.3390/nu13041150.
+PubMed [citation] PMID: 33807197, PMCID: PMC8067152
+
+849. Alekhya B, Sasikumar R. An ensemble approach for healthcare application and
+diagnosis using natural language processing. Cogn Neurodyn. 2022 Jan 17:1-18.
+doi: 10.1007/s11571-021-09758-y. [Epub ahead of print] PubMed [citation] PMID:
+35069926, PMCID: PMC8761525
+
+850. Slater LT, Karwath A, Hoehndorf R, Gkoutos GV. Effects of Negation and
+Uncertainty Stratification on Text-Derived Patient Profile Similarity. Front
+Digit Health. 2021 Dec 6;3:781227. doi: 10.3389/fdgth.2021.781227. eCollection
+2021. PubMed [citation] PMID: 34939069, PMCID: PMC8685209
+
+851. Hong N, Chang F, Ou Z, Wang Y, Yang Y, Guo Q, Ma J, Zhao D. Construction of the
+cervical cancer common terminology for promoting semantic interoperability and
+utilization of Chinese clinical data. BMC Med Inform Decis Mak. 2021 Nov
+16;21(Suppl 9):309. doi: 10.1186/s12911-021-01672-x. PubMed [citation] PMID:
+34789237, PMCID: PMC8596900
+
+852. Filice RW, Kahn CE Jr. Biomedical Ontologies to Guide AI Development in
+Radiology. J Digit Imaging. 2021 Dec;34(6):1331-1341. doi:
+10.1007/s10278-021-00527-1. Epub 2021 Nov 1. Review. PubMed [citation] PMID:
+34724143, PMCID: PMC8669056
+
+853. Siramshetty VB, Grishagin I, Nguyễn ÐT, Peryea T, Skovpen Y, Stroganov O, Katzel 
+D, Sheils T, Jadhav A, Mathé EA, Southall NT. NCATS Inxight Drugs: a
+comprehensive and curated portal for translational research. Nucleic Acids Res.
+2022 Jan 7;50(D1):D1307-D1316. doi: 10.1093/nar/gkab918. PubMed [citation] PMID: 
+34648031, PMCID: PMC8728186
+
+854. Uthayopas K, de Sá AGC, Alavi A, Pires DEV, Ascher DB. TSMDA: Target and
+symptom-based computational model for miRNA-disease-association prediction. Mol
+Ther Nucleic Acids. 2021 Aug 26;26:536-546. doi: 10.1016/j.omtn.2021.08.016.
+eCollection 2021 Dec 3. PubMed [citation] PMID: 34631283, PMCID: PMC8479276
+
+855. Zhang Y, Zou D, Zhu T, Xu T, Chen M, Niu G, Zong W, Pan R, Jing W, Sang J, Liu C,
+Xiong Y, Sun Y, Zhai S, Chen H, Zhao W, Xiao J, Bao Y, Hao L, Zhang Z. Gene
+Expression Nebulas (GEN): a comprehensive data portal integrating transcriptomic 
+profiles across multiple species at both bulk and single-cell levels. Nucleic
+Acids Res. 2022 Jan 7;50(D1):D1016-D1024. doi: 10.1093/nar/gkab878. PubMed
+[citation] PMID: 34591957, PMCID: PMC8728231
+
+856. Ibrahim M, Gauch S, Salman O, Alqahtani M. An automated method to enrich consumer
+health vocabularies using GloVe word embeddings and an auxiliary lexical
+resource. PeerJ Comput Sci. 2021 Aug 9;7:e668. doi: 10.7717/peerj-cs.668.
+eCollection 2021. PubMed [citation] PMID: 34458573, PMCID: PMC8371999
+
+857. Hanspers K, Kutmon M, Coort SL, Digles D, Dupuis LJ, Ehrhart F, Hu F, Lopes EN,
+Martens M, Pham N, Shin W, Slenter DN, Waagmeester A, Willighagen EL, Winckers
+LA, Evelo CT, Pico AR. Ten simple rules for creating reusable pathway models for 
+computational analysis and visualization. PLoS Comput Biol. 2021 Aug
+19;17(8):e1009226. doi: 10.1371/journal.pcbi.1009226. eCollection 2021 Aug. No
+abstract available. PubMed [citation] PMID: 34411100, PMCID: PMC8375987
+
+858. Dogan H, Hakguder Z, Madadjim R, Scott S, Pierobon M, Cui J. Elucidation of
+dynamic microRNA regulations in cancer progression using integrative machine
+learning. Brief Bioinform. 2021 Nov 5;22(6). pii: bbab270. doi:
+10.1093/bib/bbab270. PubMed [citation] PMID: 34373890, PMCID: PMC8574978
+
+859. Yang X, Wu C, Nenadic G, Wang W, Lu K. Mining a stroke knowledge graph from
+literature. BMC Bioinformatics. 2021 Jul 29;22(Suppl 10):387. doi:
+10.1186/s12859-021-04292-4. Erratum in: BMC Bioinformatics. 2021 Dec 8;22(1):585.
+PubMed [citation] PMID: 34325669, PMCID: PMC8319697
+
+860. Asada M, Gunasekaran N, Miwa M, Sasaki Y. Representing a Heterogeneous
+Pharmaceutical Knowledge-Graph with Textual Information. Front Res Metr Anal.
+2021 Jul 1;6:670206. doi: 10.3389/frma.2021.670206. eCollection 2021. PubMed
+[citation] PMID: 34278204, PMCID: PMC8281808
+
+861. Pendleton SC, Slater LT, Karwath A, Gilbert RM, Davis N, Pesudovs K, Liu X,
+Denniston AK, Gkoutos GV, Braithwaite T. Development and application of the
+ocular immune-mediated inflammatory diseases ontology enhanced with synonyms from
+online patient support forum conversation. Comput Biol Med. 2021 Aug;135:104542. 
+doi: 10.1016/j.compbiomed.2021.104542. Epub 2021 Jun 8. PubMed [citation] PMID:
+34139439, PMCID: PMC8404035
+
+862. Timón-Reina S, Rincón M, Martínez-Tomás R. An overview of graph databases and
+their applications in the biomedical domain. Database (Oxford). 2021 May 18;2021.
+pii: baab026. doi: 10.1093/database/baab026. PubMed [citation] PMID: 34003247,
+PMCID: PMC8130509
+
+863. Chowdhury UN, Ahmad S, Islam MB, Alyami SA, Quinn JMW, Eapen V, Moni MA. System
+biology and bioinformatics pipeline to identify comorbidities risk association:
+Neurodegenerative disorder case study. PLoS One. 2021 May 6;16(5):e0250660. doi: 
+10.1371/journal.pone.0250660. eCollection 2021. PubMed [citation] PMID: 33956862,
+PMCID: PMC8101720
+
+864. Slater LT, Karwath A, Williams JA, Russell S, Makepeace S, Carberry A, Hoehndorf 
+R, Gkoutos GV. Towards similarity-based differential diagnostics for common
+diseases. Comput Biol Med. 2021 Jun;133:104360. doi:
+10.1016/j.compbiomed.2021.104360. Epub 2021 Apr 1. PubMed [citation] PMID:
+33836447, PMCID: PMC8204262
+
+865. Fu M, Zhang J, Li W, He S, Zhang J, Tennant D, Hua W, Mao Y. Gene clusters based 
+on OLIG2 and CD276 could distinguish molecular profiling in glioblastoma. J
+Transl Med. 2021 Sep 26;19(1):404. doi: 10.1186/s12967-021-03083-y. PubMed
+[citation] PMID: 34565408, PMCID: PMC8474912
+
+866. Westerlund AM, Hawe JS, Heinig M, Schunkert H. Risk Prediction of Cardiovascular 
+Events by Exploration of Molecular Data with Explainable Artificial Intelligence.
+Int J Mol Sci. 2021 Sep 24;22(19). pii: 10291. doi: 10.3390/ijms221910291.
+Review. PubMed [citation] PMID: 34638627, PMCID: PMC8508897
 
 
 

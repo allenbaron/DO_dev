@@ -27,4 +27,15 @@ plot_xref_counts()
 plot_def_src("../Ontologies/HumanDiseaseOntology")
 
 
+# Generate html page updates ----------------------------------------------
 
+user_list_file <- file.path(
+    "graphics",
+    "website",
+    paste0(
+        stringr::str_remove_all(Sys.Date(), "-"),
+        "-",
+        "website_user_list.html"
+    )
+)
+make_user_list_html(user_list_file)
