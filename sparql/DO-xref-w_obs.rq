@@ -1,0 +1,15 @@
+# Return a count of all xrefs, marking obsolete classes (all xrefs)
+
+PREFIX rdfs: <http://www.w3.org/2000/01/rdf-schema#>
+PREFIX owl: <http://www.w3.org/2002/07/owl#>
+PREFIX oboInOwl: <http://www.geneontology.org/formats/oboInOwl#>
+
+SELECT ?id ?label ?obsolete ?xref
+WHERE {
+    ?s a owl:Class .
+    FILTER (CONTAINS(STR(?s), "DOID"))
+	OPTIONAL { ?s oboInOwl:id ?id . }
+    OPTIONAL { ?s rdfs:label ?label . }
+    OPTIONAL { ?s owl:deprecated ?obsolete . }
+    ?s oboInOwl:hasDbXref ?xref .
+}
