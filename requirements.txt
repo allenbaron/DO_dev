@@ -73,7 +73,7 @@ ptyprocess==0.7.0
 pure-eval==0.2.2
 pybiopax==0.1.0
 pydantic==1.9.0
-pyDOID==0.1.0
+pyDOID==0.1.4
 Pygments==2.11.2
 pyobo==0.7.0
 pyparsing==3.0.7
