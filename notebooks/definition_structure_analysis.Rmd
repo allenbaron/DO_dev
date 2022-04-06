@@ -1,0 +1,550 @@
+---
+title: "Evaluation of Definition Structure"
+author: "J. Allen Baron"
+date: 2022-04-06
+output: 
+    html_notebook:
+        toc: true
+        toc_float:
+            collapsed: false
+        df_print: paged
+        code_folding: hide
+---
+
+# Purpose
+
+To better understand the style of definitions used within the Human Disease Ontology, particularly with regard to "characterized by" statements.
+
+
+# Background
+
+The definition [style guide](https://docs.google.com/document/d/1YUv_7noj3JJIuSSECU3ufAbXvDiPTugIDv7Dm0mRypw) indicates that definitions should always begin with their parent term and a description of the disease's etiology (cause).
+
+Lynn has explained that definitions frequently use "characterized by", but it's not clear to me if this should preface the etiology or signs/symptoms, and "has_material_basis_in", which as I understand it is only used when a genetic cause is identified.
+
+```{r setup, include = FALSE}
+library(tidyverse)
+library(DO.utils)
+library(tidytext)
+library(wordcloud2)
+
+# custom functions
+percent <- function(x) {
+    round(x / sum(x) * 100, 2)
+}
+
+add_percent <- function(.df, .col, .group = NULL) {
+    .g <- deparse(substitute(.group))
+    if (.g != "NULL") {
+        .df <- dplyr::group_by(.df, {{ .group }})
+    }
+    df_out <- dplyr::mutate(.df, pct = percent({{ .col }}))
+    if (.g != "NULL") {
+        df_out <- dplyr::ungroup(df_out)
+    }
+    df_out
+}
+```
+
+```{r data}
+repo <- DOrepo("~/Documents/Ontologies/HumanDiseaseOntology")
+q <- "
+    PREFIX rdfs: <http://www.w3.org/2000/01/rdf-schema#>
+    PREFIX owl: <http://www.w3.org/2002/07/owl#>
+    PREFIX oio: <http://www.geneontology.org/formats/oboInOwl#>
+    PREFIX IAO: <http://purl.obolibrary.org/obo/IAO_>
+
+    SELECT ?id ?label ?obs ?def ?parent_label
+    WHERE {
+        ?c IAO:0000115 ?def ;
+            oio:id ?id ;
+            rdfs:label ?label;
+            rdfs:subClassOf ?parent .
+        ?parent rdfs:label ?parent_label .
+        FILTER(CONTAINS(STR(?c), 'DOID'))
+        FILTER(!ISBLANK(?parent))
+        OPTIONAL { ?c owl:deprecated ?obs . }
+    }"
+
+def <- repo$doid$query(q) %>%
+    tibble::as_tibble() %>%
+    tidyr::unnest(obs, keep_empty = TRUE) %>%
+    dplyr::mutate(
+        obs = dplyr::if_else(is.na(obs), FALSE, obs),
+        cb_format = stringr::str_extract(def, "(that is )?characterized by"),
+        chr_by = stringr::str_extract(def, "characterized by.*") %>%
+            stringr::str_squish()
+    ) %>%
+    dplyr::arrange(id)
+```
+
+
+# Questions and Analysis
+
+## "characterized by"
+
+1. How many definitions use "characterized by" and do the majority use the format "that is characterized by" or just "characterized by"?
+
+```{r}
+dplyr::count(def, obs, cb_format) %>%
+    add_percent(n)
+```
+The "characterized by" statement appears in about 1/2 of the non-obsolete definitions, with both formats used equally.
+
+
+2. Is there a difference in format based on when a term was created? _Newer terms can be identified by a leading "0"._
+
+```{r}
+def <- def %>%
+    dplyr::mutate(newer = stringr::str_detect(id, "DOID:0"))
+
+def %>%
+    dplyr::filter(!obs) %>%
+    dplyr::count(newer, cb_format) %>%
+    add_percent(n)
+```
+Newer IDs more often use "characterized by" without the "that is".
+
+**PREFER format without "that is ".**
+
+
+3. What is the "characterized by" statement for?
+
+```{r}
+def %>%
+    dplyr::filter(!is.na(chr_by)) %>%
+    dplyr::select(chr_by)
+```
+There is a mix of its use preceding a list of symptoms/phenotypes/signs and use preceding a cause. I'll need to ask for clarification on the preference.
+
+**The consensus is that "characterized by" should precede a list of symptoms/phenotypes/signs.**
+
+
+4. Where does "characterized by" usually occur in a definition?
+Or, in other words, how many words precede "characterized by"?
+    
+```{r}
+def %>%
+    dplyr::mutate(
+        before_cb = stringr::str_extract(
+            def,
+            ".*?characterized by"
+        ) %>%
+            stringr::str_remove("(that is )characterized by")
+    ) %>%
+    dplyr::select(id, before_cb) %>%
+    dplyr::filter(!is.na(before_cb)) %>%
+    tidytext::unnest_tokens(
+        output = "word",
+        input = before_cb,
+        token = "words"
+    ) %>%
+    dplyr::count(id, name = "n_words") %>%
+    dplyr::count(n_words, name = "occurrences") %>%
+    ggplot() +
+    geom_col(aes(x = n_words, y = occurrences))
+```
+
+Most often the "characterized by" is the fourth or fifth word which means it's generally at the beginning of a definition, probably right after the "A {parent}" statement.
+
+**"characterized by" should generally be at the start of a definition.**
+
+
+### Syndromes (and "characterized by")
+
+1. What about "characterized by" statements for syndromes?
+
+```{r}
+syndrome_q <- "
+    PREFIX rdfs: <http://www.w3.org/2000/01/rdf-schema#>
+    PREFIX owl: <http://www.w3.org/2002/07/owl#>
+    PREFIX oio: <http://www.geneontology.org/formats/oboInOwl#>
+    PREFIX IAO: <http://purl.obolibrary.org/obo/IAO_>
+    PREFIX DOID: <http://purl.obolibrary.org/obo/DOID_>
+
+    SELECT ?id ?label ?obs ?def
+    WHERE {
+        ?c IAO:0000115 ?def ;
+            oio:id ?id ;
+            rdfs:label ?label ;
+            rdfs:subClassOf DOID:225 .
+        OPTIONAL { ?c owl:deprecated ?obs . }
+    }"
+
+syn_def <- repo$doid$query(syndrome_q) %>%
+    tibble::as_tibble() %>%
+    tidyr::unnest(obs, keep_empty = TRUE) %>%
+    dplyr::mutate(
+        obs = dplyr::if_else(is.na(obs), FALSE, obs),
+        cb_format = stringr::str_extract(def, "(that is )?characterized by"),
+        chr_by = stringr::str_extract(def, "characterized by.*") %>%
+            stringr::str_squish()
+    ) %>%
+    dplyr::arrange(id)
+```
+
+
+```{r}
+count(syn_def, obs, cb_format)
+```
+
+"characterized by" is _VERY_ common for syndromes.
+
+
+2. What about syndromes in name ONLY for which causes are known? _(i.e. those not in the syndrome branch of DO but with "syndrome" in their name)_
+
+```{r}
+def <- def %>%
+    dplyr::mutate(
+        syndrome_in_name = stringr::str_detect(label, "[Ss]yndrome"),
+        true_syndrome = id %in% syn_def$id
+    )
+
+def %>%
+    dplyr::filter(!obs) %>%
+    dplyr::count(syndrome_in_name, true_syndrome) %>%
+    add_percent(n)
+```
+
+About 10% of disease are syndromes in name only, which is about twice as many as the true syndromes.
+
+
+```{r}
+sino <- def %>%
+    dplyr::filter(syndrome_in_name, !true_syndrome, !obs)
+
+sino %>%
+    dplyr::count(cb_format) %>%
+    add_percent(n)
+```
+
+Most still have "characterized by" in their definitions.
+
+```{r}
+sino %>%
+    dplyr::select(def)
+```
+
+It seems like "Budd-Chiari syndrome" (DOID:11512) really is a syndrome (no known cause). Maybe some of these should also be classified as syndromes? 
+
+
+3. How many syndromes _in name only_ have causes identified?
+
+```{r}
+sino %>%
+    dplyr::filter(stringr::str_detect(def, "from"))
+```
+
+About 38.
+
+**Generally syndromes start with a "characterized by" list, which may be followed by the cause if known.**
+
+
+## NOT "characterized by"
+
+1. When would a "characterized by" statement be **_inappropriate_**?
+
+```{r}
+no_cb <- def %>%
+    dplyr::filter(is.na(chr_by)) %>%
+    dplyr::select(def)
+no_cb
+```
+
+Allergies, autoimmune diseases, and infectious diseases do not appear to use "characterized by" statements.
+
+2. When "characterized by" is absent, what follows the "parent" statement?
+
+```{r}
+no_cb <- def %>%
+    dplyr::filter(is.na(chr_by)) %>%
+    dplyr::mutate(
+        after_parent = purrr::map2_chr(
+            .x = def,
+            .y = parent_label,
+            ~ stringr::str_extract(.x, paste0(.y, ".*")) %>%
+                stringr::str_remove(.y) %>%
+                stringr::str_squish()
+        )
+    ) %>%
+    dplyr::select(id, after_parent) %>%
+    dplyr::filter(!is.na(after_parent))
+
+no_cb_word <- no_cb %>%
+    tidytext::unnest_tokens(
+        output = "word",
+        input = after_parent,
+        token = "words"
+    ) %>%
+    dplyr::group_by(id) %>%
+    dplyr::mutate(pos = dplyr::row_number()) %>%
+    dplyr::ungroup() %>%
+    dplyr::count(pos, word) %>%
+    dplyr::arrange(pos, dplyr::desc(n)) %>%
+    dplyr::group_by(pos) %>%
+    dplyr::mutate(rank = dplyr::row_number(rev(n))) %>%
+    dplyr::ungroup() %>%
+    dplyr::filter(rank <= 10, pos < 4) %>%
+    add_percent(n, pos)
+
+no_cb_word %>%
+    dplyr::filter(rank < 6) %>%
+    dplyr::select(pos, word, pct) %>%
+    tidyr::pivot_wider(
+        names_from = pos,
+        values_from = pct
+    )
+```
+
+It seems that aside from "characterized by" the other major statements are primarily attached with "that" and include: "has_material_basis_in" > "located_in" > "involves" > "results_in" > "derives_from".
+
+The patterns may be easier to view as 3-grams (the first 3 words as a set) where those with relationship terms (identifiable by the presence of an underscore) have all following words removed in order to collapse them together. I think it would also be worth including "characterized by" to find out where it fits in terms of use frequency.
+
+```{r}
+def %>%
+    dplyr::mutate(
+        after_parent = purrr::map2_chr(
+            .x = def,
+            .y = parent_label,
+            ~ stringr::str_extract(.x, paste0(.y, ".*")) %>%
+                stringr::str_remove(.y) %>%
+                stringr::str_squish()
+        )
+    ) %>%
+    dplyr::select(id, after_parent) %>%
+    dplyr::filter(!is.na(after_parent)) %>%
+    dplyr::mutate(
+        after_parent = stringr::str_replace_all(
+            after_parent,
+            c(
+                "located in" = "located_in",
+                "results in" = "results_in",
+                "(that is ?)characterized[ _]+by" = "characterized_by",
+                "characterized by" = "characterized_by"
+            )
+        )
+    ) %>%
+    tidytext::unnest_ngrams(output = "three", input = after_parent, n = 3) %>%
+    dplyr::mutate(
+        three = stringr::str_replace(
+            three,
+            "(.*_[a-z]+).*",
+            "\\1"
+        )
+    ) %>%
+    dplyr::group_by(id) %>%
+    dplyr::filter(dplyr::row_number() == 1) %>%
+    dplyr::ungroup() %>%
+    dplyr::count(three, sort = TRUE) %>%
+    add_percent(n)
+```
+Ultimately it seems like the most frequent statements (ranked) are as follows:
+
+**characterized by >> has_material_basis_in >> located_in > results_in > derives_from > is a > has_allergic_trigger**
+
+Some less frequently used statements use: involves > arises from > affects > composed of
+
+
+3. What is included in the "is a" statement?
+
+```{r}
+no_cb %>%
+    dplyr::mutate(
+        is_a = stringr::str_extract(after_parent, "that is a ([^ ]+ ){2}") %>%
+            stringr::str_remove("that is a ")
+    ) %>%
+    dplyr::filter(!is.na(is_a)) %>%
+    dplyr::count(is_a, sort = TRUE)
+```
+It appears that it is primarily used in place of one of the more common statements.
+
+**"that is a" should be avoided and used in only rare instances.**
+
+
+## "caused by"
+
+1. How are "caused by" statements used?
+
+```{r}
+def <- def %>%
+    dplyr::mutate(
+        caused = stringr::str_extract(def, "caused by.*") %>%
+            stringr::str_squish(),
+        has_caused = !is.na(caused)
+    )
+
+count(def, obs, has_caused) %>%
+    add_percent(n)
+
+count(def, newer, has_caused) %>%
+    add_percent(n)
+```
+
+These statements are not common. They're use has declined in non-obsolete, newer terms. I'll ask for clarification to determine whether they should be avoided.
+
+**ANSWER**
+
+
+## Parentheses & Terminology
+
+1. Should definitions include words in parentheses?
+
+```{r}
+def <- def %>%
+    dplyr::mutate(
+        has_paren = stringr::str_detect(def, "\\(\\w+"),
+        paren_content = stringr::str_extract_all(def, "\\(.+?\\)") %>%
+            purrr::map_chr(cast_to_string)
+    )
+
+dplyr::count(def, has_paren) %>%
+    add_percent(n)
+```
+
+Most often they **do not** include parentheses but they do exist.
+
+
+2. Are medical terms or their explanations included in parentheses?
+
+Looking at content...
+
+```{r}
+dplyr::filter(def, has_paren) %>%
+    dplyr::select(paren_content)
+```
+
+The first few are scientific genus species names and I know there are gene names. Quantifying those...
+
+```{r}
+dplyr::filter(def, has_paren) %>%
+    dplyr::mutate(
+        is_species = stringr::str_detect(def, "\\([A-Z][a-z]+ [a-z]+"),
+        is_gene = stringr::str_detect(def, "\\([A-Z0-9]{3,}")
+    ) %>%
+    dplyr::summarize(
+        species = sum(is_species),
+        gene = sum(is_gene),
+        other = sum(!is_gene & !is_species)
+    )
+```
+
+Reviewing content that are not genes or species names...
+
+```{r}
+def %>%
+    dplyr::mutate(
+        is_species = stringr::str_detect(def, "\\([A-Z][a-z]+ [a-z]+"),
+        is_gene = stringr::str_detect(def, "\\([A-Z0-9]{3,}")
+    ) %>%
+    dplyr::filter(has_paren, !is_species, !is_gene) %>%
+    dplyr::select(paren_content)
+```
+
+There **are** medical terms or their explanations in parentheses. There's not a neat regular expression pattern to identify and quantify them, but the number relative to the total number of definitions is proportionally low suggesting a preference **not** to use them. But again, I'll need to ask for clarification as all versions exist.
+
+**The preference should be use of medical terms over layman's terms but it is not a hard and fast rule.**
+
+
+## Common N-grams
+
+The goal here is to identify common usage among definitions irrespective of order to try identify all words/2-grams/3-grams that serve to delineate statements.
+
+
+1. What are the top 20 words (excluding stop words)?
+
+```{r}
+word <- def %>%
+    dplyr::select(id, def) %>%
+    tidytext::unnest_tokens(
+        output = "word",
+        input = "def",
+        token = "words"
+    ) %>%
+    dplyr::anti_join(tidytext::stop_words, by = "word")
+
+word_count <- word %>%
+    dplyr::count(word, name = "freq", sort = TRUE) %>%
+    add_percent(freq)
+
+word_count %>%
+    dplyr::filter(dplyr::row_number() <= 20)
+```
+
+Visualizing more results as a word cloud...
+
+```{r}
+word_count %>%
+    dplyr::mutate(
+        word = stringr::str_replace(
+            word,
+            "has_material_basis_in",
+            "has_mat_basis"
+        )
+    ) %>%
+    wordcloud2::wordcloud2(size = 0.5, fontWeight = "normal")
+```
+
+
+2. What are the top 2-grams?
+
+```{r}
+g2 <- def %>%
+    dplyr::select(id, def) %>%
+    tidytext::unnest_ngrams(
+        output = "ngram",
+        input = "def",
+        n = 2
+    )
+
+g2 <- g2 %>%
+    dplyr::count(ngram, name = "freq", sort = TRUE) %>%
+    add_percent(freq)
+
+g2 %>%
+    dplyr::filter(dplyr::row_number() <= 20)
+```
+
+2. What are the top 3-grams?
+
+```{r}
+g3 <- def %>%
+    dplyr::select(id, def) %>%
+    tidytext::unnest_ngrams(
+        output = "ngram",
+        input = "def",
+        n = 3
+    )
+
+g3 <- g3 %>%
+    dplyr::count(ngram, name = "freq", sort = TRUE) %>%
+    add_percent(freq)
+
+g3 %>%
+    dplyr::filter(dplyr::row_number() <= 20)
+```
+
+That apparently is not a very useful exercise.
+
+
+# Review and Fix?
+
+## First Word
+
+I was surprised that some of the words in the first position of definitions was anything other than "a" or "an". I save that list here to review for later, as these are likely mistakes.
+
+```{r}
+def %>%
+    dplyr::select(id, def) %>%
+    tidytext::unnest_tokens(
+        output = "word",
+        input = def,
+        token = "words"
+    ) %>%
+    dplyr::group_by(id) %>%
+    dplyr::mutate(pos = dplyr::row_number()) %>%
+    dplyr::ungroup() %>%
+    dplyr::filter(pos == 1, !word %in% c("a", "an")) %>%
+    dplyr::arrange(id) %>%
+    dplyr::select(-pos)
+```
+
