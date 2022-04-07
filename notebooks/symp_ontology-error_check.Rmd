@@ -1,0 +1,234 @@
+---
+title: "Symptom ONtology - Error Check"
+author: "J. Allen Baron"
+date: 2022-04-07
+output: 
+    pdf_document:
+        toc: true
+        toc_depth: 3
+        df_print: kable
+---
+
+
+# Background
+
+While writing definitions I became curious about symptoms and wondered what was in the Symptom ontology. I wrote a quick SPARQL query to look at the list of symptom terms and, in doing so, came across an error. This prompted me to wonder about the possibility of more egregious errors in the ontology because it lacks the Github CI checks that the Human Disease Ontology has.
+
+
+# Goal
+
+To check the Symptom ontology for the most egregious errors.
+
+The errors I will check for include:
+
+1. Missing critical information
+    - ID
+    - label
+    - namespace
+2. Duplicate critical information.
+    - URI
+    - ID
+    - label
+    - synonymous labels*
+3. Incorrect critical information
+    - namespace
+    - ID not matching URI
+
+\* Checking for synonymous labels will require some degree of manual review.
+
+**Any and all errors of these types should be corrected.**
+ 
+
+# Error Check
+
+```{r setup, include = FALSE}
+library(tidyverse)
+library(DO.utils)
+
+check_missing <- function(.df, .col) {
+    missing <- dplyr::filter(.df, is.na({{ .col }}))
+    if (nrow(missing) != 0) {
+        return(missing)
+    }
+    message("None missing.")
+}
+
+check_dup <- function(.df, .col) {
+    dup <- dplyr::filter(
+        .df,
+        DO.utils::all_duplicated({{ .col }}),
+        !is.na({{ .col }})
+    )
+    if (nrow(dup) != 0) {
+        return(dup)
+    }
+    message("No duplicates.")
+}
+```
+
+
+## Extract Terms
+
+A SPARQL query should _optionally_ extract ID, label, and definition information to allow identification of classes with missing info. This is the query used:
+
+```
+SELECT ?class ?id ?label ?def
+WHERE {
+    ?class a owl:Class .
+    
+    OPTIONAL { ?class oboInOwl:id ?id . }
+    OPTIONAL { ?class rdfs:label ?label . }
+    OPTIONAL { ?class obo:IAO_0000115 ?def . }
+}
+```
+
+```{r echo = FALSE}
+# Include IDs, labels, and definitions
+symp_owl <- DO.utils::owl_xml("~/Documents/Ontologies/SymptomOntology/symp.owl")
+symp <- symp_owl$query(
+    "SELECT ?class ?id ?label ?ns ?def
+    WHERE {
+        ?class a owl:Class .
+        OPTIONAL { ?class oboInOwl:id ?id . }
+        OPTIONAL { ?class rdfs:label ?label . }
+        OPTIONAL { ?class oboInOwl:hasOBONamespace ?ns . }
+        OPTIONAL { ?class obo:IAO_0000115 ?def . }
+    }"
+) %>%
+    tibble::as_tibble() %>%
+    tidyr::unnest(id, keep_empty = TRUE) %>%
+    tidyr::unnest(ns, keep_empty = TRUE) %>%
+    tidyr::unnest(def, keep_empty = TRUE)
+```
+
+
+## Check for Requirements Missing
+
+### IDs
+
+```{r echo = FALSE}
+check_missing(symp, id) %>%
+    dplyr::select(class, id)
+```
+
+### Labels
+
+```{r echo = FALSE}
+check_missing(symp, label)
+```
+
+### Namespace
+
+```{r echo = FALSE}
+check_missing(symp, ns) %>%
+    dplyr::select(class, ns)
+```
+
+
+## Check for Error-producing Duplicates
+
+### URIs
+
+```{r echo = FALSE}
+check_dup(symp, class)
+```
+
+
+### IDs
+
+```{r echo = FALSE}
+check_dup(symp, id) %>%
+    dplyr::select(class, id, label)
+```
+
+### Labels
+
+```{r echo = FALSE}
+check_dup(symp, label)
+```
+
+
+## Synonymous Labels as Separate Terms
+
+To identify synonymous labels that are separate terms requires manual review. To make review of the 950 terms easier, review will be based on the assummption that synonyms will be very similar to one another with only a few characters changed. The approximate string matching distance is calculated and only those with less than four character changes are reviewed.
+
+```{r echo = FALSE}
+idx <- 1
+symp_dist <- utils::adist(symp$label, symp$label) %>%
+    tibble::as_tibble(
+        .name_repair = ~ vctrs::vec_as_names(
+            ...,
+            repair = "unique",
+            quiet = TRUE
+            )
+    ) %>%
+    # drop upper distance calculations (duplicates)
+    purrr::map_dfc(function(.x) { .x[1:idx] <- NA; idx <<- idx + 1 ; .x}) %>%
+    purrr::set_names(symp$label) %>%
+    dplyr::mutate(symp1 = symp$label) %>%
+    tidyr::pivot_longer(
+        cols = -symp1,
+        names_to = "symp2",
+        values_to = "dist",
+        values_drop_na = TRUE
+    ) %>%
+    dplyr::left_join(dplyr::select(symp, -def), by = c("symp1" = "label")) %>%
+    dplyr::rename(id1 = id) %>%
+    dplyr::left_join(dplyr::select(symp, -def), by = c("symp2" = "label")) %>%
+    dplyr::rename(id2 = id) %>%
+    dplyr::select(id1, symp1, id2, symp2, dist) %>%
+    dplyr::arrange(dist)
+```
+
+
+Only the synonyms identified are listed here:
+
+```{r echo = FALSE}
+dplyr::filter(
+    symp_dist,
+    symp1 %in% c("tachypnoea", "low-grade fever"),
+    dist < 4
+) %>%
+    dplyr::select(-dist)
+```
+
+
+
+
+## Incorrect critical information
+
+## Namespace incorrect
+
+The Symptom ontology namespace should be "symptoms".
+
+```{r echo = FALSE}
+wrong_ns <- dplyr::filter(symp, !is.na(ns) & ns != "symptoms")
+
+if (nrow(wrong_ns) != 0) {
+    wrong_ns
+} else {
+    message("All non-missing namespaces are correct, equal to 'symptoms'.")
+}
+```
+
+
+## URI != ID
+
+This issue once cropped in the DO. The ID number should match the class URI number.
+For these it does not.
+
+```{r echo = FALSE}
+uri_id <- symp %>%
+    dplyr::mutate(
+        uri_num = stringr::str_remove(class, ".*SYMP_"),
+        id_num = stringr::str_remove(id, ".*:")
+    ) %>%
+    dplyr::filter(uri_num != id_num) %>%
+    dplyr::select(class:label)
+
+if (nrow(uri_id) != 0) {
+    uri_id
+} else {
+    message("All ID numbers match the class URI.")
+}
+```
