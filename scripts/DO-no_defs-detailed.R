@@ -26,18 +26,20 @@ r <- DO.utils::DOrepo("~/Documents/Ontologies/HumanDiseaseOntology")
 
 no_def <- r$doid$query("sparql/DO-no_def-common_ancestor.rq") %>%
     tibble::as_tibble() %>%
+    dplyr::group_by(id) %>%
     dplyr::mutate(
         ancestor_id = dplyr::if_else(
-            ancestor_id == id,
+            length(id) > 1 & ancestor_id == id,
             NA_character_,
             ancestor_id
         ),
         ancestor_label = dplyr::if_else(
-            ancestor_label == label,
+            length(id) > 1 & ancestor_label == label,
             NA_character_,
             ancestor_label
         )
     ) %>%
+    dplyr::ungroup() %>%
     # remove records for terms without parents when parents exist
     dplyr::filter(!(all_duplicated(id) & is.na(ancestor_id))) %>%
     dplyr::add_count(ancestor_id, name = "ancestor_count") %>%
