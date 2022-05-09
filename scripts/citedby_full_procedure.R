@@ -29,7 +29,7 @@ cb_sheet <- "cited_by"
 citedby_dir <- here::here("data", "citedby")
 
 # input collection file
-collection_file <- file.path(citedby_dir, "DO_myncbi_collection.txt")
+collection_file <- file.path(citedby_dir, "collection.txt")
 
 # cited by raw output files
 cb_pm_raw_file <- file.path(citedby_dir, "do_cb_pm_summary_by_id.rda")
