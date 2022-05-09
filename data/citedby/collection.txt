@@ -4673,5 +4673,25 @@ Events by Exploration of Molecular Data with Explainable Artificial Intelligence
 Int J Mol Sci. 2021 Sep 24;22(19). pii: 10291. doi: 10.3390/ijms221910291.
 Review. PubMed [citation] PMID: 34638627, PMCID: PMC8508897
 
+867. Seneviratne S, Lenskiy A, Nolan C, Daskalaki E, Suominen H. Comparison of Word
+and Character Level Information for Medical Term Identification Using
+Convolutional Neural Networks and Transformers. Stud Health Technol Inform. 2021 
+Dec 15;284:249-253. doi: 10.3233/SHTI210717. PubMed [citation] PMID: 34920520
+
+868. Imam FT, Larson SD, Bandrowski A, Grethe JS, Gupta A, Martone ME. Development and
+use of Ontologies Inside the Neuroscience Information Framework: A Practical
+Approach. Front Genet. 2012 Jun 22;3:111. doi: 10.3389/fgene.2012.00111.
+eCollection 2012. PubMed [citation] PMID: 22737162, PMCID: PMC3381282
+
+869. He Y. Development and Applications of Interoperable Biomedical Ontologies for
+Integrative Data and Knowledge Representation and Multiscale Modeling in Systems 
+Medicine. Methods Mol Biol. 2022;2486:233-244. doi: 10.1007/978-1-0716-2265-0_12.
+PubMed [citation] PMID: 35437726
+
+870. Zhang F, Zhang Y, Hou T, Ren F, Liu X, Zhao R, Zhang X. Screening of Genes
+Related to Breast Cancer Prognosis Based on the DO-UniBIC Method. Am J Med Sci.
+2022 Apr 23. pii: S0002-9629(22)00187-2. doi: 10.1016/j.amjms.2022.04.022. [Epub 
+ahead of print] PubMed [citation] PMID: 35472336
+
 
 
