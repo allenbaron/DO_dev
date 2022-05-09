@@ -53,19 +53,10 @@ if (file.exists(cb_pm_raw_file)) {
     # set API key
     rentrez::set_entrez_key(keyring::key_get("ENTREZ_KEY"))
 
-    pmid_raw <- DO.utils::citedby_pmid(DO.utils::DO_pubs$pmid, by_id = TRUE)
-    # handle 0 results for newest publication
-    pmid <- tryCatch(
-        DO.utils::extract_pmid(pmid_raw),
-        error = function(e) {
-            warning(conditionMessage(e), "; likely the newest, retrying without it")
-            raw <- pmid_raw[-1]
-            class(raw) <- class(pmid_raw)
-            DO.utils::extract_pmid(raw)
-        }
+    do_cb_pm_summary_by_id <- DO.utils::citedby_pubmed(
+        DO.utils::DO_pubs$pmid,
+        by_id = TRUE
     )
-
-    do_cb_pm_summary_by_id <- DO.utils::pubmed_summary(pmid)
     save(do_cb_pm_summary_by_id, file = cb_pm_raw_file)
 }
 

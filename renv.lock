@@ -22,16 +22,16 @@
     },
     "DO.utils": {
       "Package": "DO.utils",
-      "Version": "0.2.2",
+      "Version": "0.2.3",
       "Source": "GitHub",
       "Remotes": "allenbaron/rentrez",
       "RemoteType": "github",
       "RemoteHost": "api.github.com",
       "RemoteRepo": "DO.utils",
       "RemoteUsername": "allenbaron",
-      "RemoteRef": "v0.2.2",
-      "RemoteSha": "d2fd16d6f83343a7969bcbbff7c9b1b08ff89b9a",
-      "Hash": "d5607ec83ba9d5631d6b9d1497566c92"
+      "RemoteRef": "v0.2.3",
+      "RemoteSha": "22039ae18119d77397de8c340ce7fd09736c430c",
+      "Hash": "dca50c61d3247ffb735ed9949d92aa45"
     },
     "DT": {
       "Package": "DT",
