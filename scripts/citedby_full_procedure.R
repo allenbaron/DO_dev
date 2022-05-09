@@ -295,7 +295,7 @@ readr::write_csv(final_merge, merge_citedby_file)
 gs_data <- googlesheets4::read_sheet(
     gs,
     cb_sheet,
-    col_types = "cccccccccccTcccDccccccccccccc" # ensure proper formats!!
+    col_types = "ccccccccccccTcccDccccccccccccc" # ensure proper formats!!
 )
 
 
