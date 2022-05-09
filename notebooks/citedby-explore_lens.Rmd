@@ -1,0 +1,471 @@
+---
+title: "Lens.org: Exploring DO's Cited By Coverage"
+author: "J. Allen Baron"
+date: "2022-05-06"
+output:
+    html_notebook:
+        toc: true
+        toc_depth: 3
+        toc_float:
+            collapsed: false
+        df_print: paged
+        code_folding: "hide"
+---
+
+# Background
+
+Due to the quantity of "cited by" code now incorporated into the `DO.utils` package,
+I debated whether it should be spun off into its own package. Before making this decision, I did a search for other R packages that might be used in citation tracking/analysis (to avoid duplicating work that exists and to decide on an appropriate name). A package called [citationchaser](https://github.com/nealhaddaway/citationchaser), which was created in early 2021, was intriguing as it described the functionality I desired for the cited by code of `DO.utils` _with_ some add flexibility.
+
+`citationchaser` turned out to be pretty minimal (3 functions) and to rely on a single service [lens.org](https://www.lens.org/). I revisited the lens.org website to see if it could improve upon and possibly simplify my current cited by approach and discovered the following:
+
+### PROs
+
+1. Lists more scholarly works citing DO publications than PubMed and Scopus combined.
+2. Uses a powerful and easy-to-use search query system, making it easy to identify works citing DO's publications.
+3. Has the ability to create (dynamic) collections that can be made publicly accessible (similar to MyNCBI collections, but auto-updating if dynamic).
+4. Has a variety of visualizations for comprehensive insight into publications citing the DO and can be customized for visual public appeal (including some branding).
+5. Interacting with and downloading content from lens.org is simpler than with Scopus and the data is formatted better for computational processing.
+6. Like scite.ai, lens.org can display matching text snippets in publications, though these are not quite as advanced as scite.ai because they are limited to results from searches and don't show snippets for citations automatically.
+
+
+### CONs
+
+1. Have not yet found a way to get a count or plot of citing articles by the DO article they cite (something like Scopus Citation Overview).
+2. Access to the API requires an institutional subscription (which _can_ be free for "non-profit legal entities that are incorporated for the public-good").
+3. The search automatically recognizes external IDs but does _NOT_ work when provided multiple IDs unless each is individually prefixed with `external_id:` and
+doing this with the 9 PMIDs for the DO publications somehow returns an extra publication that is _NOT_ one of ours.
+
+
+# Goal
+
+The goal of this work is to determine the overlap of lens.org with our current cited by list compiled from Scopus and PubMed, and to determine if it is a suitable alternative to these two resources.
+
+It would be considered a suitable alternative if it has significant or complete overlap in coverage to our current list. Even if it requires manual downloads, it would likely prove to be better than the PubMed + Scopus approach of `DO.utils`, primarily because the citation format is comprehensive and tidy, requiring no standardization (which is a major challenge currently), and the DO articles being cited by each scholarly work are easily identified by their `lens_id` in the `references` column.
+
+
+# Data
+
+```{r setup, include = FALSE}
+library(here)
+library(tidyverse)
+library(DO.utils)
+library(googlesheets4)
+library(JABmisc)
+library(ggVennDiagram)
+library(viridis)
+```
+
+
+## Lens.org
+
+### DO publications
+
+I created a [Human Disease Ontology Publications](https://link.lens.org/UdnHGF2UPQj) collection with the official DO publications and downloaded their citation information (exported with all fields as a .csv from the collection page) to `data/citedby/lens_export-DO_pubs.csv`.
+
+```{r tidy_lens_nm, include = FALSE}
+tidy_lens_names <- function(.df) {
+    .df %>%
+    dplyr::rename_with(
+         function(x) {
+             x %>%
+                 stringr::str_replace_all(
+                     c(" " = "_", "[^[:alnum:]_]" = "")
+                 ) %>%
+                 stringr::str_to_lower()
+         }
+    )
+}
+
+read_lens <- function(path, ...) {
+    readr::read_csv(
+        path,
+        col_types = readr::cols(
+            .default = readr::col_character(),
+            `Date Published` = readr::col_date(format = ""),
+            `Publication Year` = readr::col_double(),
+            `Citing Patents Count` = readr::col_double(),
+            `Citing Works Count` = readr::col_double()
+        )
+    ) %>%
+        tidy_lens_names()
+}
+```
+
+```{r}
+lens_do_pubs <- read_lens(
+    here::here("data/citedby/lens_export-DO_pubs.csv")
+) %>%
+    dplyr::left_join(
+        dplyr::select(DO.utils::DO_pubs, internal_id, pmid),
+        by = "pmid"
+    ) %>%
+    dplyr::select(internal_id, dplyr::everything())
+```
+
+
+#### Statistics
+
+DO publications have been **collectively cited `r format(sum(as.integer(lens_do_pubs$citing_works_count)), big.mark = ",")` times** (not unique publications), according to lens.org.
+
+What data is missing? **VERY LITTLE** _yay!_
+
+```{r}
+lens_do_pubs %>% 
+    JABmisc::describe_cols(vals = "none")
+```
+
+### Works Citing DO
+
+I created a dynamic collection, [Works Citing the Disease Ontology](https://link.lens.org/dBylbd8Tcnb), with the following query (in the Query Text Editor's format):
+
+```
+reference.lens_id:005-557-253-687-083 OR reference.lens_id:008-826-103-837-228 OR reference.lens_id:012-128-724-809-525 OR reference.lens_id:030-717-050-914-385 OR reference.lens_id:032-281-101-976-307 OR reference.lens_id:080-032-275-012-464 OR reference.lens_id:082-243-214-348-506 OR reference.lens_id:103-284-714-649-912 OR reference.lens_id:113-308-406-790-347
+```
+<br />
+```{r alt_citedby, echo = FALSE, eval= FALSE}
+# placeholder for shortened version of query with same results
+reference.lens_id:(005-557-253-687-083 OR 008-826-103-837-228 OR 012-128-724-809-525 OR 030-717-050-914-385 OR 032-281-101-976-307 OR 080-032-275-012-464 OR 082-243-214-348-506 OR 103-284-714-649-912 OR 113-308-406-790-347)
+```
+
+Then, I downloaded the resulting citation information for all articles in the collection (exported in the same manner as the DO publications) to `data/citedby/lens_export-DO_citedby-20220506.csv`.
+
+I tidied the column names of the resulting data frames in R and identified which DO publications are cited by each article marking them with the "internal" IDs for DO publications I created previously for quick identification.
+
+```{r}
+cites_which <- function(x, id_df) {
+    x %>%
+        stringr::str_extract_all(vctr_to_string(id_df$lens_id)) %>%
+        purrr::map_chr(vctr_to_string, delim = "; ") %>%
+        stringr::str_replace_all(
+            purrr::set_names(id_df$internal_id, nm = id_df$lens_id)
+        )
+}
+```
+
+```{r}
+lens_cb <- read_lens(
+    here::here("data/citedby/lens_export-DO_citedby-20220506.csv")
+) %>%
+    dplyr::mutate(cites = cites_which(references, lens_do_pubs))
+```
+
+
+#### Statistics
+
+```{r}
+lens_cb %>%
+    dplyr::mutate(
+        any_id = dplyr::coalesce(doi, pmid, pmcid)
+    ) %>%
+    dplyr::select(
+        dplyr::contains("id"), doi, cites, dplyr::everything()
+    ) %>% 
+    JABmisc::describe_cols(vals = "none")
+```
+
+The following observations are most relevant:
+
+1. 7.5% have no DOI, PMID, or PMCID (see `any_id`)
+    - These are the most reliable comparison IDs with current cited by results. The only alternative is an article's Title which could vary in formatting.
+2. All of the results have a title (`title`) and cite at least one DO publication (`cites`).
+3. Some useful (and possibly critical) publication info is missing for some publications. This would include `date_published`, `publication_year`, `publication_type`, and `authors`.
+
+
+## Current Cited By
+
+The current PubMed + Scopus + MyNCBI collection cited by list was downloaded from the [DO_uses](https://docs.google.com/spreadsheets/d/1wG-d0wt-9YbwhQTaelxqRzbm4qnu11WDM2rv3THy5mY/edit#gid=1972219724) google sheet.
+
+```{r gs_dl, eval = FALSE, echo = FALSE}
+# up-to-date but doesn't have correct provider list for all citations due to
+#   staged appending of data
+uses_gs <- "1wG-d0wt-9YbwhQTaelxqRzbm4qnu11WDM2rv3THy5mY"
+cb <- googlesheets4::read_sheet(
+    uses_gs,
+    "cited_by",
+    col_types = "________ccccTcccTccc__________"
+)
+```
+
+```{r}
+merge_citedby_file <- here::here("data", "citedby", "DO_citedby.csv")
+cb <- readr::read_csv(
+    merge_citedby_file,
+    col_types = readr::cols(
+        .default = readr::col_character(),
+        pub_date = readr::col_date(format = ""),
+        added = readr::col_datetime(format = "")
+    )
+)
+```
+
+
+# Cited By Source Comparison
+
+```{r split_col}
+split_col <- function(df, .col) {
+    n <- max(stringr::str_count(df[[.col]], ";"), na.rm = TRUE) + 1
+    tidyr::separate(
+        df,
+        col = .col,
+        into = paste0(.col, "_", 1:n),
+        sep = "; ?",
+        fill = "right"
+    )
+}
+```
+
+```{r index_current_by_src, message = FALSE}
+# For current citations
+# 1. create unique identifiers for each that can overlap with lens (index)
+# 2. split sources (to see overlap of lens with individual providers)
+# 3. format as named list (nm: provider, val: index)
+current_df <- cb %>%
+    dplyr::mutate(
+        # use index as identifier across datasets
+        index = dplyr::row_number(),
+        source = stringr::str_replace(source, "ncbi_col-[^ ]+", "myncbi")
+    ) %>%
+    dplyr::select(index, source) %>%
+    split_col("source") %>%
+    tidyr::pivot_longer(
+        cols = dplyr::starts_with("source"),
+        names_to = "n",
+        names_pattern = ".*([0-9])",
+        values_to = "source",
+        values_drop_na = TRUE
+    ) %>%
+    dplyr::select(-n)
+
+sources <- unique(current_df$source)
+cb_list <- purrr::map(sources, ~ current_df$index[current_df$source == .x]) %>%
+    purrr::set_names(sources)
+```
+
+```{r matcher}
+matcher <- function(lens_df, current_df) {
+    id_cols <- c("doi", "pmid", "pmcid")
+    purrr::map(
+        id_cols,
+        function(id_col) {
+            lens_df %>%
+                dplyr::filter(id_type == id_col) %>%
+                dplyr::select(-id_type, {{ id_col }} := id) %>%
+                DO.utils::match_citations(current_df, add_col = "match") %>%
+                dplyr::mutate(id_type = id_col) %>%
+                dplyr::rename(id = id_col)
+        }
+    ) %>%
+        purrr::set_names(id_cols) %>%
+        dplyr::bind_rows() %>%
+        DO.utils::collapse_col(c(id, id_type), )
+}
+```
+
+```{r index_lens, message = FALSE}
+# For lens citations
+# 1. split lens records with multiple external IDs
+# 2. match external IDs to current citations records (match = index)
+# 3. add index to lens records without matches
+# 4. append lens index to list of current cited by indices
+lens_id_long <- lens_cb %>%
+    dplyr::select(lens_id, doi, pmid, pmcid) %>%
+    split_col("doi") %>%
+    split_col("pmid") %>%
+    split_col("pmcid") %>%
+    tidyr::pivot_longer(
+        cols = tidyselect::matches("doi|pmid|pmcid"),
+        names_to = "id_type",
+        names_pattern = "^([^_]+)_.*",
+        names_transform = list(n = as.integer),
+        values_to = "id",
+        values_drop_na = TRUE
+    )
+
+match_df <- matcher(lens_id_long, cb) %>%
+    dplyr::filter(!is.na(match)) %>% 
+    dplyr::select(lens_id, match) %>%
+    dplyr::right_join(dplyr::select(lens_cb, lens_id), by = "lens_id") %>%
+    dplyr::group_by(match) %>%
+    dplyr::mutate(
+        index = dplyr::if_else(
+            is.na(match), dplyr::row_number() + max(current_df$index), match
+        )
+    ) %>%
+    dplyr::ungroup() %>%
+    dplyr::arrange(index)
+
+cb_list <- append(cb_list, list(lens = match_df$index))
+```
+
+Total count of _unique_ citations by source:
+
+```{r}
+purrr::map(cb_list, length) %>%
+    tibble::as_tibble() %>%
+    tidyr::pivot_longer(
+        cols = tidyselect::everything(),
+        names_to = "source",
+        values_to = "n"
+    ) %>%
+    dplyr::arrange(dplyr::desc(n))
+```
+
+
+Overlap of cited by lists (_excludes MyNCBI results_):
+
+```{r}
+ggVennDiagram::ggVennDiagram(
+    x = cb_list[names(cb_list) != "myncbi"], 
+    edge_size = 0.5
+) +
+    viridis::scale_fill_viridis(option = "F")
+```
+
+Overlap of all lists (_includes MyNCBI results_):
+
+```{r}
+ggVennDiagram::ggVennDiagram(
+    x = cb_list, 
+    edge_size = 0.5
+) +
+    viridis::scale_fill_viridis(option = "F")
+```
+
+## Lens.org-Only Citations
+
+```{r pie_chart}
+gg_pie <- function(.df) {
+    ggplot2::ggplot(data = .df, aes(x = 1, y = n)) +
+            geom_col(aes(fill = publication_type), position = "stack") +
+            geom_label(
+                aes(x = 1.25, group = publication_type, label = pct),
+                position = position_stack(vjust = 0.5),
+                fill = "white",
+                alpha = 0.7,
+                label.size = NA
+            ) +
+            geom_text(
+                aes(x = 1.75, group = publication_type, label = publication_type),
+                position = position_stack(vjust = 0.5),
+                lineheight = 0.7
+            ) +
+            coord_polar("y") +
+            theme_void() +
+            theme(
+                legend.position = "none",
+            ) +
+            labs(subtitle = paste0("Total: ", sum(.df$n)))
+}
+```
+
+```{r fig.width = 4}
+lens_cb <- lens_cb %>%
+    dplyr::left_join(
+        dplyr::select(match_df, lens_id, index),
+        by = "lens_id"
+    ) %>%
+    dplyr::select(index, dplyr::everything()) %>%
+    dplyr::arrange(index, lens_id)
+
+lens_only <- dplyr::filter(lens_cb, index > max(current_df$index))
+
+dplyr::count(lens_only, publication_type, sort = TRUE) %>%
+    dplyr::mutate(pct = paste0(round(n / sum(n) * 100, 1), "%")) %>%
+    tidyr::replace_na(list(publication_type = "unknown"))
+```
+
+
+Or as a pie chart:
+
+```{r}
+dplyr::count(lens_only, publication_type) %>%
+    dplyr::mutate(
+        pct = paste0(round(n / sum(n) * 100, 1), "%"),
+        publication_type = dplyr::if_else(
+            is.na(publication_type),"unknown",
+            stringr::str_replace_all(publication_type, " ", "\n")
+        )
+    ) %>%
+    gg_pie()
+```
+
+Those **UNKNOWN** scholarly works are:
+```{r}
+dplyr::filter(lens_only, is.na(publication_type))
+```
+
+## Scopus-Only citations
+
+```{r}
+scopus_only <- cb %>%
+    dplyr::mutate(index = dplyr::row_number()) %>%
+    dplyr::filter(source == "scopus" & !index %in% cb_list$lens)
+
+scopus_only %>%
+    dplyr::mutate(
+        publication_type = stringr::str_replace_all(pub_type, "\\|", " \\| ")
+    ) %>%
+    dplyr::count(publication_type, sort = TRUE) %>%
+    dplyr::mutate(pct = paste0(round(n / sum(n) * 100, 1), "%")) %>%
+    tidyr::replace_na(list(publication_type = "unknown"))
+```
+
+
+Or as a pie chart:
+
+```{r}
+scopus_only %>%
+    dplyr::mutate(
+        publication_type = stringr::str_replace_all(
+            pub_type,
+            c("Series\\|" = "", "\\|Book" = "", "\\|Conference" = "",
+              "\\|" = " ")
+        )
+    ) %>%
+    dplyr::count(publication_type) %>%
+    dplyr::mutate(
+        pct = paste0(round(n / sum(n) * 100, 1), "%"),
+        publication_type = dplyr::if_else(
+            is.na(publication_type),"unknown",
+            stringr::str_replace_all(publication_type, " ", "\n")
+        )
+    ) %>%
+    gg_pie()
+```
+
+
+# Discussion
+
+Lens.org captures everything obtained from PubMed and most of the publications from Scopus & the MyNCBI collection (it's missing ~ 210 publications of interest from them). The citation quality of Lens.org is worse. It has merged a few unrelated records, has some duplicates, and has some unexplainable citations that have little information. Lens.org has ~ 100 publications of interest, compared to Scopus' ~ 60.
+
+
+# Conclusion
+
+If Lens.org had been this good when I first started it might have been better to use it alone, but now that I've done the hard work of combining PubMed & Scopus results it doesn't seem worth combining the info from Lens.org at this time.
+
+Lens.org's online tools might be useful on their own for code-free exploration.
+
+
+# Additional Code
+
+```{r}
+lens_cb_long <- lens_cb %>%
+    dplyr::select(lens_id, doi, pmid, pmcid) %>%
+    split_col("doi") %>%
+    split_col("pmid") %>%
+    split_col("pmcid") %>%
+    tidyr::pivot_longer(
+        cols = tidyselect::matches("doi|pmid|pmcid"),
+        names_to = c(".value", "n"),
+        names_sep = "_",
+        names_transform = list(n = as.integer),
+        values_to = "id"
+    ) %>%
+    dplyr::filter(!(n > 1 & dplyr::if_all(c(doi, pmid, pmcid), is.na))) %>%
+    dplyr::arrange(lens_id, n) %>%
+    dplyr::mutate(index = dplyr::row_number()) %>%
+    dplyr::select(index, n, dplyr::contains("id"), doi, dplyr::everything())
+
+lens_cb_long <- DO.utils::match_citations(lens_cb_long, cb, add_col = TRUE)
+```
