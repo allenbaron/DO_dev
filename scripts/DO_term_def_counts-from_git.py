@@ -10,10 +10,12 @@ import pandas as pd
 start = datetime.now()
 
 # set file input/output
-do_dir = '~/Documents/Ontologies/HumanDiseaseOntology/'
+do_dir = pyDOID.util.standardize_path(
+    '~/Documents/Ontologies/HumanDiseaseOntology/'
+)
 doid_owl = os.path.join(do_dir, 'src/ontology/doid.owl')
 
-do_dev = '~/Documents/DO_dev/'
+do_dev = pyDOID.util.standardize_path('~/Documents/DO_dev/')
 release_stat_dir = os.path.join(do_dev, "data/DO_release")
 release_file = os.path.join(release_stat_dir, 'DO_term_def_counts.csv')
 
@@ -42,9 +44,9 @@ FILTER NOT EXISTS {?s owl:deprecated ?any}
 
 res_dict = do_repo.tag_iterate(
     do_repo.doid.query,
-    start=new_tag_names[0],
+    which=new_tag_names,
     query=q,
-    load=True
+    reload=True
 )
 
 res_dict
