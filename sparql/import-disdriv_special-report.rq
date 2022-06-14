@@ -1,0 +1,48 @@
+# Return a count of each import by ORIGINAL namespace, unless in DISDRIV
+#
+# NOTES:
+# - QUERY against doid-merged.owl
+# - DISDRIV is handled separately --> classes in DISDRIV and another import
+#	are de-duplicated (counted ONLY in DISDRIV).
+# - Builds on import-report.rq by splitting out DISDRIV
+# - ~ 6s execution
+
+PREFIX rdfs: <http://www.w3.org/2000/01/rdf-schema#>
+PREFIX owl: <http://www.w3.org/2002/07/owl#>
+PREFIX obo: <http://purl.obolibrary.org/obo/>
+PREFIX oboInOwl: <http://www.geneontology.org/formats/oboInOwl#>
+
+SELECT ?import ?namespace (COUNT(DISTINCT(?class)) as ?count)
+WHERE {
+	{
+		?class a owl:Class .
+
+		# Exclude blank & DOID/doid classes
+		FILTER(!isBlank(?class) && !REGEX(STR(?class), "DOID", "i"))
+
+		# Exclude DISDRIV (handled in other statement)
+		FILTER NOT EXISTS {
+			VALUES ?do_disdriv { obo:DOID_4 obo:DISDRIV_0000000 }
+			?class rdfs:subClassOf* ?do_disdriv .
+		}
+
+		BIND(STRBEFORE(STRAFTER(STR(?class), "obo/"), "_") AS ?import)
+	}
+	UNION
+	{
+		# Handle DISDRIV specially (mixed namespace)
+		?class a owl:Class ;
+			rdfs:subClassOf* obo:DISDRIV_0000000
+		# alternate way to identify DISDRIV root term
+		# ?disdriv_root a owl:Class .
+		# FILTER(CONTAINS(STR(?disdriv_root), "DISDRIV"))
+		# FILTER NOT EXISTS { ?disdriv_root rdfs:subClassOf ?superclass . }
+
+		FILTER(!isBlank(?class))
+
+		BIND("DISDRIV" AS ?import)
+		BIND(STRBEFORE(STRAFTER(STR(?class), "obo/"), "_") AS ?namespace)
+	}
+}
+GROUP BY ?import ?namespace
+ORDER BY ?import ?namespace
