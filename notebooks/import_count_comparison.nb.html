@@ -2978,11 +2978,9 @@ cli_count</code></pre>
 <!-- rnb-chunk-end -->
 <!-- rnb-text-begin -->
 </div>
-<div id="sparql-counts" class="section level1" number="4">
-<h1><span class="header-section-number">4</span> SPARQL counts</h1>
-<div id="property-counts-new" class="section level2" number="4.1">
-<h2><span class="header-section-number">4.1</span> Property Counts –
-NEW!!</h2>
+<div id="sparql-property-counts-new" class="section level1" number="4">
+<h1><span class="header-section-number">4</span> SPARQL Property Counts
+– NEW!!</h1>
 <p>Properties used in DO are not currently counted making this an
 entirely new report. They can be considered a type of import,
 particularly with regard to RO and IAO.</p>
@@ -3009,11 +3007,15 @@ particularly with regard to RO and IAO.</p>
 <!-- rnb-frame-end -->
 <!-- rnb-chunk-end -->
 <!-- rnb-text-begin -->
-<div id="comparison-to-ground-truth" class="section level3" number="4.1.1">
-<h3><span class="header-section-number">4.1.1</span> Comparison to
-Ground Truth</h3>
-<p>The data shown has been pivoted to make comparison with the “ground
-truth” counts easier.</p>
+<div id="comparison-to-ground-truth" class="section level2" number="4.1">
+<h2><span class="header-section-number">4.1</span> Comparison to Ground
+Truth</h2>
+<p>Comparison with the “ground truth” counts demonstrates that this
+query is accurate.</p>
+<p>NOTE: The difference between the ground truth and the property query
+for “doid” is due to the inclusion of “doid:chebi” and “doid:sequence”
+<em>classes</em> in the ground truth, which are not annotation or object
+properties.</p>
 <!-- rnb-text-end -->
 <!-- rnb-chunk-begin -->
 <!-- rnb-source-begin eyJkYXRhIjoiYGBgclxuY29tcGFyZV90cnV0aChwcm9wLCBcImltcG9ydFwiKSAlPiVcbiAgICBkcGx5cjo6c2VsZWN0KC10eXBlKVxuYGBgIn0= -->
@@ -3029,17 +3031,20 @@ truth” counts easier.</p>
 <!-- rnb-frame-end -->
 <!-- rnb-chunk-end -->
 <!-- rnb-text-begin -->
-<p>The difference between the ground truth and the property query for
-“doid” is not an error but due to the inclusion of “doid:chebi” and
-“doid:sequence” classes in the ground truth, which are not annotation or
-object properties.</p>
 </div>
 </div>
-<div id="original-count-query-corrected" class="section level2" number="4.2">
-<h2><span class="header-section-number">4.2</span> Original Count Query
-– Corrected</h2>
+<div id="sparql-class-counts" class="section level1" number="5">
+<h1><span class="header-section-number">5</span> SPARQL Class
+Counts</h1>
+<div id="corrected-count-query" class="section level2" number="5.1">
+<h2><span class="header-section-number">5.1</span> <em>Corrected</em>
+Count Query</h2>
 <p>This a corrected version of the current import-report.rq SPARQL query
-that counts <em>only</em> classes of specified imports.</p>
+that counts <em>only</em> classes of specified imports, instead of all
+triples.</p>
+<p>A downside of this report is the need to manually add imports to be
+counted. The output format (in columns) may also be considered a
+downside.</p>
 <!-- rnb-text-end -->
 <!-- rnb-chunk-begin -->
 <!-- rnb-source-begin eyJkYXRhIjoiYGBgclxuc3lzdGVtLnRpbWUoXG4gICAgY29ycmVjdGVkIDwtIGRtJHF1ZXJ5KGZpbGUucGF0aChzcGFycWxfZGlyLCBcImltcG9ydC1jb3JyZWN0ZWQtcmVwb3J0LnJxXCIpKVxuKVxuYGBgIn0= -->
@@ -3063,11 +3068,11 @@ that counts <em>only</em> classes of specified imports.</p>
 <!-- rnb-frame-end -->
 <!-- rnb-chunk-end -->
 <!-- rnb-text-begin -->
-<div id="comparison-to-ground-truth-1" class="section level3" number="4.2.1">
-<h3><span class="header-section-number">4.2.1</span> Comparison to
+<div id="comparison-to-ground-truth-1" class="section level3" number="5.1.1">
+<h3><span class="header-section-number">5.1.1</span> Comparison to
 Ground Truth</h3>
 <p>The data shown has been pivoted to make comparison with the “ground
-truth” counts easier.</p>
+truth” counts easier. All counts appear accurate.</p>
 <!-- rnb-text-end -->
 <!-- rnb-chunk-begin -->
 <!-- rnb-source-begin eyJkYXRhIjoiYGBgclxuY29ycmVjdGVkX2xvbmcgPC0gY29ycmVjdGVkICU+JVxuICAgIHRpZHlyOjpwaXZvdF9sb25nZXIoXG4gICAgICAgIGNvbHMgPSBkcGx5cjo6ZXZlcnl0aGluZygpLFxuICAgICAgICBuYW1lc190byA9IFwiaW1wb3J0XCIsXG4gICAgICAgIHZhbHVlc190byA9IFwiY291bnRcIlxuICAgICkgJT4lXG4gICAgZHBseXI6Om11dGF0ZShpbXBvcnQgPSBzdHJpbmdyOjpzdHJfdG9fdXBwZXIoaW1wb3J0KSlcblxuY29tcGFyZV90cnV0aChjb3JyZWN0ZWRfbG9uZywgXCJpbXBvcnRcIilcbmBgYCJ9 -->
@@ -3092,28 +3097,22 @@ compare_truth(corrected_long, &quot;import&quot;)</code></pre>
 <!-- rnb-text-begin -->
 </div>
 </div>
-<div id="all-imports" class="section level2" number="4.3">
-<h2><span class="header-section-number">4.3</span> All Imports</h2>
-<p>This version includes a count of all classes imported by namespace.
-It provides a flexible (including all namespaces, not just those
-specified), non-duplicated count (like the ground truth and corrected
-query) and ignores the source of the import (meaning CHEBI imports of
-DISDRIV are just counted as CHEBI).</p>
+<div id="all-imports" class="section level2" number="5.2">
+<h2><span class="header-section-number">5.2</span> All Imports</h2>
+<p>This version includes a count equivalent to the corrected count above
+but it includes <em>all</em> imports without the need to specify them
+individually (no UNION statements), making it more flexible.</p>
+<p>As new imports are added they will automatically be counted. Those
+included in this report and not the corrected report above are listed in
+the comparison section below.</p>
+<p>Also, there is no disinction between direct and indirect imports.
+This is primarily relevant for DISDRIV whose subclasses from other
+namespaces are counted as in that namespace and are not affiliated in
+any way with DISDRIV (meaning CHEBI imports of DISDRIV are just counted
+as CHEBI).</p>
 <!-- rnb-text-end -->
 <!-- rnb-chunk-begin -->
-<!-- rnb-source-begin eyJkYXRhIjoiYGBgclxuc3lzdGVtLnRpbWUoXG4gICAgZGVmIDwtIGRtJHF1ZXJ5KGZpbGUucGF0aChzcGFycWxfZGlyLCBcImltcG9ydC1yZXBvcnQucnFcIikpXG4pXG5gYGAifQ== -->
-<pre class="r"><code>system.time(
-    def &lt;- dm$query(file.path(sparql_dir, &quot;import-report.rq&quot;))
-)</code></pre>
-<!-- rnb-source-end -->
-<!-- rnb-output-begin eyJkYXRhIjoiICAgdXNlciAgc3lzdGVtIGVsYXBzZWQgXG4gIDMuNDA1ICAgMC4wMDYgICAzLjQxMSBcbiJ9 -->
-<pre><code>   user  system elapsed 
-  3.405   0.006   3.411 </code></pre>
-<!-- rnb-output-end -->
-<!-- rnb-source-begin eyJkYXRhIjoiYGBgclxuZGVmXG5gYGAifQ== -->
-<pre class="r"><code>def</code></pre>
-<!-- rnb-source-end -->
-<!-- rnb-frame-begin eyJtZXRhZGF0YSI6eyJjbGFzc2VzIjpbImRhdGEuZnJhbWUiXSwibnJvdyI6MTYsIm5jb2wiOjIsInN1bW1hcnkiOnsiRGVzY3JpcHRpb24iOlsiZGYgWzE2IMOXIDJdIl19fSwicmRmIjoiSDRzSUFBQUFBQUFBQTQxVXk0N1RNQlIxMDJaS0l4Z3FJVmdCUWdnaGhGUnZlSWpkbEQ2R1Jwb21WUjlvV0xxcHArT1oxSTZjbEduRmhpVXJKUDVnUGhIeEFZQWRYdzl0cGdnVzdqbjMrdHlIN1pzT084Y3Z2R01QSVZSR2xWSUpsVjFGa1RzWkh6YmVJRlJ4bEZGQ0ZWVFR1RktpTzRwb1p6MWZac050OTdvdEh3eW5mUVNzMnZGSG5hSC9Ic3h5dHgxZTBaV2xlNGRoMkFrRHNDcnZ1b0hkY1hvRFlMV2czZkxIWkNXNGxRVnRmMng1MlBmN05tUmtneXVqRDMwYjdvNkhiNE9SclRkcGRZZFg5ZlltZzU2dWlOQytQay96WXFCUGo1cHpaUEFSNEhQQU91QVI0QUhncDhUZ3QvczVIbndIUDJzYTVKY0d2NEsvQ2ZqbGNrdGZ1SENYa3dWTjRiSWQyekpiSkVKbVZoS0pKYzhLY1RjVHdtY2t4WXpQNkVvbmhlUS9DcnBxSlBoSHFuSWg1T1h1SFMwa2F6RTlVK1NlV2orMzE3WXdpa2xxZS9YQStRUWFpWVNrcGh1YVlrbjRuT0toL3ZYekJvMzI2UzR0WHk2b1pCSDJlZmI2NWFiNjJUL1VkRTdsZitzRGc1djZoN3YwVTVKUy9GZlZuOTB3U2Z0c3hmZ3VGWkdTckdOMlRuRkI5ZUJhcmtIdUNLZG5OTExQL1hnclZSVFJOQlVTZDVnTTlLUnNwcnVickxOVHdmRjB5ZUtNY1N4TW11c1BWNVBpQXR0QnU2VUg3Yk9aZzdvUjN2Z0ZqMm9EdkJuSkNENlJLbVJIdXFwSU1pYTRTdWJvdndxM0VGeVNCY2Z0SmRmRlo0M29kTW5QRzYrMlp6RnZxQVFobGp1bXBHTWJjKzJYUWZtY2NXb0hNaVpUR29PeHJ3NlpueEVua25GN201N3lwamdUR2JFNkx4S3g5Y0NjL3dZYjU0TE1JUVVBQUE9PSJ9 -->
+<!-- rnb-frame-begin eyJtZXRhZGF0YSI6eyJjbGFzc2VzIjpbImRhdGEuZnJhbWUiXSwibnJvdyI6MTYsIm5jb2wiOjIsInN1bW1hcnkiOnsiRGVzY3JpcHRpb24iOlsiZGYgWzE2IMOXIDJdIl19fSwicmRmIjoiSDRzSUFBQUFBQUFBQTQxVXk0N1RNQlIxMDJaS0l4Z3FJVmdCUWdnaGhGUXZBQ0YyVS9vWUdtbWFWSDJnWWVtbW5vNW5VanR5VXFZVkc1YXNrUGlEK1VURUJ3QjJmRDIwbVNKWXVPZmM2M01mdG04NjdCeS85STQ5aEZBWlZVb2xWSFlWUmU1a2ZOaDRnMURGVVVZSlZWQk40MHFKN2lpaW5mVjhtUTIzM2V1MmZEQ2M5aEd3YXNjZmRZYitlekRMM1haNFJWZVc3aDJHWVNjTXdLcTg2d1oyeCtrTmdOV0Nkc3NmazVYZ1ZoYTAvYkhsWWQvdjI1Q1JEYTZNUHZSdHVEc2V2ZzFHdHQ2azFSMWUxZHViREhxNklrTDcranpOaTRFK1BXck9rY0ZIZ004QjY0QkhnQWVBbnhLRDMrN25lUEFkL0t4cGtGOGEvQXIrSnVDWHl5MTk0Y0pkVGhZMGhjdDJiTXRza1FpWldVa2tsandyeE4xTUNKK1JGRE0rb3l1ZEZKTC9LT2lxa2VBZnFjcUZrSmU3ZDdTUXJNWDBUSkY3YXYzY1h0dkNLQ2FwN2RVRDV4Tm9KQktTbW01b2lpWGhjNHFIK3RmUEd6VGFwN3UwZkxtZ2trWFk1OW5yVjV2cVovOVEwem1WLzYwUERHN3FIKzdTVDBsSzhWOVZmM2JESk8yekZlTzdWRVJLc283Wk9jVUYxWU5ydVFhNUk1eWUwY2crOStPdFZGRkUwMVJJM0dFeTBKT3ltZTV1c3M1T0JjZlRKWXN6eHJFd2FhNC9YRTJLQzJ3SDdaWWV0TTltRHVwR2VPTVhQS29OOEdZa0kvaEVxcEFkNmFvaXlaamdLcG1qL3lyY1FuQkpGaHkzbDF3WG56V2kweVUvYjd6WW5zVzhvUktFV082WWtvNXR6TFZmQnVWenhxa2R5SmhNYVF6R3ZqcGtma2FjU01idGJYckttK0pNWk1UcXZFakUxZ056L2h1MEQyay9JUVVBQUE9PSJ9 -->
 <div data-pagedtable="false">
 <script data-pagedtable-source type="application/json">
 {"columns":[{"label":["import"],"name":[1],"type":["chr"],"align":["left"]},{"label":["count"],"name":[2],"type":["dbl"],"align":["right"]}],"data":[{"1":"CHEBI","2":"373"},{"1":"CL","2":"184"},{"1":"DISDRIV","2":"8"},{"1":"ECO","2":"13"},{"1":"ExO","2":"4"},{"1":"FOODON","2":"56"},{"1":"GENO","2":"31"},{"1":"HP","2":"439"},{"1":"NCBITaxon","2":"1095"},{"1":"NCIT","2":"1"},{"1":"OMIM","2":"202"},{"1":"SO","2":"245"},{"1":"SYMP","2":"960"},{"1":"TRANS","2":"32"},{"1":"UBERON","2":"788"},{"1":"UPHENO","2":"1"}],"options":{"columns":{"min":{},"max":[10],"total":[2]},"rows":{"min":[10],"max":[10],"total":[16]},"pages":{}}}
@@ -3122,15 +3121,16 @@ DISDRIV are just counted as CHEBI).</p>
 <!-- rnb-frame-end -->
 <!-- rnb-chunk-end -->
 <!-- rnb-text-begin -->
-<div id="comparison-to-ground-truth-2" class="section level3" number="4.3.1">
-<h3><span class="header-section-number">4.3.1</span> Comparison to
+<div id="comparison-to-ground-truth-2" class="section level3" number="5.2.1">
+<h3><span class="header-section-number">5.2.1</span> Comparison to
 Ground Truth</h3>
+<p>This count appears accurate.</p>
 <!-- rnb-text-end -->
 <!-- rnb-chunk-begin -->
 <!-- rnb-source-begin eyJkYXRhIjoiYGBgclxuY29tcGFyZV90cnV0aChkZWYsIFwiaW1wb3J0XCIpXG5gYGAifQ== -->
 <pre class="r"><code>compare_truth(def, &quot;import&quot;)</code></pre>
 <!-- rnb-source-end -->
-<!-- rnb-frame-begin eyJtZXRhZGF0YSI6eyJjbGFzc2VzIjpbInRibF9kZiIsInRibCIsImRhdGEuZnJhbWUiXSwibnJvdyI6MTYsIm5jb2wiOjQsInN1bW1hcnkiOnsiQSB0aWJibGUiOlsiMTYgw5cgNCJdfX0sInJkZiI6Ikg0c0lBQUFBQUFBQUE4VlN6VTdiUUJBZU8rdlFXRFJGb3NkSzVJeVVIT0RDalRST2FDd1JPOHBQUlUvSTVBK3JZUjA1dG9qVUMwZE9sWGdEM2dLT25Ia2FMcjBtbmZYT1JNSXZnS1gxTi9QdGZEcy91NzNteGJGOVlRTkFBWVJoUU1GQ0U2emg0S3g2QWlCTWRBd1FVRks0d3FCOU5BU3V2V3pwRGN0cHR4b3VPYVp6VHRaTzArMDNlKzVQY2dzdHg5K2FLemFMWjc3ZjlEM3l4SStXeHp0bXUwdFd5WE1hN2lCWVJaTERQTWNkc08xMzNBNUwraXdXL1Y4ZGxsdUQzbmV2ei9tR2pWWnZtNjg0N0xaVlJvRFB1aWNqUlh6RzlZazQxU3NPQWc1dzcwa1ZtQTBFNEJYWFAremtCYkdDK0pYNHNqcW5mdHRWVTRUNkREUldDQThKOXdqUENVOEoveXcwUG56TDhQU04rTEN1VVQ1cS9FdDhuZkQrOFYwODF3RWYvcjE3UUpZTWJpWkwwSVVKdm9Md1poSEZDWG03c3poSzVmZ3lpZFBrbW1VanBEaEFqTVBwTkhkdUtZNXVhM3kydWpUekRuK2J6ZVl0WDhCb0hpeTVBQ2J0Y1pBRXRXbU1ldlRXT2NsT3RFakNTS0xJVkUvZnlvbU5PRWQ4U2FXcVpGd2RYYWZ5ZC9WSUpRRDlOSUNxTTBqQ3R0QXB6UTN4Rms5bUltZWhuSER0OCtCcU1pZW5qQjFuRGRjV2NiaWRqWTNzc3BaRVNjQng5aWlhTTVQMUJ1di84U0dMSWZFREFBQT0ifQ== -->
+<!-- rnb-frame-begin eyJtZXRhZGF0YSI6eyJjbGFzc2VzIjpbInRibF9kZiIsInRibCIsImRhdGEuZnJhbWUiXSwibnJvdyI6MTYsIm5jb2wiOjQsInN1bW1hcnkiOnsiQSB0aWJibGUiOlsiMTYgw5cgNCJdfX0sInJkZiI6Ikg0c0lBQUFBQUFBQUE4VlN6VTdiUUJBZU8rdlFXRFJGb3NkSzVJeVVTSWdMTjlJNG9iRkU3Q2cvRlQwaGt6K3NoblhrMkNKU0x4dzVWZUlOZUFzNGN1WnB1UFNhZE5ZN0V3bS9BSmJXMzh5MzgrMzg3UGFhRjhmMmhRMEFCUkNHQVFVTFRiQ0dnN1BxQ1lBdzBURkFRRW5oQ29QMjBSQzQ5cktsTnl5bjNXcTQ1SmpPT1ZrN1RiZmY3TGsveVMyMEhIOXJydGdzbnZsKzAvZklFejlhSHUrWTdTNVpKYzlwdUlOZ0ZVa084eHgzd0xiZmNUc3M2Yk5ZOUg5MVdHNE5ldCs5UHVjYk5scTliYjdpc050V0dRRSs2NTZNRlBFWjF5ZmlWSzg0Q0RqQXZTZFZZRFlRZ0ZkYy83Q1RGOFFLNGxmaXkrcWMrbTFYVFJIcU05QllJVHdrM0NNOEp6d2wvTFBRK1BBdHc5TTM0c082UnZtbzhTL3hkY0w3eDNmeFhBZDgrUGZ1QVZreXVKa3NRUmNtK0FyQ20wVVVKK1R0enVJb2xlUExKRTZUYTVhTmtPSUFNUTZuMDl5NXBUaTZyZkhaNnRMTU8veHROcHUzZkFHamViRGtBcGkweDBFUzFLWXg2dEZiNXlRNzBTSUpJNGtpVXoxOUt5YzI0aHp4SlpXcWtuRjFkSjNLMzlVamxRRDAwd0NxemlBSjIwS25ORGZFV3p5WmlaeUZjc0sxejRPcnlaeWNNbmFjTlZ4YnhPRjJOamF5eTFvU0pRSEgyYU5vemt6V0c2ei9BNWRIYVlUeEF3QUEifQ== -->
 <div data-pagedtable="false">
 <script data-pagedtable-source type="application/json">
 {"columns":[{"label":["import"],"name":[1],"type":["chr"],"align":["left"]},{"label":["ground_truth"],"name":[2],"type":["int"],"align":["right"]},{"label":["count"],"name":[3],"type":["dbl"],"align":["right"]},{"label":["diff"],"name":[4],"type":["dbl"],"align":["right"]}],"data":[{"1":"CHEBI","2":"373","3":"373","4":"0"},{"1":"CL","2":"184","3":"184","4":"0"},{"1":"DISDRIV","2":"8","3":"8","4":"0"},{"1":"ECO","2":"13","3":"13","4":"0"},{"1":"ExO","2":"4","3":"4","4":"0"},{"1":"FOODON","2":"56","3":"56","4":"0"},{"1":"GENO","2":"31","3":"31","4":"0"},{"1":"HP","2":"439","3":"439","4":"0"},{"1":"NCBITaxon","2":"1095","3":"1095","4":"0"},{"1":"NCIT","2":"1","3":"1","4":"0"},{"1":"OMIM","2":"202","3":"202","4":"0"},{"1":"SO","2":"245","3":"245","4":"0"},{"1":"SYMP","2":"960","3":"960","4":"0"},{"1":"TRANS","2":"32","3":"32","4":"0"},{"1":"UBERON","2":"788","3":"788","4":"0"},{"1":"UPHENO","2":"1","3":"1","4":"0"}],"options":{"columns":{"min":{},"max":[10],"total":[4]},"rows":{"min":[10],"max":[10],"total":[16]},"pages":{}}}
@@ -3140,9 +3140,9 @@ Ground Truth</h3>
 <!-- rnb-chunk-end -->
 <!-- rnb-text-begin -->
 </div>
-<div id="comparison-to-current-corrected-report" class="section level3" number="4.3.2">
-<h3><span class="header-section-number">4.3.2</span> Comparison to
-Current (Corrected) Report</h3>
+<div id="comparison-to-corrected-report" class="section level3" number="5.2.2">
+<h3><span class="header-section-number">5.2.2</span> Comparison to
+Corrected Report</h3>
 <p>This report automatically identifies all imports by excluding DOID
 classes and counting all remaining classes by namespace. Unlike the
 current report, this query would automatically identify and count new
@@ -3153,33 +3153,31 @@ exactly, for NCBITaxon): DISDRIV, ECO, ExO, GENO, NCBITaxon, NCIT, OMIM,
 UPHENO.</p>
 </div>
 </div>
-<div id="sub-divided-import-counts" class="section level2" number="4.4">
-<h2><span class="header-section-number">4.4</span> Sub-divided Import
+<div id="sub-divided-import-counts" class="section level2" number="5.3">
+<h2><span class="header-section-number">5.3</span> Sub-divided Import
 Counts</h2>
-<p>The two remaining count queries handle classes differently when those
-classes are subclasses of a different namespace. This helps identify
-more clearly how terms are imported into the DO, whether directly or
-indirectly, and has particular usefulness with regard to DISDRIV and
-it’s varied subclasses.</p>
-<div id="special-handling-of-disdriv-only" class="section level3" number="4.4.1">
-<h3><span class="header-section-number">4.4.1</span> Special Handling of
+<p>The remaining count queries handle utilize a different approach,
+counting classes differently when those classes are subclasses of a
+different namespace (CHEBI subclasses imported via DISDRIV is counted
+differently than CHEBI subclasses imported directly with CHEBI). This
+approach makes how terms are imported into the DO clearer, whether
+directly or indirectly, and may have particular usefulness with regard
+to DISDRIV and it’s varied subclasses.</p>
+<div id="special-handling-of-disdriv-only" class="section level3" number="5.3.1">
+<h3><span class="header-section-number">5.3.1</span> Special Handling of
 DISDRIV Only</h3>
 <p>This version is similar to the count of all import classes above but
-carves out a special exception for DISDRIV and all subclasses in
+carves out an exception specifically for DISDRIV and all subclasses in
 DISDRIV. If a class is in DISDRIV it is NOT counted elsewhere and is
 ONLY counted as a subclass of DISDRIV. This retains the unique count of
 classes by namespace but identifies those classes brought in by
 DISDRIV.</p>
 <!-- rnb-text-end -->
 <!-- rnb-chunk-begin -->
-<!-- rnb-source-begin eyJkYXRhIjoiYGBgclxuY29tcGFyZV90cnV0aChwcm9wLCBcImltcG9ydFwiKSAlPiVcbiAgICBkcGx5cjo6c2VsZWN0KGltcG9ydCwgdHlwZSwgZHBseXI6OmV2ZXJ5dGhpbmcoKSlcbmBgYCJ9 -->
-<pre class="r"><code>compare_truth(prop, &quot;import&quot;) %&gt;%
-    dplyr::select(import, type, dplyr::everything())</code></pre>
-<!-- rnb-source-end -->
-<!-- rnb-frame-begin eyJtZXRhZGF0YSI6eyJjbGFzc2VzIjpbInRibF9kZiIsInRibCIsImRhdGEuZnJhbWUiXSwibnJvdyI6MTQsIm5jb2wiOjUsInN1bW1hcnkiOnsiQSB0aWJibGUiOlsiMTQgw5cgNSJdfX0sInJkZiI6Ikg0c0lBQUFBQUFBQUE3MVZYMi9UTUJDL1pnbXdDTUpnQ1BHQ0VBeUpGeHFuR3hwb0wzUmptdFNub0Fta3ZhRTBjZEpzaVIwNWpySys3YVB4a1JBZllNVk9uS2lOaWhhR05FdnUvZm45N3M1MlR0ZlQ0N005ODh3RWdBM1FCd1BZTUlRS3h2ZHZKOE5QQUxvbWpBSG9zQ25scFNCdFMxVHNMYkV0QmJ5WmNaNGRJSlFWTExIcGxDYnhsSGxzYmxNV0lXR2lveE5YTVhkdVlBWTBEbm9tblJ5NmZabkhmWm51MFVReFg5L0FQSFY3RW5QYTgrcjVQTTBVOWRVS1ZlQ0JqM0NDVTB4NGprYjJTTkZlcktGeHpOSmM0ZThWWHBhbEhXR0NLZUUwb1ZGZE1xUXM5VVE2VVhwQzNESlJNVytYWXNxOWlybnJPQTV5Um9nRjRURDNaemoxRlBmbFd1NHVjajRpMmliY1dVdjZnQVF2djZBNThpbkRuWFo2S3FJUDNPazU5dmxYUmpQTStGd2h6eVZ5U0FqbEhvOHArU2YwdGxuL0huY2I1SDl1Y1Bjb3dLUHF1d0RJT2JCZERRazVEK3I5YmtuWGxYeWlPSm9hRXpMV0drTzl4aU1sSDlUeTg2OVZPZjV5dGQ2LzFiRTdlZHI4ejZCWmx0clYrZ2wzdFZibXBVRzhGT2RRTjdlaG5QZmlOS09NSzB2bjh3d3IvV0hFYUVHQ0g1d1ZmTmFrOElXckpRZHhHSFpxYkRKYTJrMGQrYkcwSy9HeldDeCtkdy9qSjE3ZUhLWnhtb0hIUFR0a0lsNVkxNTJRK3pTVDNTQ0N0T1dwMy80ZHNJN2pjVUhrU1lLaFB5dkl4WEJmRm9DNkxVQ2RUdXJXa203VUpiVkY5NVV3aVdMU3ZJeVJlRlBjREJSTDNMaTZzSjJ4dUgwYlUzaHptNHNHYm5pbVQ1UEdVOTBOcnY4QXVBbUoyT3dHQUFBPSJ9 -->
+<!-- rnb-frame-begin eyJtZXRhZGF0YSI6eyJjbGFzc2VzIjpbInRibF9kZiIsInRibCIsImRhdGEuZnJhbWUiXSwibnJvdyI6MTgsIm5jb2wiOjMsInN1bW1hcnkiOnsiQSB0aWJibGUiOlsiMTggw5cgMyJdfX0sInJkZiI6Ikg0c0lBQUFBQUFBQUE2MlRTMC9DUUJDQWx6NGdOQUVKZXZUZzJZUW14b3MzS3FWSW83U0VoOEZqTFJVYnk3WXBKWkI0OGVqSnhIL0FMelQrQW5EYnpoQXBlbU9UNXB1Wm5YZmJYbk4wS1kwa1FnaFBoRnlPOENJVGlUZ2N0R3BYaEFnY1UzSkVJTVdZUytaMG5IZ1NVbUZQRlM1RXRhMDFkRkE0OVE2a1FsUHZOM3Y2L1FGVVhsTk5FUE10MDJ5YUJtakNqV2JnRGRmdWdsUTAxSVkrc0pZK1JUZXpvM2ZRclk4QlF2K2hneUhpb0hkdDlMSEdzS0gxdGpYeXcyNDdyb0pEcy93YmRyYjhZd2w3N1MvL2FkOVE5Y0Zld3NPeEhEZXNMRWh5bEFud0JIZ0dyS1NzZis5U09RZmV2cVdzZy80YXBQdzhUZWtxS2VrcTVRZjRLY0QzMVU3ZXpHY2xVbXZxekdDN1BLN0puUVorR09IN1RGd0N5M1l3eHZibk5Nb2tLb2IrUXNaa3BmaE54MzJ6Ulh4bEs5cWVOY09LYUpUR1ZtVEpUeUdMWjlvNkUxTHdnOGoxS1F2aTRqOUF6QVRud296aGFFN2pUc1kxKzNsT1gyb1hjWUhrT2owbGtLdS9aRDR0eVcwZ2xZaXJjT2pFcGR2SlBldlI4VUFwczRtVGdlVWdkQ2x1UzJMV21SejVrWVYra3UxN2FFbG1JK3NmS1lNcEIvZ0RBQUE9In0= -->
 <div data-pagedtable="false">
 <script data-pagedtable-source type="application/json">
-{"columns":[{"label":["import"],"name":[1],"type":["chr"],"align":["left"]},{"label":["type"],"name":[2],"type":["chr"],"align":["left"]},{"label":["ground_truth"],"name":[3],"type":["int"],"align":["right"]},{"label":["count"],"name":[4],"type":["dbl"],"align":["right"]},{"label":["diff"],"name":[5],"type":["dbl"],"align":["right"]}],"data":[{"1":"http://purl.obolibrary.org/obo/BFO","2":"owl:ObjectProperty","3":"2","4":"2","5":"0"},{"1":"http://purl.obolibrary.org/obo/doid","2":"owl:AnnotationProperty","3":"19","4":"17","5":"-2"},{"1":"http://purl.obolibrary.org/obo/IAO","2":"owl:AnnotationProperty","3":"3","4":"3","5":"0"},{"1":"http://purl.obolibrary.org/obo/IDO","2":"owl:ObjectProperty","3":"1","4":"1","5":"0"},{"1":"http://purl.obolibrary.org/obo/OBI","2":"owl:AnnotationProperty","3":"1","4":"1","5":"0"},{"1":"http://purl.obolibrary.org/obo/RO","2":"owl:ObjectProperty","3":"39","4":"39","5":"0"},{"1":"http://purl.obolibrary.org/obo/so","2":"owl:ObjectProperty","3":"1","4":"1","5":"0"},{"1":"http://purl.obolibrary.org/obo/symp","2":"owl:ObjectProperty","3":"1","4":"1","5":"0"},{"1":"http://purl.org/dc/elements/1.1","2":"owl:AnnotationProperty","3":"4","4":"4","5":"0"},{"1":"http://purl.org/dc/terms","2":"owl:AnnotationProperty","3":"1","4":"1","5":"0"},{"1":"http://www.geneontology.org/formats/oboInOwl","2":"owl:AnnotationProperty","3":"17","4":"17","5":"0"},{"1":"http://www.w3.org/2000/01/rdf-schema","2":"owl:AnnotationProperty","3":"3","4":"3","5":"0"},{"1":"http://www.w3.org/2002/07/owl","2":"owl:AnnotationProperty","3":"2","4":"2","5":"0"},{"1":"http://www.w3.org/2004/02/skos/core","2":"owl:AnnotationProperty","3":"5","4":"5","5":"0"}],"options":{"columns":{"min":{},"max":[10],"total":[5]},"rows":{"min":[10],"max":[10],"total":[14]},"pages":{}}}
+{"columns":[{"label":["import"],"name":[1],"type":["chr"],"align":["left"]},{"label":["namespace"],"name":[2],"type":["chr"],"align":["left"]},{"label":["count"],"name":[3],"type":["dbl"],"align":["right"]}],"data":[{"1":"CHEBI","2":"NA","3":"368"},{"1":"CL","2":"NA","3":"184"},{"1":"DISDRIV","2":"CHEBI","3":"5"},{"1":"DISDRIV","2":"DISDRIV","3":"8"},{"1":"DISDRIV","2":"ExO","3":"4"},{"1":"DISDRIV","2":"FOODON","3":"1"},{"1":"DISDRIV","2":"NCIT","3":"1"},{"1":"ECO","2":"NA","3":"13"},{"1":"FOODON","2":"NA","3":"55"},{"1":"GENO","2":"NA","3":"31"},{"1":"HP","2":"NA","3":"439"},{"1":"NCBITaxon","2":"NA","3":"1095"},{"1":"OMIM","2":"NA","3":"202"},{"1":"SO","2":"NA","3":"245"},{"1":"SYMP","2":"NA","3":"960"},{"1":"TRANS","2":"NA","3":"32"},{"1":"UBERON","2":"NA","3":"788"},{"1":"UPHENO","2":"NA","3":"1"}],"options":{"columns":{"min":{},"max":[10],"total":[3]},"rows":{"min":[10],"max":[10],"total":[18]},"pages":{}}}
   </script>
 </div>
 <!-- rnb-frame-end -->
@@ -3187,15 +3185,15 @@ DISDRIV.</p>
 <!-- rnb-text-begin -->
 <p>Here it’s clear that ExO, FoodOn, and NCIT are ONLY indirectly
 imported into the DO via DISDRIV.</p>
-<div id="comparison-to-ground-truth-3" class="section level4" number="4.4.1.1">
-<h4><span class="header-section-number">4.4.1.1</span> Comparison to
+<div id="comparison-to-ground-truth-3" class="section level4" number="5.3.1.1">
+<h4><span class="header-section-number">5.3.1.1</span> Comparison to
 Ground Truth</h4>
-<p>Here are two different versions of comparison to the “ground
-truth”.</p>
-</div>
-<div id="comparison-by-original-namespace" class="section level4" number="4.4.1.2">
-<h4><span class="header-section-number">4.4.1.2</span> Comparison by
-Original Namespace</h4>
+<p>Two comparisons to the “ground truth” are included here, showing 1)
+the count is accurate and 2) how the count differs from previous report
+queries.</p>
+<div id="comparison-by-original-namespace" class="section level5" number="5.3.1.1.1">
+<h5><span class="header-section-number">5.3.1.1.1</span> Comparison by
+Original Namespace</h5>
 <p>This comparison shows that the total class counts for each namespace
 are the same as the ground truth. The comparison is accomplished by
 aggregating all imports, including DISDRIV subclasses, with their
@@ -3221,7 +3219,7 @@ original namespace.</p>
     dplyr::summarize(count = sum(count)) %&gt;%
     compare_truth(&quot;import&quot;)</code></pre>
 <!-- rnb-source-end -->
-<!-- rnb-frame-begin eyJtZXRhZGF0YSI6eyJjbGFzc2VzIjpbInRibF9kZiIsInRibCIsImRhdGEuZnJhbWUiXSwibnJvdyI6MTYsIm5jb2wiOjQsInN1bW1hcnkiOnsiQSB0aWJibGUiOlsiMTYgw5cgNCJdfX0sInJkZiI6Ikg0c0lBQUFBQUFBQUE4VlN6VTdiUUJBZU8rdlFXRFJGb3NkSzVJeVVIT0RDalRST2FDd1JPOHBQUlUvSTVBK3JZUjA1dG9qVUMwZE9sWGdEM2dLT25Ia2FMcjBtbmZYT1JNSXZnS1gxTi9QdGZEcy91NzNteGJGOVlRTkFBWVJoUU1GQ0U2emg0S3g2QWlCTWRBd1FVRks0d3FCOU5BU3V2V3pwRGN0cHR4b3VPYVp6VHRaTzArMDNlKzVQY2dzdHg5K2FLemFMWjc3ZjlEM3l4SStXeHp0bXUwdFd5WE1hN2lCWVJaTERQTWNkc08xMzNBNUwraXdXL1Y4ZGxsdUQzbmV2ei9tR2pWWnZtNjg0N0xaVlJvRFB1aWNqUlh6RzlZazQxU3NPQWc1dzcwa1ZtQTBFNEJYWFAremtCYkdDK0pYNHNqcW5mdHRWVTRUNkREUldDQThKOXdqUENVOEoveXcwUG56TDhQU04rTEN1VVQ1cS9FdDhuZkQrOFYwODF3RWYvcjE3UUpZTWJpWkwwSVVKdm9Md1poSEZDWG03c3poSzVmZ3lpZFBrbW1VanBEaEFqTVBwTkhkdUtZNXVhM3kydWpUekRuK2J6ZVl0WDhCb0hpeTVBQ2J0Y1pBRXRXbU1ldlRXT2NsT3RFakNTS0xJVkUvZnlvbU5PRWQ4U2FXcVpGd2RYYWZ5ZC9WSUpRRDlOSUNxTTBqQ3R0QXB6UTN4Rms5bUltZWhuSER0OCtCcU1pZW5qQjFuRGRjV2NiaWRqWTNzc3BaRVNjQng5aWlhTTVQMUJ1di84U0dMSWZFREFBQT0ifQ== -->
+<!-- rnb-frame-begin eyJtZXRhZGF0YSI6eyJjbGFzc2VzIjpbInRibF9kZiIsInRibCIsImRhdGEuZnJhbWUiXSwibnJvdyI6MTYsIm5jb2wiOjQsInN1bW1hcnkiOnsiQSB0aWJibGUiOlsiMTYgw5cgNCJdfX0sInJkZiI6Ikg0c0lBQUFBQUFBQUE4VlN6VTdiUUJBZU8rdlFXRFJGb3NkSzVJeVVTSWdMTjlJNG9iRkU3Q2cvRlQwaGt6K3NoblhrMkNKU0x4dzVWZUlOZUFzNGN1WnB1UFNhZE5ZN0V3bS9BSmJXMzh5MzgrMzg3UGFhRjhmMmhRMEFCUkNHQVFVTFRiQ0dnN1BxQ1lBdzBURkFRRW5oQ29QMjBSQzQ5cktsTnl5bjNXcTQ1SmpPT1ZrN1RiZmY3TGsveVMyMEhIOXJydGdzbnZsKzAvZklFejlhSHUrWTdTNVpKYzlwdUlOZ0ZVa084eHgzd0xiZmNUc3M2Yk5ZOUg5MVdHNE5ldCs5UHVjYk5scTliYjdpc050V0dRRSs2NTZNRlBFWjF5ZmlWSzg0Q0RqQXZTZFZZRFlRZ0ZkYy83Q1RGOFFLNGxmaXkrcWMrbTFYVFJIcU05QllJVHdrM0NNOEp6d2wvTFBRK1BBdHc5TTM0c082UnZtbzhTL3hkY0w3eDNmeFhBZDgrUGZ1QVZreXVKa3NRUmNtK0FyQ20wVVVKK1R0enVJb2xlUExKRTZUYTVhTmtPSUFNUTZuMDl5NXBUaTZyZkhaNnRMTU8veHROcHUzZkFHamViRGtBcGkweDBFUzFLWXg2dEZiNXlRNzBTSUpJNGtpVXoxOUt5YzI0aHp4SlpXcWtuRjFkSjNLMzlVamxRRDAwd0NxemlBSjIwS25ORGZFV3p5WmlaeUZjc0sxejRPcnlaeWNNbmFjTlZ4YnhPRjJOamF5eTFvU0pRSEgyYU5vemt6V0c2ei9BNWRIYVlUeEF3QUEifQ== -->
 <div data-pagedtable="false">
 <script data-pagedtable-source type="application/json">
 {"columns":[{"label":["import"],"name":[1],"type":["chr"],"align":["left"]},{"label":["ground_truth"],"name":[2],"type":["int"],"align":["right"]},{"label":["count"],"name":[3],"type":["dbl"],"align":["right"]},{"label":["diff"],"name":[4],"type":["dbl"],"align":["right"]}],"data":[{"1":"CHEBI","2":"373","3":"373","4":"0"},{"1":"CL","2":"184","3":"184","4":"0"},{"1":"DISDRIV","2":"8","3":"8","4":"0"},{"1":"ECO","2":"13","3":"13","4":"0"},{"1":"ExO","2":"4","3":"4","4":"0"},{"1":"FOODON","2":"56","3":"56","4":"0"},{"1":"GENO","2":"31","3":"31","4":"0"},{"1":"HP","2":"439","3":"439","4":"0"},{"1":"NCBITaxon","2":"1095","3":"1095","4":"0"},{"1":"NCIT","2":"1","3":"1","4":"0"},{"1":"OMIM","2":"202","3":"202","4":"0"},{"1":"SO","2":"245","3":"245","4":"0"},{"1":"SYMP","2":"960","3":"960","4":"0"},{"1":"TRANS","2":"32","3":"32","4":"0"},{"1":"UBERON","2":"788","3":"788","4":"0"},{"1":"UPHENO","2":"1","3":"1","4":"0"}],"options":{"columns":{"min":{},"max":[10],"total":[4]},"rows":{"min":[10],"max":[10],"total":[16]},"pages":{}}}
@@ -3231,9 +3229,9 @@ original namespace.</p>
 <!-- rnb-chunk-end -->
 <!-- rnb-text-begin -->
 </div>
-<div id="comparison-by-parent-import" class="section level4" number="4.4.1.3">
-<h4><span class="header-section-number">4.4.1.3</span> Comparison by
-Parent Import</h4>
+<div id="comparison-by-parent-import" class="section level5" number="5.3.1.1.2">
+<h5><span class="header-section-number">5.3.1.1.2</span> Comparison by
+Parent Import</h5>
 <p>This comparison shows how this count strategy, handling DISDRIV
 specially, alters the counts. Here all subclasses of DISDRIV are counted
 with DISDRIV irrespective of their original namespace.</p>
@@ -3245,7 +3243,7 @@ with DISDRIV irrespective of their original namespace.</p>
     dplyr::summarize(count = sum(count)) %&gt;%
     compare_truth(&quot;import&quot;)</code></pre>
 <!-- rnb-source-end -->
-<!-- rnb-frame-begin eyJtZXRhZGF0YSI6eyJjbGFzc2VzIjpbInRibF9kZiIsInRibCIsImRhdGEuZnJhbWUiXSwibnJvdyI6MTQsIm5jb2wiOjQsInN1bW1hcnkiOnsiQSB0aWJibGUiOlsiMTQgw5cgNCJdfX0sInJkZiI6Ikg0c0lBQUFBQUFBQUE2MVNTMHZEUUJDZXBCdTFRYXVnUjBGUEhvVDI0c1dic1E5dDBEYlNoK2hKWWw4RzIwMUpFeFM4ZVBRaytBLzhGM3JUczc5R0JLL1dTWFpHYU00dVRMNzVKak03cjIyVXozYk1NeE1BTWlBMERUSUdxbUMwV3dmNVhRQ2hJOUZBUURiR1czUmFSVVdncktEazZJZFJxbGFLTmhHOWRFemFmTmx1bGh2MktkRk1wZVNRT25mZ09HV25Ua3djVnVyOFI2K2VrSmF0bDRwMnk3MzFKYnM1TmJ2R2JrME9FTTN6R29jWXJjWit2Y2s1MnNWSzR5L0hYUHVrR21jQldFb0tCeTFDZkVWWklCdDJDeHRvZjRrTFF2MEQ1UnVyZmtmY1JGeExKcEhFUXM2NmdlUllBOElkd20zQ28zdUZlOFR2eGdxZjFoVjZsa0w1clBDUi9DekNCMlhmK3dRK1NkNzNOWmc1MXRZc2YvdUVmejR6TDhDUTdxZzNBYlY5d2FQMVJtTS9DSWt0RGdJL2t0MkxNSWpDS3c3cm9Ja2RSTmZyOTFQM1pnUC9wc0IzeDh2UTcvRXpuVTYvMGdWMGh1NkVDMkNqMlhWRHQ5QVBNQjdaVHlwazNoK0huaTh4U0kvZnJwRUsxb0tVWVRtU2NTWGRmT2Nxa3RmNWVMRW1xTlVEVmNmUGdIV2hVdXBUdXNyZ3lmVGt3Sk05cm4zb1h2YUdSSExZY2RKd1lSeDRmN014MFRvcGhIN29zcC9aOFlkc1NYcURuMTlpenZqM3NnTUFBQT09In0= -->
+<!-- rnb-frame-begin eyJtZXRhZGF0YSI6eyJjbGFzc2VzIjpbInRibF9kZiIsInRibCIsImRhdGEuZnJhbWUiXSwibnJvdyI6MTQsIm5jb2wiOjQsInN1bW1hcnkiOnsiQSB0aWJibGUiOlsiMTQgw5cgNCJdfX0sInJkZiI6Ikg0c0lBQUFBQUFBQUE2MVNPMC9EUUF4MjBndlFDQW9TakVnd01TQzFBeXhzaEQ2Z0ViUkJmU0NZVU9pTGlIS3Awa1Fnc1RBeUlmRVArQmV3d2N5dlFVaXNGQ2RuSXpVemxwelBuMk9mSDNlTjh1bTJlV29DUUFhRXBrSEdRQk9NZG1zL3Z3TWdkQ1FhQ01qR2VJdEJ5MmdJMUNYVUhQMHdTdFZLMFNhaWw0N0ltaTNielhMRFBpR2FxWlFjTW1mMkhhZnMxSW1KZzBxZC8ralZZN0t5OVZMUmJybTN2dVF3cDJiWE9LekpDYUo1VnVNVW85WFlxemU1UnJ0WWFmelZtR2tmVitNcUFBdEo0NkJGaUsrb2MrVERhV0VOL1M5eFEyaC9vSDVqMSsrSTY0Z3J5U2FTWE1oWk41Q0lOU0RjSnR3a1BMeFh1RXY4YnFUd2FWV2haeW1VendvZktjNGlmRkQrM1U5Z1NlcStyOENVV0J2VC9PMFQvbG1tWG9BaDNldmVHTlR0QzE2dGR6M3lnNURZL0NEd0k5azlENE1vdk9TMERybzRRSFM5Zmo5MWJqYndid3A4ZG53WitqMStKcFBKVjdxQnp0QWRjd1BzTkx0dTZCYjZBZVlqKzBtbHpQcWowUE1sSnVueDJ6VlN5VnFRY2l4R011NmttKzljUnZJcXZ4VVhBSFgxUU4zeE0yQmJxSkw2aEk0eWVETTlPZkJrajNzZnVoZTlJWkVjVHB3TVhCZ0YzdDl1VFBTT0M2RWZ1aHhuZHZ3aGU1TFo0T2NYUU95bWxMSURBQUE9In0= -->
 <div data-pagedtable="false">
 <script data-pagedtable-source type="application/json">
 {"columns":[{"label":["import"],"name":[1],"type":["chr"],"align":["left"]},{"label":["ground_truth"],"name":[2],"type":["int"],"align":["right"]},{"label":["count"],"name":[3],"type":["dbl"],"align":["right"]},{"label":["diff"],"name":[4],"type":["dbl"],"align":["right"]}],"data":[{"1":"CHEBI","2":"373","3":"368","4":"-5"},{"1":"CL","2":"184","3":"184","4":"0"},{"1":"DISDRIV","2":"8","3":"19","4":"11"},{"1":"ECO","2":"13","3":"13","4":"0"},{"1":"FOODON","2":"56","3":"55","4":"-1"},{"1":"GENO","2":"31","3":"31","4":"0"},{"1":"HP","2":"439","3":"439","4":"0"},{"1":"NCBITaxon","2":"1095","3":"1095","4":"0"},{"1":"OMIM","2":"202","3":"202","4":"0"},{"1":"SO","2":"245","3":"245","4":"0"},{"1":"SYMP","2":"960","3":"960","4":"0"},{"1":"TRANS","2":"32","3":"32","4":"0"},{"1":"UBERON","2":"788","3":"788","4":"0"},{"1":"UPHENO","2":"1","3":"1","4":"0"}],"options":{"columns":{"min":{},"max":[10],"total":[4]},"rows":{"min":[10],"max":[10],"total":[14]},"pages":{}}}
@@ -3255,49 +3253,56 @@ with DISDRIV irrespective of their original namespace.</p>
 <!-- rnb-chunk-end -->
 <!-- rnb-text-begin -->
 <p>NOTE that ExO and other namespaces imported via DISDRIV no longer
-appear in this list.</p>
+appear in this list as they are included as DISDRIV classes.</p>
 </div>
 </div>
-<div id="special-handling-by-import-root" class="section level3" number="4.4.2">
-<h3><span class="header-section-number">4.4.2</span> Special Handling by
+<div id="note-on-alternate-option" class="section level4" number="5.3.1.2">
+<h4><span class="header-section-number">5.3.1.2</span> Note on Alternate
+Option</h4>
+<p>Counting all children of DISDRIV as part of the DISDRIV import
+without identifying their original namespaces could be an alternate
+count strategy.</p>
+</div>
+</div>
+<div id="special-handling-by-import-root" class="section level3" number="5.3.2">
+<h3><span class="header-section-number">5.3.2</span> Special Handling by
 Import Root</h3>
 <p>This version is designed to count all terms based on their
-relationship to import roots. It has a number of pros and at least one
-con:</p>
-<p>PROS: 1. Import counts are organized by root, meaning the terms of
-the OWL tree on disease-ontology.org with the <code>disease</code>
-branch excluded. 2. Most flexible count of imports and the terms within
-imports.</p>
-<p>CONS: 1. Term counts may not be unique when they have relationship to
-more than one import root. 2. Term counts may not be duplicated when an
-import root has more than one label. - Technically, having more than one
-label is an error in OBO ontologies but it is not yet prevented/fixed
-during import (there is an example below).</p>
-<p>It is possible for a term to have a relationship to more than one
-import root even if the term itself is only in one import. This is
-apparent with CHEBI terms which are in DISDRIV (shown below).</p>
-<p>Note: Instead of using the “import” column, this query uses the
-labels for root terms (<code>import_root</code> column) in an effort to
-improve communication about how it derived and avoid
-misinterpretation.</p>
+relationship to import roots (i.e. the top-level terms of the OWL tree
+on disease-ontology.org excluding <code>disease</code>). It has pros and
+cons:</p>
+<p><strong>PROS:</strong></p>
+<ol style="list-style-type: decimal">
+<li>Import counts are organized by root, making this count more
+relatable to the data.<br />
+</li>
+<li>This is the most flexible count of imports and the terms within
+imports.</li>
+</ol>
+<p><strong>CON:</strong></p>
+<ul>
+<li>Term counts may not be unique. Duplication is apparent in the
+results below, resulting from two scenarios:
+<ol style="list-style-type: decimal">
+<li>When terms have a relationship to more than one import root.<br />
+</li>
+<li>When an import root has more than one label.<br />
+</li>
+</ol>
+<ul>
+<li>These duplications could potentially be eliminated by ensuring
+import roots have a single label and possibly by migrating import terms
+to DISDRIV, as appropriate.</li>
+</ul></li>
+</ul>
+<p><strong>NOTE:</strong> Instead of using an “import” column, this
+query has an <code>import_root</code> column that uses the labels for
+root terms instead of their namespace identifier. This is in an effort
+to improve communication about how this dataset is derived and to
+<em>hopefully</em> avoid misinterpretation.</p>
 <!-- rnb-text-end -->
 <!-- rnb-chunk-begin -->
-<!-- rnb-source-begin eyJkYXRhIjoiYGBgclxuc3lzdGVtLnRpbWUoXG4gICAgbnNfZmxleCA8LSBkbSRxdWVyeShcbiAgICAgICAgZmlsZS5wYXRoKHNwYXJxbF9kaXIsIFwiaW1wb3J0LWJ5X3Jvb3RfYXV0by1yZXBvcnQucnFcIilcbiAgICApICU+JVxuICAgICAgICB0aWR5cjo6dW5uZXN0KG5hbWVzcGFjZSwga2VlcF9lbXB0eSA9IFRSVUUpXG4pXG5gYGAifQ== -->
-<pre class="r"><code>system.time(
-    ns_flex &lt;- dm$query(
-        file.path(sparql_dir, &quot;import-by_root_auto-report.rq&quot;)
-    ) %&gt;%
-        tidyr::unnest(namespace, keep_empty = TRUE)
-)</code></pre>
-<!-- rnb-source-end -->
-<!-- rnb-output-begin eyJkYXRhIjoiICAgdXNlciAgc3lzdGVtIGVsYXBzZWQgXG4gMjguMzg2ICAgMC4wNTUgIDI4LjQ1OSBcbiJ9 -->
-<pre><code>   user  system elapsed 
- 28.386   0.055  28.459 </code></pre>
-<!-- rnb-output-end -->
-<!-- rnb-source-begin eyJkYXRhIjoiYGBgclxubnNfZmxleFxuYGBgIn0= -->
-<pre class="r"><code>ns_flex</code></pre>
-<!-- rnb-source-end -->
-<!-- rnb-frame-begin eyJtZXRhZGF0YSI6eyJjbGFzc2VzIjpbInRibF9kZiIsInRibCIsImRhdGEuZnJhbWUiXSwibnJvdyI6MjAsIm5jb2wiOjMsInN1bW1hcnkiOnsiQSB0aWJibGUiOlsiMjAgw5cgMyJdfX0sInJkZiI6Ikg0c0lBQUFBQUFBQUE3VlRQWS9UTUJoMjI0UmVnbnFjMUk0TW1SSHRBZ01Mb3ZUamFBUk5UbTBQSGRQSlRYeFhpOFFPdG5QWE1qRWlKdmdIL0R3R0JuN0JGU2V4UXh2S1NLVG9lWi9INzRmZjEvWnNkUEhFdnJBQkFBMWcxR3FnWVVvVG1PZUwwKzR6QUl5NkpEVmdBQ3ZEdFhScTU1NEFuTWkvb3haTW4zQWtGR2xDQWdXTk40b2FBWW9pN1JlczBCSXJjaHhpamlCSFRzandEV0wvV1QxQ056aEVKRUNLdHpGWklZWUZsSktUUUNFUUkyckpJc0ZTTHF5cEZ0bzB4dkVsVDNtQUVvR1hPTUpDZDJjbEswU28yQ1RvWDhJUlJ4L1NuY0pOdm9rVE9SOUZPNEpCd21QTU9hYkVTUmdORU9jSFJ0ZTZvalIwWWlqM2lXRlVtWDk5Y3Fhc2UrZUQ4Y3ozdEQ1OG95Yy9uSXdIN2lIU0hMbnowY3g5cTJoanZQWjFybFBmSDVXNURHL29Ma3Fub1hZeVhvMDliVnZlY09BdWRnWm4rRk4zZW1DUFo1TS9RZlY1bVdyK2JxcDl6TVhzcFRmL3F3MjlKWG5LV2Z2OXh5RC8rcCsvRjNpdCtHMi93STdpanNLVEFsLzgyc2YrSTRYUEZYNTdXQ0JXZVQ1KzNmY25xdDZYSHdYMndYNzkxNThLWS8vOW1BVEdpS3V6YXlqeFBvNFR5c1FsbzFTVUZ6RHpTMkI1Wjh5QXBrUlVzbG1NM3ZaMHhsWTJwcXpvZHJ2OVdTMGJSSkRyc2xxMFF5aGc3NHJKZU1udUtpRk5LaTg2SlRLb25yMTNzeEpjWXhYaFFVcXluWVRkWUpXUzk5Mm5XWUY4dWZoYXl1N3MySTJpWkgyclVwbjZpQkc1eHFUc1BJSkxwTi9Bc2V3NGI3aVhNRXowdEd5cDhwNmdBbW8vTzZDUlZ2TGV3TjF2VlJVemIrWUVBQUE9In0= -->
+<!-- rnb-frame-begin eyJtZXRhZGF0YSI6eyJjbGFzc2VzIjpbInRibF9kZiIsInRibCIsImRhdGEuZnJhbWUiXSwibnJvdyI6MjAsIm5jb2wiOjMsInN1bW1hcnkiOnsiQSB0aWJibGUiOlsiMjAgw5cgMyJdfX0sInJkZiI6Ikg0c0lBQUFBQUFBQUE3VlRUVy9UTUJoMjI0UXVRUjJUMmlPSG5CR3RoTGh3UVpSK2pFYlFaR283TkU2VG0zaXJSV0lIMjlsYVRod1JKL2dIL0R3T0hQZ0ZLMDVpaHphVUk1R2k1MzBldng5K1g5dXowY1ZUKzhJR0FEU0FVYXVCaGlsTllKNHZUcnZQQUREcWt0U0FBYXdNMTlLcG5Yc0NjQ0wvamxvd2ZjS1JVS1FKQ1JRMDNpaHFCQ2lLdEYrd1FrdXN5SEdJT1lJY09TSERONGo5Wi9VSTNlQVFrUUFwM3Naa2hSZ1dVRXBPQW9WQWpLZ2xpd1JMdWJDbVdtalRHTWVYUE9VQlNnUmU0Z2dMM1oyVnJCQ2hZcE9nZndsSEhIMUlkd28zK1NaTzVId1U3UWdHQ1k4eDU1Z1NKMkUwUUp3ZkdGM3JpdExRaWFIY0o0WlJaZjcxeVpteTdwMFB4alBmMC9yd2paNzhjRElldUlkSWMrVE9SelAzcmFLTjhkclh1VTU5ZjFUbU1yeWh1eWlkaHRySmVEWDJ0RzE1dzRHNzJCbWM0VS9kNllFOW5rMytCTlhuWmFyNXU2bjJNUmV6bDk3OHJ6YjBsdVFwWiszM0g0UDg2My8rWHVDMTRyZjlBanVLT3dwUENuenhheC83anhRK1YvanRZWUZZNWZuNGRkK2ZxSHBmZmhUWUIvdjFYMzhxalAzM1l4SVlJNjdPcnFIRSt6aE9LQk9YakZKUlhzRE1MNEhsblRFRG1oSlJ5V1l4ZXR2VEdWdlptTEtpMiszMlo3VnNFRUd1eTJyUkRxR0F2U3NtNHlXN3E0UTBxYnpvbE1pZ2V2YmV6VXB3alZXRUJ5bkpkaEoyZzFWSzNuZWZaQVh5NWVKcktidXpZemVLa3ZXdFNtWHFJMGJrR3BPeTh3Z3VrWDREeDdManZPRmV3akRSMDdLbHludUNDcWo5N0lCR1dzbDdBM2UvQWI2NVpGcm1CQUFBIn0= -->
 <div data-pagedtable="false">
 <script data-pagedtable-source type="application/json">
 {"columns":[{"label":["import_root"],"name":[1],"type":["chr"],"align":["left"]},{"label":["namespace"],"name":[2],"type":["chr"],"align":["left"]},{"label":["count"],"name":[3],"type":["dbl"],"align":["right"]}],"data":[{"1":"Onset","2":"HP","3":"14"},{"1":"anatomy","2":"UBERON","3":"788"},{"1":"cell","2":"CL","3":"184"},{"1":"chebi","2":"CHEBI","3":"372"},{"1":"disease driver","2":"CHEBI","3":"5"},{"1":"disease driver","2":"DISDRIV","3":"8"},{"1":"disease driver","2":"ExO","3":"4"},{"1":"disease driver","2":"FOODON","3":"1"},{"1":"disease driver","2":"NCIT","3":"1"},{"1":"evidence","2":"ECO","3":"13"},{"1":"inheritance pattern","2":"GENO","3":"29"},{"1":"ncbitaxon","2":"NCBITaxon","3":"1095"},{"1":"omim_susceptibility","2":"OMIM","3":"202"},{"1":"phenotype","2":"HP","3":"425"},{"1":"phenotype","2":"UPHENO","3":"1"},{"1":"sequence","2":"SO","3":"245"},{"1":"symptom","2":"SYMP","3":"861"},{"1":"transmission process","2":"TRANS","3":"32"},{"1":"cell","2":"CL","3":"184"},{"1":"food material","2":"FOODON","3":"55"}],"options":{"columns":{"min":{},"max":[10],"total":[3]},"rows":{"min":[10],"max":[10],"total":[20]},"pages":{}}}
@@ -3306,12 +3311,12 @@ misinterpretation.</p>
 <!-- rnb-frame-end -->
 <!-- rnb-chunk-end -->
 <!-- rnb-text-begin -->
-<div id="comparison-to-ground-truth-4" class="section level4" number="4.4.2.1">
-<h4><span class="header-section-number">4.4.2.1</span> Comparison to
+<div id="comparison-to-ground-truth-4" class="section level4" number="5.3.2.1">
+<h4><span class="header-section-number">5.3.2.1</span> Comparison to
 Ground Truth</h4>
-<p>Only the comparison by original namespace is possible for this count
+<p>Only a comparison by original namespace is possible for this count
 query result because the import is identified in a fundamentally
-different way.</p>
+different way (by label instead of namespace identifier).</p>
 <!-- rnb-text-end -->
 <!-- rnb-chunk-begin -->
 <!-- rnb-source-begin eyJkYXRhIjoiYGBgclxubnNfZmxleCAlPiVcbiAgICBkcGx5cjo6Z3JvdXBfYnkobmFtZXNwYWNlKSAlPiVcbiAgICBkcGx5cjo6c3VtbWFyaXplKGNvdW50ID0gc3VtKGNvdW50KSkgJT4lXG4gICAgY29tcGFyZV90cnV0aChcIm5hbWVzcGFjZVwiKVxuYGBgIn0= -->
@@ -3320,7 +3325,7 @@ different way.</p>
     dplyr::summarize(count = sum(count)) %&gt;%
     compare_truth(&quot;namespace&quot;)</code></pre>
 <!-- rnb-source-end -->
-<!-- rnb-frame-begin eyJtZXRhZGF0YSI6eyJjbGFzc2VzIjpbInRibF9kZiIsInRibCIsImRhdGEuZnJhbWUiXSwibnJvdyI6MTYsIm5jb2wiOjQsInN1bW1hcnkiOnsiQSB0aWJibGUiOlsiMTYgw5cgNCJdfX0sInJkZiI6Ikg0c0lBQUFBQUFBQUE0MVNTMC9iUUJBZU96WVFxMEFrT0NLVk0xSnlxWkI2UVlRNGdWZ2lOc3FqQ2lma09nOHN3anB5YkNWU0x6MVdQYlgvZ0g4QlI4NzlKVDF5NlpVdzY1MUpoUzlnYWYzTmZEdmZ6bU8zWGU5L3N2b1dBQlRBMERRb21HaUMyZXVlbGo4REdEbzZHaGhRbExqQW9CMDBERnlsYktrTjAyNDJhZzQ1dW4xTzFucmQ2ZFRiemhkeUN3M2JXNWtMTnRkT1BhL3V1ZVFaWncyWGQvVG1CVmxGMTY0NVhYOFJDUTV6YmFmTHR0ZHlXaXpwc05qb1hMWllibmJiSjI2SDgvVnFqZllxMzFydm9pa3pBbXlxbnJRVThRSFhCbkd5Vnh3RWZNUzllMWxnTmhDQVA3aitZU2VQaVB1SXU4UnZ5WE9xODE5eWlsQ2RnOEo5d2dQQ0V1RTU0UkhodDZuQzMzc1pIajhSSDFZVmlqdUZQLzhxck5MK2o3dFg4YXM2T004WTN2VTl2aS9zZjN6L0xjV3JCMlFLLzNZNEEvVjRETDdjakp6NndaQ0lEK000U3NYZ0tvblQ1SnFWQVZJSjMrMGdISTF5UnhmamFGN2g0K1c5NmQveHQxd3VuL0kxQkJOL3hqVXdhUTM4eEsrTVl0U2o5NXlUckVmVEpJd0VpblQ1K3MyY1dJdHp4SFlxWkNXRGNuQ2RpcHZ5b1V3QTZuVUFWYWVSaEcxRHBkU1h4SnY4UG9kaUhBcWVqRG54dnc0bjVHeGh4MW5EbFdrY3JtWmpJVHVySkZIaWM1d1ZSQk5tc3Q3ZytRV1IvTFB6OUFNQUFBPT0ifQ== -->
+<!-- rnb-frame-begin eyJtZXRhZGF0YSI6eyJjbGFzc2VzIjpbInRibF9kZiIsInRibCIsImRhdGEuZnJhbWUiXSwibnJvdyI6MTYsIm5jb2wiOjQsInN1bW1hcnkiOnsiQSB0aWJibGUiOlsiMTYgw5cgNCJdfX0sInJkZiI6Ikg0c0lBQUFBQUFBQUE0MVNTMC9iUUJBZU96WVFxMEFrT0NLVk0xSWlWVng2UVlRNGdWZ2lOc3FqQ2lma09nOHN3anB5YkNWU0x6MVdQYlgvZ0g4QlI4NzlKVDF5NlpVdzY1MUpoUzlnYWYzTmZEdmZ6bU8zWGU4ZlduMExBQXBnYUJvVVREVEI3SFZQeTU4QkRCMGREUXdvU2x4ZzBBNGFCcTVTdHRTR2FUY2JOWWNjM1Q0bmE3M3VkT3B0NXd1NWhZYnRyY3dGbTJ1bm5sZjNYUEtNczRiTE8zcnpncXlpYTllY3JyK0lCSWU1dHRObDIyczVMWlowV0d4MExsc3NON3Z0RTdmRCtYcTFSbnVWYjYxMzBaUVpBVFpWVDFxSytJQnJnempaS3c0Q1B1TGV2U3d3R3dqQUgxei9zSk5IeEgzRVhlSzM1RG5WK1M4NVJhak9RZUUrNFFGaGlmQ2M4SWp3MjFUaDc3ME1qNStJRDZzS3haM0NuMzhWVm1uL3g5MnIrRlVkbkdjTTcvb2UzeGYyUDc3L2x1TFZBektGZnp1Y2dYbzhCbDl1Ums3OVlFakVoM0VjcFdKd2xjUnBjczNLQUttRTczWVFqa2E1bzR0eE5LL3c4ZkxlOU8vNFd5NlhUL2thZ29rLzR4cVl0QVorNGxkR01lclJlODVKMXFOcEVrWUNSYnA4L1daT3JNVTVZanNWc3BKQk9iaE94VTM1azB3QTZuVUFWYWVSaEcxRHBkU1h4SnY4UG9kaUhBcWVqRG54dnc0bjVHeGh4MW5EbFdrY3JtWmpJVHVySkZIaWM1d1ZSQk5tc3Q3ZytRVlljcnFsOUFNQUFBPT0ifQ== -->
 <div data-pagedtable="false">
 <script data-pagedtable-source type="application/json">
 {"columns":[{"label":["namespace"],"name":[1],"type":["chr"],"align":["left"]},{"label":["ground_truth"],"name":[2],"type":["int"],"align":["right"]},{"label":["count"],"name":[3],"type":["dbl"],"align":["right"]},{"label":["diff"],"name":[4],"type":["dbl"],"align":["right"]}],"data":[{"1":"CHEBI","2":"373","3":"377","4":"4"},{"1":"CL","2":"184","3":"368","4":"184"},{"1":"DISDRIV","2":"8","3":"8","4":"0"},{"1":"ECO","2":"13","3":"13","4":"0"},{"1":"ExO","2":"4","3":"4","4":"0"},{"1":"FOODON","2":"56","3":"56","4":"0"},{"1":"GENO","2":"31","3":"29","4":"-2"},{"1":"HP","2":"439","3":"439","4":"0"},{"1":"NCBITaxon","2":"1095","3":"1095","4":"0"},{"1":"NCIT","2":"1","3":"1","4":"0"},{"1":"OMIM","2":"202","3":"202","4":"0"},{"1":"SO","2":"245","3":"245","4":"0"},{"1":"SYMP","2":"960","3":"861","4":"-99"},{"1":"TRANS","2":"32","3":"32","4":"0"},{"1":"UBERON","2":"788","3":"788","4":"0"},{"1":"UPHENO","2":"1","3":"1","4":"0"}],"options":{"columns":{"min":{},"max":[10],"total":[4]},"rows":{"min":[10],"max":[10],"total":[16]},"pages":{}}}
@@ -3329,18 +3334,20 @@ different way.</p>
 <!-- rnb-frame-end -->
 <!-- rnb-chunk-end -->
 <!-- rnb-text-begin -->
-<p>Only the CHEBI count differs because of the way these counts are
-derived. All other differences should not be present in this count and
-are due to the following data issues:</p>
+<p>There are a number of differences in these counts. All these
+differences, except in the case of CHEBI, should not be present in this
+count and are due to the following data issues:</p>
 <ol style="list-style-type: decimal">
 <li>The doubled CL import count is due to the import root having two
 different <code>rdfs:label</code>s.
 <ul>
-<li>This technically should not be allowed but there is currently no way
-to prevent/fix it during import. Note that while this duplication is
-obvious because it duplicates <em>all terms</em>, more complex
-duplication might occur if a term within an import tree had multiple
-labels.</li>
+<li>The presence of two labels for a term is an error. It was somehow
+created/allowed by ROBOT for doid-merged.owl and not for
+doid-merged.obo, where it would have caused the release to fail.</li>
+<li>As shown below, these labels only differ by the presence of a
+language tag.</li>
+<li>Updates may be needed to prevent/fix this type of error during
+import or release.</li>
 </ul></li>
 </ol>
 <!-- rnb-text-end -->
@@ -3355,7 +3362,7 @@ WHERE {
     ?import_root rdfs:label ?label
 }&quot;)</code></pre>
 <!-- rnb-source-end -->
-<!-- rnb-frame-begin eyJtZXRhZGF0YSI6eyJjbGFzc2VzIjpbImRhdGEuZnJhbWUiXSwibnJvdyI6MiwibmNvbCI6Mywic3VtbWFyeSI6eyJEZXNjcmlwdGlvbiI6WyJkZiBbMiDDlyAzXSJdfX0sInJkZiI6Ikg0c0lBQUFBQUFBQUE1V1QzMi9UTUJESDNiUmhMUHlVRUx6QkEwSUlIdW9pZ1NhMFZ5YWtTYkNoQ2FTOVRZNTd0TjdjczNWMldQdHY4d2NBVG1LUEpnc0NJamsrbno5MzkwMThQams0ZlYyY0ZveXhNWnVNUm15Y0I1UGxYejYvbjc1bGJKS0Z4WWhOMkc0OXJ3UDBvQ0VadXg5R0ZqZGVMcjIzKzdPWnJVaHpVeHF0U2hLMDRZWVdzN0NjdmZ0dzlxcDkvaitnVzJraVFldU8zZDNQQUtQRmV1SnpGQ3R3RVI5SDV5MjFzb2I4R1JuakU2ZEZDVmNsdE1CRkw5RnRLM0F1SEZjNGgzWE50TVhZOXg2M0l3MStBL0xCTEJyM2dDYTdNZVY1TUI2RjhhTTd1cURVd2lYeFJYUStpMEtrSVdqVmdPTVVCQU0vcWQrSGpjQ1dmVDdFWXJVQ1VwSWZvdDk3czAyLytBc05DNkIvNW8vYWVadC9Nc1NYd2dIL0kvVjc5OWk2ajJxdGNJZ1NSR0tqMVFYd0h2WDRXcTVQamVPNFBBZVpqdjVwSjVXVTRKd2hmcURvcUc2ZDdYUVA3Y1l2RGZLeVV0b3JEQzNjcExsK2NMdGtMbm5xdkR0Tm83YXRrTFhneloveFVGTkFNUmRlOEs4VVFnYlM3UmpybGNHUUxLdnZZZDRMSGxIUGNhL0N1dmg4S3BjVlhrejN1cjNZQ0lwaXJ1eHhXekpMd3ZLWTZnYmdRaUVNM1pLNzRTT2JiK1NXRkthL1dRU3Y0OTU0a2JoQ0dwMDhzYzkvQWZGMTN5QitCQUFBIn0= -->
+<!-- rnb-frame-begin eyJtZXRhZGF0YSI6eyJjbGFzc2VzIjpbImRhdGEuZnJhbWUiXSwibnJvdyI6MiwibmNvbCI6Mywic3VtbWFyeSI6eyJEZXNjcmlwdGlvbiI6WyJkZiBbMiDDlyAzXSJdfX0sInJkZiI6Ikg0c0lBQUFBQUFBQUE1V1QzMi9UTUJESDNiUmhMUHlVRUx6QkEwSUlIdXFDUUFqeHlvUTBDVFkwZ2JTM3lYR1AxcHQ3dHM3TzF2N2IvQUdBazlpanlZS0FTSTdQNTgvZGZST2ZqL2FPWHhYSEJXTnN6Q2FqRVJ2bndXVDUxeThmcG04Wm0yUmhNV0lUdGx2UDZ3RGRhMGpHN29hUnhZM25TKy90dTluTVZxUzVLWTFXSlFuYWNFT0xXVmpPM244OGVkRSsveC9RclRTUm9IWEg3dTVuZ05GaVBmRTVpaFc0aUkrajg0WmFXVVAraEl6eGlkT2loTXNTV3VDaWwraW1GVGdYaml1Y3c3cG0ybUxzZTQvYmtRYlBnWHd3aThZOW9NbHVUSGthakFkaC9PaU9MaWkxY0VsOEVaMVBvaEJwQ0ZvMTREZ0Z3Y0NQNnZkK0k3QmxudzZ4V0syQWxPVDc2Tis4M3FhZi9ZV0dCZEEvOHdmdHZNMC9HdUpMNFlEL2tmcTllMmpkSjdWV09FUUpJckhSNmd4NGozcDRKZGZueG5GWW5vSk1SLys0azBwS2NNNFEzMU4wVUxmT2RycjdkdU9YQm5sWktlMFZoaFp1MGx3OXVGMHlGengxM3EybVVkdFd5RnJ3K3M5NHFDbWdtQXN2K0RjS0lRUHBkb3oxeW1CSWx0WDNNTzhGajZqbnVGTmhYWHcrbGNzS3o2WXZ1NzNZQ0lwaUx1MXhXekpMd3ZLWTZocmdRaUVNM1pMYjRTT2JiK1NXRkthL1dRU3Y0OTU0a2JoQ0dwMDhzYzkvQVY2ZE5OTitCQUFBIn0= -->
 <div data-pagedtable="false">
 <script data-pagedtable-source type="application/json">
 {"columns":[{"label":["import_root"],"name":[1],"type":["chr"],"align":["left"]},{"label":["label"],"name":[2],"type":["chr"],"align":["left"]},{"label":["lang"],"name":[3],"type":["chr"],"align":["left"]}],"data":[{"1":"http://purl.obolibrary.org/obo/CL_0000000","2":"cell","3":"en"},{"1":"http://purl.obolibrary.org/obo/CL_0000000","2":"cell","3":""}],"options":{"columns":{"min":{},"max":[10],"total":[3]},"rows":{"min":[10],"max":[10],"total":[2]},"pages":{}}}
@@ -3366,12 +3373,18 @@ WHERE {
 <!-- rnb-text-begin -->
 <ol start="2" style="list-style-type: decimal">
 <li>The differences in SYMP and GENO are due to inclusion of obsolete
-classes in the ground truth.
+classes in the ground truth (a list is shown below).
 <ul>
-<li>This is the only query that explicitly filters out
-<code>owl:deprecated</code> classes, which is necessary to identify
-import roots (like root terms, obsolete classes do NOT have
-superclasses).</li>
+<li>The GENO obsolete classes need to be fixed.</li>
+<li>The SYMP osbsolete classes likely just need to be removed by making
+SYMP an indirect import.</li>
+<li><strong>NOTE:</strong> This is the only query that explicitly
+filters out <code>owl:deprecated</code> classes. This extra step is
+necessary to identify import roots with SPARQL without also identifying
+obsolete classes (like root terms, obsolete classes do NOT have
+superclasses). <em>The need to filter out obsolete classes could be
+avoided by making all import roots subclasses of <code>owl:Thing</code>
+(currently only two are).</em></li>
 </ul></li>
 </ol>
 <!-- rnb-text-end -->
@@ -3385,7 +3398,7 @@ WHERE {
     FILTER(REGEX(STR(?class), &#39;GENO|SYMP&#39;))
 }&quot;)</code></pre>
 <!-- rnb-source-end -->
-<!-- rnb-frame-begin eyJtZXRhZGF0YSI6eyJjbGFzc2VzIjpbImRhdGEuZnJhbWUiXSwibnJvdyI6MTAxLCJuY29sIjoyLCJzdW1tYXJ5Ijp7IkRlc2NyaXB0aW9uIjpbImRmIFsxMDEgw5cgMl0iXX19LCJyZGYiOiJINHNJQUFBQUFBQUFBKzFaeTI3VFFCUjEwb1MyRmk4SndRNFdDQ0VrVkNmWGo3SER1b0M2NkVNRkpGZ2gyeGxTdCs2TU5YYWcyZkhOZkFBd2ZrR1NCcEdURlFzc1Rld1ozek8rOTl6cjhZbDl1di9lTWQrYmhtRnNHYjFPeDlqcTYwT2ovKzd0cTczQU1IcGQzZWtZUFdPMzNGOXBvM3Y2b0J5OHF4dHZUancvSzRyc3hXQ1FUVlZxeVVpbVNhUkNOYk9rbWd4MGQvRDY1ZEh4eDZIZXlMVmhpRGRjRS9MbXcrRkpCUmtPSFJ6aXdoRENIU1BDSWVzeU5nZkJ3eWM4Zkp2aEVCK0hCRGhrQkVNY1BDOE96cGpqNFJDY3NiVnZzVGtJWGpBdUhyNkxwOUxGVTduQmN1SGhqSGs0WXg2ZWZRL1BQc1BEWjNqNERJK0Y0Ykg0K0YzcDQ3SDRlQ3I5RFdMQml6L0FVeG5nakFWNEtnTThsaEgrc0JqQkpOTVFEcDl3cVVDNFZLQWhURElOWVpJSkZ5U0VDeExDMVFVUkhqN2gyU2Y0WVVFMnpwZ05yekJrNDR6aDRvcHdkVUc0dWlBSEwwc1hKeG5YTUlSckdISnh4bkFOUTdpRzJlQXZEM240all6TEh2THdwUStYUGVUaGpERThmSVlYREM1N2lPRTNNcTZVaU9GbHlYQ1NmYndzY1FsSHVJUWpYTUtSajZmU3gxUHA0eVRqRW81R0cwQmdrbTFjS2RtNFVySnhraDE4NldNMjdCakRIMGtNZjc2d0FDYVpCZkJ5RWFDYVgxY1l1bzVwaUY0dURNT3NYaE9XN3hEL3QzK3NMYnpiN1l2d2t1ZEcvVjYzMnc3R2Faam5UV2RIUnJsTWVjR1hrRGV6VUl6RDNFckVtRi9wZnMrb3QyOUxkdHV4RkorNUtwcWk2TlJXaTA1a014bWQ2NE1IdW4xZmJJdUd0V08xdDJZeitLUnhKSmFLMTk3dzNGS2htSERydFB3OXFCeXNiWit1c2hYVFM2NlMyRG9RQlhQbnJaLzl4WnBQdUZyYi9xamV6OXMvV21VZmhUbTMvbWoxKyt4eGxoOG1WNGxZWlJVcUZjN1M1SUpiUzFZUHI4MTFVZzBjUitjOExocWp4d3RUeFRIUGM2bXMvVVFkbGJVeVA5MzliRmFjU1dGRjB5UXRFcUhYaFdxYTY0bmJWZktMMVpiYXJiTFV2dFoxMEZUVnpvOG1xUzNBSElkRmFIMVNHckppdW0yWkZZa1Vlckp1K1YyaXZ3VHVxS1dCTzFOUlhueThGNTlOeGNXZXYxaUxsVU9kMnBsZng5MzZrdDNXc1g0ejFRMHVKb2xvdjREMDB6RGlhZE81cllPc1lyUXlsWWlXVFZPUDVsWWhpN0MxTTJPWnRpTk5uZjhFTTBYVUFvNFpBQUE9In0= -->
+<!-- rnb-frame-begin eyJtZXRhZGF0YSI6eyJjbGFzc2VzIjpbImRhdGEuZnJhbWUiXSwibnJvdyI6MTAxLCJuY29sIjoyLCJzdW1tYXJ5Ijp7IkRlc2NyaXB0aW9uIjpbImRmIFsxMDEgw5cgMl0iXX19LCJyZGYiOiJINHNJQUFBQUFBQUFBKzFaeTI3VFFCUjEwb1MyRmk4SndRNFdDQ0VrVkNmWGo3SER1b0M2NkVNRkpGZ2gyeGxTdCs2TU5YYWcyZkhOZkFBd2ZrR1NCcEdURlFzc1Rld1ozek8rOTl6cjhZbDl1di9lTWQrYmhtRnNHYjFPeDlqcTYwT2ovKzd0cTczQU1IcGQzZWtZUFdPMzNGOXBvM3Y2b0J5OHF4dHZUancvSzRyc3hXQ1FUVlZxeVVpbVNhUkNOYk9rbWd4MGQvRDY1ZEh4eDZIZXlMVmhpRGRjRS9MbXcrRkpCUmtPSFJ6aXdoRENIU1BDSWVzeU5nZkJ3eWM4Zkp2aEVCK0hCRGhrQkVNY1BDOE96cGpqNFJDY3NiVnZzVGtJWGpBdUhyNkxwOUxGVTduQmN1SGhqSGs0WXg2ZWZRL1BQc1BEWjNqNERJK0Y0Ykg0K0YzcDQ3SDRlQ3I5RFdMQml6L0FVeG5nakFWNEtnTThsaEgrc0JqQkpOTVFEcDl3cVVDNFZLQWhURElOWVpJSkZ5U0VDeExDMVFVUkhqN2gyU2Y0WVVFMnpwZ05yekJrNDR6aDRvcHdkVUc0dWlBSEwwc1hKeG5YTUlSckdISnh4bkFOUTdpRzJlQXZEM240all6TEh2THdwUStYUGVUaGpERThmSVlYREM1N2lPRTNNcTZVaU9GbHlYQ1NmYndzY1FsSHVJUWpYTUtSajZmU3gxUHA0eVRqRW81R0cwQmdrbTFjS2RtNFVySnhraDE4NldNMjdCakRIMGtNZjc2d0FDYVpCZkJ5RWFDYVgxY1l1bzVwaUY0dURNT3NYaE9XN3hEL3QzK3NMYnpiN1l2d2t1ZEcvVjYzMnc3R2Faam5UV2RIUnJsTWVjR1hrRGV6VUl6RDNFckVtRi9wZnMrb3QyOUxkdHV4RkorNUtwcWk2TlJXaTA1a014bWQ2NE1IdW4xZmJJdUd0V08xdDJZeitLUnhKSmFLMTk3dzNGS2htSERydFB3OXFCeXNiWit1c2hYVFM2NlMyRG9RQlhQbnJaLzl4WnBQdUZyYi9xamV6OXMvV21VZmhUbTMvbWoxKyt4eGxoOG1WNGxZWlJVcUZjN1M1SUpiUzFZUHI4MTFVZzBjUitjOExocWp4d3RUeFRIUGM2bXMvVVFkbGJVeVA5MzliRmFjU1dGRjB5UXRFcUhYaFdxYTY0bmJWZktMMVpiYXJiTFV2dFoxMEZUVnpvOG1xUzNBSElkRmFIMVNHckppdW0yWkZZa1Vlckp1K1YyaXZ3VHVxS1dCTzFOUlhueThGNTlOeGNVZUxkWmk1VkNuZHViWGNiZStaTGQxck45TWRZT0xTU0xhTHlEOU5JeDQyblJ1NnlDckdLMU1KYUpsMDlTanVWWElJbXp0ekZpbTdVaFQ1ejhCdm85aGtvNFpBQUE9In0= -->
 <div data-pagedtable="false">
 <script data-pagedtable-source type="application/json">
 {"columns":[{"label":["class"],"name":[1],"type":["chr"],"align":["left"]},{"label":["obsolete"],"name":[2],"type":["lgl"],"align":["right"]}],"data":[{"1":"http://purl.obolibrary.org/obo/GENO_0000142","2":"TRUE"},{"1":"http://purl.obolibrary.org/obo/GENO_0000150","2":"TRUE"},{"1":"http://purl.obolibrary.org/obo/SYMP_0000003","2":"TRUE"},{"1":"http://purl.obolibrary.org/obo/SYMP_0000004","2":"TRUE"},{"1":"http://purl.obolibrary.org/obo/SYMP_0000010","2":"TRUE"},{"1":"http://purl.obolibrary.org/obo/SYMP_0000011","2":"TRUE"},{"1":"http://purl.obolibrary.org/obo/SYMP_0000012","2":"TRUE"},{"1":"http://purl.obolibrary.org/obo/SYMP_0000013","2":"TRUE"},{"1":"http://purl.obolibrary.org/obo/SYMP_0000014","2":"TRUE"},{"1":"http://purl.obolibrary.org/obo/SYMP_0000026","2":"TRUE"},{"1":"http://purl.obolibrary.org/obo/SYMP_0000027","2":"TRUE"},{"1":"http://purl.obolibrary.org/obo/SYMP_0000028","2":"TRUE"},{"1":"http://purl.obolibrary.org/obo/SYMP_0000029","2":"TRUE"},{"1":"http://purl.obolibrary.org/obo/SYMP_0000031","2":"TRUE"},{"1":"http://purl.obolibrary.org/obo/SYMP_0000034","2":"TRUE"},{"1":"http://purl.obolibrary.org/obo/SYMP_0000035","2":"TRUE"},{"1":"http://purl.obolibrary.org/obo/SYMP_0000037","2":"TRUE"},{"1":"http://purl.obolibrary.org/obo/SYMP_0000042","2":"TRUE"},{"1":"http://purl.obolibrary.org/obo/SYMP_0000043","2":"TRUE"},{"1":"http://purl.obolibrary.org/obo/SYMP_0000044","2":"TRUE"},{"1":"http://purl.obolibrary.org/obo/SYMP_0000048","2":"TRUE"},{"1":"http://purl.obolibrary.org/obo/SYMP_0000049","2":"TRUE"},{"1":"http://purl.obolibrary.org/obo/SYMP_0000050","2":"TRUE"},{"1":"http://purl.obolibrary.org/obo/SYMP_0000052","2":"TRUE"},{"1":"http://purl.obolibrary.org/obo/SYMP_0000053","2":"TRUE"},{"1":"http://purl.obolibrary.org/obo/SYMP_0000055","2":"TRUE"},{"1":"http://purl.obolibrary.org/obo/SYMP_0000057","2":"TRUE"},{"1":"http://purl.obolibrary.org/obo/SYMP_0000060","2":"TRUE"},{"1":"http://purl.obolibrary.org/obo/SYMP_0000062","2":"TRUE"},{"1":"http://purl.obolibrary.org/obo/SYMP_0000065","2":"TRUE"},{"1":"http://purl.obolibrary.org/obo/SYMP_0000067","2":"TRUE"},{"1":"http://purl.obolibrary.org/obo/SYMP_0000071","2":"TRUE"},{"1":"http://purl.obolibrary.org/obo/SYMP_0000072","2":"TRUE"},{"1":"http://purl.obolibrary.org/obo/SYMP_0000073","2":"TRUE"},{"1":"http://purl.obolibrary.org/obo/SYMP_0000077","2":"TRUE"},{"1":"http://purl.obolibrary.org/obo/SYMP_0000078","2":"TRUE"},{"1":"http://purl.obolibrary.org/obo/SYMP_0000080","2":"TRUE"},{"1":"http://purl.obolibrary.org/obo/SYMP_0000081","2":"TRUE"},{"1":"http://purl.obolibrary.org/obo/SYMP_0000085","2":"TRUE"},{"1":"http://purl.obolibrary.org/obo/SYMP_0000088","2":"TRUE"},{"1":"http://purl.obolibrary.org/obo/SYMP_0000096","2":"TRUE"},{"1":"http://purl.obolibrary.org/obo/SYMP_0000097","2":"TRUE"},{"1":"http://purl.obolibrary.org/obo/SYMP_0000101","2":"TRUE"},{"1":"http://purl.obolibrary.org/obo/SYMP_0000103","2":"TRUE"},{"1":"http://purl.obolibrary.org/obo/SYMP_0000104","2":"TRUE"},{"1":"http://purl.obolibrary.org/obo/SYMP_0000105","2":"TRUE"},{"1":"http://purl.obolibrary.org/obo/SYMP_0000108","2":"TRUE"},{"1":"http://purl.obolibrary.org/obo/SYMP_0000110","2":"TRUE"},{"1":"http://purl.obolibrary.org/obo/SYMP_0000111","2":"TRUE"},{"1":"http://purl.obolibrary.org/obo/SYMP_0000113","2":"TRUE"},{"1":"http://purl.obolibrary.org/obo/SYMP_0000115","2":"TRUE"},{"1":"http://purl.obolibrary.org/obo/SYMP_0000117","2":"TRUE"},{"1":"http://purl.obolibrary.org/obo/SYMP_0000119","2":"TRUE"},{"1":"http://purl.obolibrary.org/obo/SYMP_0000120","2":"TRUE"},{"1":"http://purl.obolibrary.org/obo/SYMP_0000122","2":"TRUE"},{"1":"http://purl.obolibrary.org/obo/SYMP_0000123","2":"TRUE"},{"1":"http://purl.obolibrary.org/obo/SYMP_0000126","2":"TRUE"},{"1":"http://purl.obolibrary.org/obo/SYMP_0000135","2":"TRUE"},{"1":"http://purl.obolibrary.org/obo/SYMP_0000137","2":"TRUE"},{"1":"http://purl.obolibrary.org/obo/SYMP_0000138","2":"TRUE"},{"1":"http://purl.obolibrary.org/obo/SYMP_0000140","2":"TRUE"},{"1":"http://purl.obolibrary.org/obo/SYMP_0000142","2":"TRUE"},{"1":"http://purl.obolibrary.org/obo/SYMP_0000143","2":"TRUE"},{"1":"http://purl.obolibrary.org/obo/SYMP_0000145","2":"TRUE"},{"1":"http://purl.obolibrary.org/obo/SYMP_0000148","2":"TRUE"},{"1":"http://purl.obolibrary.org/obo/SYMP_0000149","2":"TRUE"},{"1":"http://purl.obolibrary.org/obo/SYMP_0000150","2":"TRUE"},{"1":"http://purl.obolibrary.org/obo/SYMP_0000151","2":"TRUE"},{"1":"http://purl.obolibrary.org/obo/SYMP_0000152","2":"TRUE"},{"1":"http://purl.obolibrary.org/obo/SYMP_0000154","2":"TRUE"},{"1":"http://purl.obolibrary.org/obo/SYMP_0000155","2":"TRUE"},{"1":"http://purl.obolibrary.org/obo/SYMP_0000159","2":"TRUE"},{"1":"http://purl.obolibrary.org/obo/SYMP_0000161","2":"TRUE"},{"1":"http://purl.obolibrary.org/obo/SYMP_0000163","2":"TRUE"},{"1":"http://purl.obolibrary.org/obo/SYMP_0000165","2":"TRUE"},{"1":"http://purl.obolibrary.org/obo/SYMP_0000166","2":"TRUE"},{"1":"http://purl.obolibrary.org/obo/SYMP_0000167","2":"TRUE"},{"1":"http://purl.obolibrary.org/obo/SYMP_0000168","2":"TRUE"},{"1":"http://purl.obolibrary.org/obo/SYMP_0000169","2":"TRUE"},{"1":"http://purl.obolibrary.org/obo/SYMP_0000170","2":"TRUE"},{"1":"http://purl.obolibrary.org/obo/SYMP_0000171","2":"TRUE"},{"1":"http://purl.obolibrary.org/obo/SYMP_0000172","2":"TRUE"},{"1":"http://purl.obolibrary.org/obo/SYMP_0000173","2":"TRUE"},{"1":"http://purl.obolibrary.org/obo/SYMP_0000175","2":"TRUE"},{"1":"http://purl.obolibrary.org/obo/SYMP_0000176","2":"TRUE"},{"1":"http://purl.obolibrary.org/obo/SYMP_0000179","2":"TRUE"},{"1":"http://purl.obolibrary.org/obo/SYMP_0000181","2":"TRUE"},{"1":"http://purl.obolibrary.org/obo/SYMP_0000191","2":"TRUE"},{"1":"http://purl.obolibrary.org/obo/SYMP_0000192","2":"TRUE"},{"1":"http://purl.obolibrary.org/obo/SYMP_0000203","2":"TRUE"},{"1":"http://purl.obolibrary.org/obo/SYMP_0000204","2":"TRUE"},{"1":"http://purl.obolibrary.org/obo/SYMP_0000276","2":"TRUE"},{"1":"http://purl.obolibrary.org/obo/SYMP_0000351","2":"TRUE"},{"1":"http://purl.obolibrary.org/obo/SYMP_0000624","2":"TRUE"},{"1":"http://purl.obolibrary.org/obo/SYMP_0000642","2":"TRUE"},{"1":"http://purl.obolibrary.org/obo/SYMP_0000645","2":"TRUE"},{"1":"http://purl.obolibrary.org/obo/SYMP_0000683","2":"TRUE"},{"1":"http://purl.obolibrary.org/obo/SYMP_0000687","2":"TRUE"},{"1":"http://purl.obolibrary.org/obo/SYMP_0000885","2":"TRUE"},{"1":"http://purl.obolibrary.org/obo/SYMP_0019166","2":"TRUE"},{"1":"http://purl.obolibrary.org/obo/SYMP_0019170","2":"TRUE"}],"options":{"columns":{"min":{},"max":[10],"total":[2]},"rows":{"min":[10],"max":[10],"total":[101]},"pages":{}}}
@@ -3395,21 +3408,15 @@ WHERE {
 <!-- rnb-chunk-end -->
 <!-- rnb-text-begin -->
 </div>
-<div id="exploring-the-chebi-count" class="section level4" number="4.4.2.2">
-<h4><span class="header-section-number">4.4.2.2</span> Exploring the
-CHEBI Count</h4>
-<p>The count of CHEBI terms is greater due to the inherent nature of
-this approach. The CHEBI terms that have relationships to the import
-roots of both CHEBI and DISDRIV are:</p>
+<div id="explaining-the-inaccurate-chebi-count" class="section level4" number="5.3.2.2">
+<h4><span class="header-section-number">5.3.2.2</span> Explaining the
+Inaccurate CHEBI Count</h4>
+<p>The count of CHEBI terms in the previous query is greater due to the
+inherent nature of this approach. Some CHEBI terms have a relationship
+to the import roots of both CHEBI and DISDRIV. Those terms are:</p>
 <!-- rnb-text-end -->
 <!-- rnb-chunk-begin -->
-<!-- rnb-source-begin eyJkYXRhIjoiYGBgclxuY2hlYmlfZHVwIDwtIGRtJHF1ZXJ5KFxuICAgIGZpbGUucGF0aChzcGFycWxfZGlyLCBcImltcG9ydC1jaGViaV9yb290X292ZXJsYXAtcmVwb3J0LnJxXCIpXG4pXG5jaGViaV9kdXBcbmBgYCJ9 -->
-<pre class="r"><code>chebi_dup &lt;- dm$query(
-    file.path(sparql_dir, &quot;import-chebi_root_overlap-report.rq&quot;)
-)
-chebi_dup</code></pre>
-<!-- rnb-source-end -->
-<!-- rnb-frame-begin eyJtZXRhZGF0YSI6eyJjbGFzc2VzIjpbImRhdGEuZnJhbWUiXSwibnJvdyI6NCwibmNvbCI6Miwic3VtbWFyeSI6eyJEZXNjcmlwdGlvbiI6WyJkZiBbNCDDlyAyXSJdfX0sInJkZiI6Ikg0c0lBQUFBQUFBQUE1VlVYVy9UTUJSMXNvYXlpRTlOOEFhYUVFS0FWQmZVclFRZVlTRDZ3SVlta1BhR0hNZHJ2TGwyZE8xc3pSdS9tUjhBMkltak5Wa1JteVhIdnZlZWMzMGNYL3R3NzJnU0g4VUlvUTAwQ0FLMEVka3BpcjUvK3pSS0VCcUUxZ2pRQUcyNmNXbEJXM2JpblBkc0gvakF5OXlZNHQxNFhKUWdzRXFWNENrUXFMQ0MrZGlhNHcrZlA3NmYvWmk4U3Q2OHZSNWpkNXE4dmg1am1reDJQZVBGbFJoSmt1ejB0ak1rZ3FwY0NXL2UxNHdxbVZucWRqZndjRUpFa1pOUlhtV2dsdFcyTmd3VXozdzBCa1ZMVUpLWGk5NS9qQ1JaTU8wWERWc25GVVRyMWhBa1phSkh1MVVRcTBKakxqTzJyT1UyN1ZjUE43UnF6eGdZcDZGMjE2MnJvS2hVZXVLMllQdnZidThDRzFXTjFOZzduM29oVkFGcjFEQ05nY2c1dzRmdU82c0ZOdGhuNjdDeVhERGdGTStrbWU2c29wLy9CODNtREs2TTMyL0dWZnpqZGZpVWFJYi9pYnFJSGhUNkMxOXl1UTVGQUVnbCtDbkRQZFNqUzdtKzFvNkQ5SVJSNDBGUE9xa29aVm9yd0hzYzlsMmhyS1o3VUZRbVZ4S25KUmVHUzF2V2RackxCN2NKNmh5M2RYYmIxZGxQWHdjTjhPWWZmNmd0SWM2SUlmZ1lMR1ZOdXFFcURGZlNKZ3ZkQXhEMXlBSDBISGRMNlJiUFJqUXY1YWw3U1ZacnNSWVUrQkp1NTJHelpOZ0tpM3lxRzB6T3VXVGRtOUVZZCt3bTZ6M2lBcmcwRnhmdlhHT2pER2x4TVZXaTlmZzYvd3NKMXRDNzl3UUFBQT09In0= -->
+<!-- rnb-frame-begin eyJtZXRhZGF0YSI6eyJjbGFzc2VzIjpbImRhdGEuZnJhbWUiXSwibnJvdyI6NCwibmNvbCI6Miwic3VtbWFyeSI6eyJEZXNjcmlwdGlvbiI6WyJkZiBbNCDDlyAyXSJdfX0sInJkZiI6Ikg0c0lBQUFBQUFBQUE1VlUzMi9UTUJCMnNvYXlpSjlDNHcwMElZUUFxUzVUdHk3d0NBUFJCelkwZ2JRMzVEaW04ZWJhMXRsaHpSdC9NMzhBNENTTzFtUkZiSkVjKys2KzcveGRmTTd4d2Nra1Bva1JRaHRvRUFSb0kzSkxGSDM5OG1HVUlEUUluUkdnQWRxczVxVURQWENMeW5uUGpZRVB2TXl0MVcvR1kxMkF3Q3BWZ3FkQW9NUUs1bU5uanQ5OWZQOTI5bTN5S3RsL2ZUM0czalRadVI1am1rejJQT1BGbFJoSmt1ejJ5aGtTUVZXdWhEZnZHMGFWekJ4MXV4dDRPQ0ZDNTJTVWx4bW9aYmx0TEFQRk14K05RZEVDbE9URm92Y2RJMGtXelBoTnc5WkpCVEdtTlFSSm1lalJibW5pVkJqTVpjYVd0ZHptK2RYRERaM2FId3hzcGFGMjEwOVhnUzVWZWxxVjRNYnY3dWdDRzFXTjFOZzduM29oVkFGcjFEQ0RnY2c1dzhmVmUxWUxiTERQMW1GbHNXREFLWjVKTzkxZFJULy9ENXJOR1Z3WmY5ak1xL2pINi9BcE1Rei9FM1VSUGRMbUUxOXl1UTVGQUVncCtCbkRQZFNqUzdrKzE0Nmo5SlJSNjBGUE9xa29aY1lvd0FjY0RxdEdXVTIzcFV1Yks0blRnZ3ZMcFd2ck9zM2xnOXNFZFk3YlBydGQ5ZGxQM3djTjhPWWZmNmd0SWM2SUpmZzdPTXFhZEVPbExWZlNKUXVySDBEVUl3ZlFjOXd0WkxWNU5xSjVJYzlHTzkxZXJBVUZ2b1hiZGRoc0diYkNJcC9xQnBOekxsbjNaalRHSFZka1hTUFd3S1c5dUhqbkJsdGxTWXVMcVJLdHgvZjVYN25wblhUM0JBQUEifQ== -->
 <div data-pagedtable="false">
 <script data-pagedtable-source type="application/json">
 {"columns":[{"label":["class"],"name":[1],"type":["chr"],"align":["left"]},{"label":["label"],"name":[2],"type":["chr"],"align":["left"]}],"data":[{"1":"http://purl.obolibrary.org/obo/CHEBI_30879","2":"alcohol"},{"1":"http://purl.obolibrary.org/obo/CHEBI_35681","2":"secondary alcohol"},{"1":"http://purl.obolibrary.org/obo/CHEBI_36835","2":"3alpha-hydroxy steroid"},{"1":"http://purl.obolibrary.org/obo/CHEBI_8884","2":"rocuronium"}],"options":{"columns":{"min":{},"max":[10],"total":[2]},"rows":{"min":[10],"max":[10],"total":[4]},"pages":{}}}
@@ -3421,24 +3428,35 @@ chebi_dup</code></pre>
 <p>Looking at these terms in doid-merged.owl using Protege the following
 subClassOf relationships are apparent:</p>
 <pre><code>rocuronium &gt; 3alpha-hydroxy steroid &gt; secondary alcohol &gt; alcohol</code></pre>
-<p>‘alcohol’ has two parents ‘organic hydroxy compound’ from CHEBI and
-‘alcoholic beverage’ from FOODON (in DISDRIV). It is at this point where
-the duplication occurs.</p>
-<p>This duplication could get more complicated as more imports are used
-in the DO but it might also be removed if terms migrate from direct
-import to the DO to indirect import via DISDRIV.</p>
+<p>And ‘alcohol’ has two parents ‘organic hydroxy compound’ from CHEBI
+and ‘alcoholic beverage’ from FOODON (in DISDRIV). It is due to this
+multi-parentage at this point that the duplication occurs.</p>
+<p>This type of duplication could get more complicated as more imports
+are used in the DO but it might also be removed if terms migrate from
+direct import to the DO to indirect import via DISDRIV.</p>
 </div>
-<div id="summary" class="section level4" number="4.4.2.3">
-<h4><span class="header-section-number">4.4.2.3</span> Summary</h4>
-<p>This query shows everywhere a term appears so counts will not be
-unique.</p>
+</div>
+</div>
+<div id="perspective-recommendations" class="section level2" number="5.4">
+<h2><span class="header-section-number">5.4</span> Perspective &amp;
+Recommendations</h2>
+<p>While the last and most flexible count might be considered
+“inaccurate” because CHEBI terms are counted multiple times, those terms
+<em>are</em> in fact imported in both CHEBI and DISDRIV. With that
+context, it is also possible to describe that count as the only truly
+accurate one.</p>
+<p>Which count to use will depend on the purpose for the count.
+<strong>My recommendation</strong> based on purpose is as follows:</p>
+<ol style="list-style-type: decimal">
+<li>Goal: Count all unique terms by namespace –&gt; USE <a href="#all-imports">All Imports</a> count.</li>
+<li>Goal: Identify imports in context –&gt; USE <a href="#special-handling-by-import-root">Special Handling by Import
+Root</a> count.</li>
+</ol>
 <!-- rnb-text-end -->
 </div>
 </div>
-</div>
-</div>
 
-<div id="rmd-source-code">LS0tCnRpdGxlOiAiQ29tcGFyaXNvbiBvZiBWYXJpb3VzIEltcG9ydCBDb3VudHMiCmF1dGhvcjogIkouIEFsbGVuIEJhcm9uIgpkYXRlOiAyMDIyLTA2LTEzCm91dHB1dDoKICAgIGh0bWxfbm90ZWJvb2s6CiAgICAgICAgdG9jOiB0cnVlCiAgICAgICAgdG9jX2Zsb2F0OiB0cnVlCiAgICAgICAgbnVtYmVyX3NlY3Rpb25zOiB0cnVlCiAgICAgICAgY29kZV9mb2xkaW5nOiAiaGlkZSIKICAgICAgICB0aGVtZTogImpvdXJuYWwiCi0tLQoKIyBCYWNrZ3JvdW5kIGFuZCBQdXJwb3NlCgpUaGUgY3VycmVudCBpbXBvcnQgY291bnQgdXNlZCBkdXJpbmcgcmVsZWFzZSBvZiB0aGUgRGlzZWFzZSBPbnRvbG9neSBpcyBpbmNvcnJlY3QuIEl0IGNvdW50cyB0aGUgdG90YWwgdHJpcGxlcyBpbXBvcnRlZCBmcm9tIGEgc2V0IG9mIHNwZWNpZmllZCByZXNvdXJjZXMuIEl0J3MgYWxzbyBzbG93LCB1c2luZyBsb3RzIG9mIFVOSU9OIHN0YXRlbWVudHMuCgpUaGlzIG5vdGVib29rIHByZXNlbnRzIGltcG9ydCBjb3VudHMgY2FsY3VsYXRlZCBpbiBhIHZhcmlldHkgb2YgbWFubmVycyB0byBhaWQgdGhlIGRlY2lzaW9uIGluIGhvdyBiZXN0IHRvIHByZXNlbnQgdGhlc2UuIFRoZSBtb3N0IGJhc2ljIGNvdW50IGlzIGEgc2ltcGxlIGNvcnJlY3Rpb24Kb2YgdGhlIGN1cnJlbnQgaW1wb3J0IHJlcG9ydCBmb3VuZCBpbiB0aGUgSHVtYW5EaXNlYXNlT250b2xvZ3kgcmVwb3NpdG9yeSBhdCBzcmMvc3BhcnFsL2J1aWxkL2ltcG9ydC1yZXBvcnQucnEuCgoKIyBEYXRhIFNvdXJjZQoKQWxsIG9mIHRoZXNlIGltcG9ydCBjb3VudCBxdWVyaWVzIGFyZSBleGVjdXRlZCBhZ2FpbnN0IHRoZSBbZG9pZC1tZXJnZWQub3dsIGZpbGVdKGh0dHBzOi8vZ2l0aHViLmNvbS9EaXNlYXNlT250b2xvZ3kvSHVtYW5EaXNlYXNlT250b2xvZ3kvYmxvYi92MjAyMi0wNi0wNy9zcmMvb250b2xvZ3kvZG9pZC1tZXJnZWQub3dsKSBmcm9tIHJlbGVhc2UgW3YyMDIyLTA2LTA3XShodHRwczovL2dpdGh1Yi5jb20vRGlzZWFzZU9udG9sb2d5L0h1bWFuRGlzZWFzZU9udG9sb2d5L3RyZWUvdjIwMjItMDYtMDcpLgoKIyBBcHByb3hpbWF0ZSBHcm91bmQgVHJ1dGggKGZyb20gQ29tbWFuZCBMaW5lKQoKVGhpcyBjb3VudCB3YXMgZ2VuZXJhdGVkIHdpdGggdGhlIGNvbWJpbmF0aW9uIG9mIGBncmVwYCBhbmQgYHNlZGAgb24gdGhlIGNvbW1hbmRsaW5lLiBJdCBpcyBPTkxZIGZvciBjb21wYXJpc29uIGFzIGFuIGFwcHJveGltYXRpb24gb2YgdGhlIGdyb3VuZCB0cnV0aCBhbmQgaXMgbm90IGludGVuZGVkIGZvciB1c2UgaW4gcmVsZWFzZXMuIFVubGlrZSBzb21lIGNvdW50cyBpdCBpbmNsdWRlcyBET0lEIGFuZCBvYnNvbGV0ZSB0ZXJtcy4KCmBgYHtyIHNldHVwLCBpbmNsdWRlID0gRkFMU0V9CmxpYnJhcnkoaGVyZSkKbGlicmFyeSh0aWR5dmVyc2UpCmxpYnJhcnkoRE8udXRpbHMpCgojIGN1c3RvbSBmdW5jdGlvbnMKY29tcGFyZV90cnV0aCA8LSBmdW5jdGlvbihkZiwgY29sKSB7CiAgICBpbXBvcnRfcGF0dGVybiA8LSBkZltbY29sXV0gJT4lCiAgICBETy51dGlsczo6dmN0cl90b19zdHJpbmcoZGVsaW0gPSAifCIpCgogICAgY2xpX2NvdW50ICU+JQogICAgICAgIGRwbHlyOjptdXRhdGUoCiAgICAgICAgICAgIHt7IGNvbCB9fSA6PSBzdHJpbmdyOjpzdHJfZXh0cmFjdChpbXBvcnQsIGltcG9ydF9wYXR0ZXJuKQogICAgICAgICkgJT4lCiAgICAgICAgZHBseXI6Omdyb3VwX2J5KC5kYXRhW1tjb2xdXSkgJT4lCiAgICAgICAgZHBseXI6OnN1bW1hcml6ZShncm91bmRfdHJ1dGggPSBzdW0oY291bnQpKSAlPiUKICAgICAgICBkcGx5cjo6dW5ncm91cCgpICU+JQogICAgICAgIGRwbHlyOjpyaWdodF9qb2luKGRmLCBieSA9IGNvbCkgJT4lCiAgICAgICAgZHBseXI6Om11dGF0ZShkaWZmID0gY291bnQgLSBncm91bmRfdHJ1dGgpCn0KCiMgbG9hZCBkYXRhCnJlcG8gPC0gRE8udXRpbHM6OkRPcmVwbyhoZXJlOjpoZXJlKCIuLi9PbnRvbG9naWVzL0h1bWFuRGlzZWFzZU9udG9sb2d5IikpCnJlcG8kY2hlY2tvdXRfdGFnKCJ2MjAyMi0wNi0wNyIpCgpkbSA8LSByZXBvJGRvaWRfbWVyZ2VkCnNwYXJxbF9kaXIgPC0gaGVyZTo6aGVyZSgic3BhcnFsIikKYGBgCgpgYGB7Un0KY2xpX2NvdW50IDwtIHN5c3RlbTIoCiAgICBoZXJlOjpoZXJlKCJzY3JpcHRzL2NvdW50X2ltcG9ydHMuenNoIiksCiAgICBhcmdzID0gaGVyZTo6aGVyZSgKICAgICAgICAiLi4vT250b2xvZ2llcy9IdW1hbkRpc2Vhc2VPbnRvbG9neS9zcmMvb250b2xvZ3kvZG9pZC1tZXJnZWQub3dsIgogICAgKSwKICAgIHN0ZG91dCA9IFRSVUUKKSAlPiUKICAgIHN0cmluZ3I6OnN0cl90cmltKCkgJT4lCiAgICBzdHJpbmdyOjpzdHJfc3BsaXRfZml4ZWQoIiAiLCBuID0gMikgJT4lCiAgICB0aWJibGU6OmFzX3RpYmJsZSgubmFtZV9yZXBhaXIgPSAibWluaW1hbCIpICU+JQogICAgcHVycnI6OnNldF9uYW1lcyhjKCJjb3VudCIsICJpbXBvcnQiKSkgJT4lCiAgICBkcGx5cjo6c2VsZWN0KGltcG9ydCwgY291bnQpICU+JQogICAgZHBseXI6Om11dGF0ZShjb3VudCA9IGFzLmludGVnZXIoY291bnQpKQoKY2xpX2NvdW50CmBgYAoKCiMgU1BBUlFMIGNvdW50cwoKIyMgUHJvcGVydHkgQ291bnRzIC0tIE5FVyEhCgpQcm9wZXJ0aWVzIHVzZWQgaW4gRE8gYXJlIG5vdCBjdXJyZW50bHkgY291bnRlZCBtYWtpbmcgdGhpcyBhbiBlbnRpcmVseSBuZXcgcmVwb3J0LiBUaGV5IGNhbiBiZSBjb25zaWRlcmVkIGEgdHlwZSBvZiBpbXBvcnQsIHBhcnRpY3VsYXJseSB3aXRoIHJlZ2FyZCB0byBSTyBhbmQgSUFPLgoKYGBge3J9CnN5c3RlbS50aW1lKAogICAgcHJvcCA8LSBkbSRxdWVyeShmaWxlLnBhdGgoc3BhcnFsX2RpciwgImltcG9ydC1wcm9wZXJ0aWVzLXJlcG9ydC5ycSIpKQopCnByb3AKYGBgCgoKIyMjIENvbXBhcmlzb24gdG8gR3JvdW5kIFRydXRoCgpUaGUgZGF0YSBzaG93biBoYXMgYmVlbiBwaXZvdGVkIHRvIG1ha2UgY29tcGFyaXNvbiB3aXRoIHRoZSAiZ3JvdW5kIHRydXRoIiBjb3VudHMgZWFzaWVyLgoKYGBge3J9CmNvbXBhcmVfdHJ1dGgocHJvcCwgImltcG9ydCIpICU+JQogICAgZHBseXI6OnNlbGVjdCgtdHlwZSkKYGBgCgpUaGUgZGlmZmVyZW5jZSBiZXR3ZWVuIHRoZSBncm91bmQgdHJ1dGggYW5kIHRoZSBwcm9wZXJ0eSBxdWVyeSBmb3IgImRvaWQiIGlzIG5vdCBhbiBlcnJvciBidXQgZHVlIHRvIHRoZSBpbmNsdXNpb24gb2YgImRvaWQ6Y2hlYmkiIGFuZCAiZG9pZDpzZXF1ZW5jZSIgY2xhc3NlcyBpbiB0aGUgZ3JvdW5kIHRydXRoLCB3aGljaCBhcmUgbm90IGFubm90YXRpb24gb3Igb2JqZWN0IHByb3BlcnRpZXMuCgoKIyMgT3JpZ2luYWwgQ291bnQgUXVlcnkgLS0gQ29ycmVjdGVkCgpUaGlzIGEgY29ycmVjdGVkIHZlcnNpb24gb2YgdGhlIGN1cnJlbnQgaW1wb3J0LXJlcG9ydC5ycSBTUEFSUUwgcXVlcnkgdGhhdCBjb3VudHMgX29ubHlfIGNsYXNzZXMgb2Ygc3BlY2lmaWVkIGltcG9ydHMuCgpgYGB7cn0Kc3lzdGVtLnRpbWUoCiAgICBjb3JyZWN0ZWQgPC0gZG0kcXVlcnkoZmlsZS5wYXRoKHNwYXJxbF9kaXIsICJpbXBvcnQtY29ycmVjdGVkLXJlcG9ydC5ycSIpKQopCmNvcnJlY3RlZApgYGAKCiMjIyBDb21wYXJpc29uIHRvIEdyb3VuZCBUcnV0aAoKVGhlIGRhdGEgc2hvd24gaGFzIGJlZW4gcGl2b3RlZCB0byBtYWtlIGNvbXBhcmlzb24gd2l0aCB0aGUgImdyb3VuZCB0cnV0aCIgY291bnRzIGVhc2llci4KCmBgYHtyfQpjb3JyZWN0ZWRfbG9uZyA8LSBjb3JyZWN0ZWQgJT4lCiAgICB0aWR5cjo6cGl2b3RfbG9uZ2VyKAogICAgICAgIGNvbHMgPSBkcGx5cjo6ZXZlcnl0aGluZygpLAogICAgICAgIG5hbWVzX3RvID0gImltcG9ydCIsCiAgICAgICAgdmFsdWVzX3RvID0gImNvdW50IgogICAgKSAlPiUKICAgIGRwbHlyOjptdXRhdGUoaW1wb3J0ID0gc3RyaW5ncjo6c3RyX3RvX3VwcGVyKGltcG9ydCkpCgpjb21wYXJlX3RydXRoKGNvcnJlY3RlZF9sb25nLCAiaW1wb3J0IikKYGBgCgoKIyMgQWxsIEltcG9ydHMKClRoaXMgdmVyc2lvbiBpbmNsdWRlcyBhIGNvdW50IG9mIGFsbCBjbGFzc2VzIGltcG9ydGVkIGJ5IG5hbWVzcGFjZS4gSXQgcHJvdmlkZXMgYSBmbGV4aWJsZSAoaW5jbHVkaW5nIGFsbCBuYW1lc3BhY2VzLCBub3QganVzdCB0aG9zZSBzcGVjaWZpZWQpLCBub24tZHVwbGljYXRlZCBjb3VudCAobGlrZSB0aGUgZ3JvdW5kIHRydXRoIGFuZCBjb3JyZWN0ZWQgcXVlcnkpIGFuZCBpZ25vcmVzIHRoZSBzb3VyY2Ugb2YgdGhlIGltcG9ydCAobWVhbmluZyBDSEVCSSBpbXBvcnRzIG9mIERJU0RSSVYgYXJlIGp1c3QgY291bnRlZCBhcyBDSEVCSSkuCgpgYGB7cn0Kc3lzdGVtLnRpbWUoCiAgICBkZWYgPC0gZG0kcXVlcnkoZmlsZS5wYXRoKHNwYXJxbF9kaXIsICJpbXBvcnQtcmVwb3J0LnJxIikpCikKZGVmCmBgYAoKCiMjIyBDb21wYXJpc29uIHRvIEdyb3VuZCBUcnV0aAoKYGBge3J9CmNvbXBhcmVfdHJ1dGgoZGVmLCAiaW1wb3J0IikKYGBgCgoKIyMjIENvbXBhcmlzb24gdG8gQ3VycmVudCAoQ29ycmVjdGVkKSBSZXBvcnQKClRoaXMgcmVwb3J0IGF1dG9tYXRpY2FsbHkgaWRlbnRpZmllcyBhbGwgaW1wb3J0cyBieSBleGNsdWRpbmcgRE9JRCBjbGFzc2VzIGFuZCBjb3VudGluZyBhbGwgcmVtYWluaW5nIGNsYXNzZXMgYnkgbmFtZXNwYWNlLiBVbmxpa2UgdGhlIGN1cnJlbnQgcmVwb3J0LCB0aGlzIHF1ZXJ5IHdvdWxkIGF1dG9tYXRpY2FsbHkgaWRlbnRpZnkgYW5kIGNvdW50IG5ldyBpbXBvcnRzLgoKQ3VycmVudGx5LCB0aGlzIHJlcG9ydCBpZGVudGlmaWVzIHRoZSBmb2xsb3dpbmcgaW1wb3J0cyB0aGF0IGFyZSBOT1QgY291bnRlZCBieSB0aGUgY3VycmVudCBpbXBvcnQtcmVwb3J0IChvciB3aG9zZSBuYW1lc3BhY2UgZG9lc24ndCBtYXRjaCBleGFjdGx5LCBmb3IgTkNCSVRheG9uKTogYHIgZHBseXI6OmZpbHRlcihkZWYsICFpbXBvcnQgJWluJSBjb3JyZWN0ZWRfbG9uZyRpbXBvcnQpJGltcG9ydCAlPiUgdmN0cl90b19zdHJpbmcgKGRlbGltID0gIiwgIilgLgoKCgojIyBTdWItZGl2aWRlZCBJbXBvcnQgQ291bnRzCgpUaGUgdHdvIHJlbWFpbmluZyBjb3VudCBxdWVyaWVzIGhhbmRsZSBjbGFzc2VzIGRpZmZlcmVudGx5IHdoZW4gdGhvc2UgY2xhc3NlcyBhcmUgc3ViY2xhc3NlcyBvZiBhIGRpZmZlcmVudCBuYW1lc3BhY2UuIFRoaXMgaGVscHMgaWRlbnRpZnkgbW9yZSBjbGVhcmx5IGhvdyB0ZXJtcyBhcmUgaW1wb3J0ZWQgaW50byB0aGUgRE8sIHdoZXRoZXIgZGlyZWN0bHkgb3IgaW5kaXJlY3RseSwgYW5kIGhhcyBwYXJ0aWN1bGFyIHVzZWZ1bG5lc3Mgd2l0aCByZWdhcmQgdG8gRElTRFJJViBhbmQgaXQncyB2YXJpZWQgc3ViY2xhc3Nlcy4KCgojIyMgU3BlY2lhbCBIYW5kbGluZyBvZiBESVNEUklWIE9ubHkKClRoaXMgdmVyc2lvbiBpcyBzaW1pbGFyIHRvIHRoZSBjb3VudCBvZiBhbGwgaW1wb3J0IGNsYXNzZXMgYWJvdmUgYnV0IGNhcnZlcyBvdXQgYSBzcGVjaWFsIGV4Y2VwdGlvbiBmb3IgRElTRFJJViBhbmQgYWxsIHN1YmNsYXNzZXMgaW4gRElTRFJJVi4gSWYgYSBjbGFzcyBpcyBpbiBESVNEUklWIGl0IGlzIE5PVCBjb3VudGVkIGVsc2V3aGVyZSBhbmQgaXMgT05MWSBjb3VudGVkIGFzIGEgc3ViY2xhc3Mgb2YgRElTRFJJVi4gVGhpcyByZXRhaW5zIHRoZSB1bmlxdWUgY291bnQgb2YgY2xhc3NlcyBieSBuYW1lc3BhY2UgYnV0IGlkZW50aWZpZXMgdGhvc2UgY2xhc3NlcyBicm91Z2h0IGluIGJ5IERJU0RSSVYuCgpgYGB7cn0Kc3lzdGVtLnRpbWUoCiAgICBkaXNkcml2IDwtIGRtJHF1ZXJ5KAogICAgICAgIGZpbGUucGF0aChzcGFycWxfZGlyLCAiaW1wb3J0LWRpc2RyaXZfc3BlY2lhbC1yZXBvcnQucnEiKQogICAgKSAlPiUKICAgICAgICB0aWR5cjo6dW5uZXN0KG5hbWVzcGFjZSwga2VlcF9lbXB0eSA9IFRSVUUpCikKZGlzZHJpdgpgYGAKCkhlcmUgaXQncyBjbGVhciB0aGF0IEV4TywgRm9vZE9uLCBhbmQgTkNJVCBhcmUgT05MWSBpbmRpcmVjdGx5IGltcG9ydGVkIGludG8gdGhlIERPIHZpYSBESVNEUklWLgoKCiMjIyMgQ29tcGFyaXNvbiB0byBHcm91bmQgVHJ1dGgKCkhlcmUgYXJlIHR3byBkaWZmZXJlbnQgdmVyc2lvbnMgb2YgY29tcGFyaXNvbiB0byB0aGUgImdyb3VuZCB0cnV0aCIuIAoKIyMjIyBDb21wYXJpc29uIGJ5IE9yaWdpbmFsIE5hbWVzcGFjZQoKVGhpcyBjb21wYXJpc29uIHNob3dzIHRoYXQgdGhlIHRvdGFsIGNsYXNzIGNvdW50cyBmb3IgZWFjaCBuYW1lc3BhY2UgYXJlIHRoZSBzYW1lIGFzIHRoZSBncm91bmQgdHJ1dGguIFRoZSBjb21wYXJpc29uIGlzIGFjY29tcGxpc2hlZCBieSBhZ2dyZWdhdGluZyBhbGwgaW1wb3J0cywgaW5jbHVkaW5nIERJU0RSSVYgc3ViY2xhc3Nlcywgd2l0aCB0aGVpciBvcmlnaW5hbCBuYW1lc3BhY2UuCgpgYGB7cn0KZGlzZHJpdiAlPiUKICAgIHRpZHlyOjpwaXZvdF93aWRlcigKICAgICAgICBuYW1lc19mcm9tID0gYyhpbXBvcnQsIG5hbWVzcGFjZSksCiAgICAgICAgdmFsdWVzX2Zyb20gPSBjb3VudAogICAgKSAlPiUKICAgIHRpZHlyOjpwaXZvdF9sb25nZXIoCiAgICAgICAgY29scyA9IGRwbHlyOjpldmVyeXRoaW5nKCksCiAgICAgICAgbmFtZXNfdG8gPSAiaW1wb3J0IiwKICAgICAgICB2YWx1ZXNfdG8gPSAiY291bnQiCiAgICApICU+JQogICAgZHBseXI6Om11dGF0ZSgKICAgICAgICBpbXBvcnQgPSBzdHJpbmdyOjpzdHJfcmVtb3ZlKGltcG9ydCwgIl9OQSQiKSAlPiUKICAgICAgICAgICAgc3RyaW5ncjo6c3RyX3JlbW92ZSgiLipfIikKICAgICkgJT4lCiAgICBkcGx5cjo6Z3JvdXBfYnkoaW1wb3J0KSAlPiUKICAgIGRwbHlyOjpzdW1tYXJpemUoY291bnQgPSBzdW0oY291bnQpKSAlPiUKICAgIGNvbXBhcmVfdHJ1dGgoImltcG9ydCIpCmBgYAoKCiMjIyMgQ29tcGFyaXNvbiBieSBQYXJlbnQgSW1wb3J0CgpUaGlzIGNvbXBhcmlzb24gc2hvd3MgaG93IHRoaXMgY291bnQgc3RyYXRlZ3ksIGhhbmRsaW5nIERJU0RSSVYgc3BlY2lhbGx5LCBhbHRlcnMgdGhlIGNvdW50cy4gSGVyZSBhbGwgc3ViY2xhc3NlcyBvZiBESVNEUklWIGFyZSBjb3VudGVkIHdpdGggRElTRFJJViBpcnJlc3BlY3RpdmUgb2YgdGhlaXIgb3JpZ2luYWwgbmFtZXNwYWNlLgoKYGBge3J9CmRpc2RyaXYgJT4lCiAgICBkcGx5cjo6Z3JvdXBfYnkoaW1wb3J0KSAlPiUKICAgIGRwbHlyOjpzdW1tYXJpemUoY291bnQgPSBzdW0oY291bnQpKSAlPiUKICAgIGNvbXBhcmVfdHJ1dGgoImltcG9ydCIpCmBgYApOT1RFIHRoYXQgRXhPIGFuZCBvdGhlciBuYW1lc3BhY2VzIGltcG9ydGVkIHZpYSBESVNEUklWIG5vIGxvbmdlciBhcHBlYXIgaW4gdGhpcyBsaXN0LgoKCiMjIyBTcGVjaWFsIEhhbmRsaW5nIGJ5IEltcG9ydCBSb290CgpUaGlzIHZlcnNpb24gaXMgZGVzaWduZWQgdG8gY291bnQgYWxsIHRlcm1zIGJhc2VkIG9uIHRoZWlyIHJlbGF0aW9uc2hpcCB0byBpbXBvcnQgcm9vdHMuIEl0IGhhcyBhIG51bWJlciBvZiBwcm9zIGFuZCBhdCBsZWFzdCBvbmUgY29uOgoKUFJPUzoKMS4gSW1wb3J0IGNvdW50cyBhcmUgb3JnYW5pemVkIGJ5IHJvb3QsIG1lYW5pbmcgdGhlIHRlcm1zIG9mIHRoZSBPV0wgdHJlZSBvbiBkaXNlYXNlLW9udG9sb2d5Lm9yZyB3aXRoIHRoZSBgZGlzZWFzZWAgYnJhbmNoIGV4Y2x1ZGVkLgoyLiBNb3N0IGZsZXhpYmxlIGNvdW50IG9mIGltcG9ydHMgYW5kIHRoZSB0ZXJtcyB3aXRoaW4gaW1wb3J0cy4KCkNPTlM6CjEuIFRlcm0gY291bnRzIG1heSBub3QgYmUgdW5pcXVlIHdoZW4gdGhleSBoYXZlIHJlbGF0aW9uc2hpcCB0byBtb3JlIHRoYW4gb25lIGltcG9ydCByb290LgoyLiBUZXJtIGNvdW50cyBtYXkgbm90IGJlIGR1cGxpY2F0ZWQgd2hlbiBhbiBpbXBvcnQgcm9vdCBoYXMgbW9yZSB0aGFuIG9uZSBsYWJlbC4KICAgIC0gVGVjaG5pY2FsbHksIGhhdmluZyBtb3JlIHRoYW4gb25lIGxhYmVsIGlzIGFuIGVycm9yIGluIE9CTyBvbnRvbG9naWVzIGJ1dCBpdCBpcyBub3QgeWV0IHByZXZlbnRlZC9maXhlZCBkdXJpbmcgaW1wb3J0ICh0aGVyZSBpcyBhbiBleGFtcGxlIGJlbG93KS4KCkl0IGlzIHBvc3NpYmxlIGZvciBhIHRlcm0gdG8gaGF2ZSBhIHJlbGF0aW9uc2hpcCB0byBtb3JlIHRoYW4gb25lIGltcG9ydCByb290IGV2ZW4gaWYgdGhlIHRlcm0gaXRzZWxmIGlzIG9ubHkgaW4gb25lIGltcG9ydC4gVGhpcyBpcyBhcHBhcmVudCB3aXRoIENIRUJJIHRlcm1zIHdoaWNoIGFyZSBpbiBESVNEUklWIChzaG93biBiZWxvdykuCgpOb3RlOiBJbnN0ZWFkIG9mIHVzaW5nIHRoZSAiaW1wb3J0IiBjb2x1bW4sIHRoaXMgcXVlcnkgdXNlcyB0aGUgbGFiZWxzIGZvciByb290IHRlcm1zIChgaW1wb3J0X3Jvb3RgIGNvbHVtbikgaW4gYW4gZWZmb3J0IHRvIGltcHJvdmUgY29tbXVuaWNhdGlvbiBhYm91dCBob3cgaXQgZGVyaXZlZCBhbmQgYXZvaWQgbWlzaW50ZXJwcmV0YXRpb24uCgpgYGB7cn0Kc3lzdGVtLnRpbWUoCiAgICBuc19mbGV4IDwtIGRtJHF1ZXJ5KAogICAgICAgIGZpbGUucGF0aChzcGFycWxfZGlyLCAiaW1wb3J0LWJ5X3Jvb3QtcmVwb3J0LnJxIikKICAgICkgJT4lCiAgICAgICAgdGlkeXI6OnVubmVzdChuYW1lc3BhY2UsIGtlZXBfZW1wdHkgPSBUUlVFKQopCm5zX2ZsZXgKYGBgCgoKIyMjIyBDb21wYXJpc29uIHRvIEdyb3VuZCBUcnV0aAoKT25seSB0aGUgY29tcGFyaXNvbiBieSBvcmlnaW5hbCBuYW1lc3BhY2UgaXMgcG9zc2libGUgZm9yIHRoaXMgY291bnQgcXVlcnkgcmVzdWx0IGJlY2F1c2UgdGhlIGltcG9ydCBpcyBpZGVudGlmaWVkIGluIGEgZnVuZGFtZW50YWxseSBkaWZmZXJlbnQgd2F5LgoKYGBge3J9Cm5zX2ZsZXggJT4lCiAgICBkcGx5cjo6Z3JvdXBfYnkobmFtZXNwYWNlKSAlPiUKICAgIGRwbHlyOjpzdW1tYXJpemUoY291bnQgPSBzdW0oY291bnQpKSAlPiUKICAgIGNvbXBhcmVfdHJ1dGgoIm5hbWVzcGFjZSIpCmBgYAoKT25seSB0aGUgQ0hFQkkgY291bnQgZGlmZmVycyBiZWNhdXNlIG9mIHRoZSB3YXkgdGhlc2UgY291bnRzIGFyZSBkZXJpdmVkLiBBbGwgb3RoZXIgZGlmZmVyZW5jZXMgc2hvdWxkIG5vdCBiZSBwcmVzZW50IGluIHRoaXMgY291bnQgYW5kIGFyZSBkdWUgdG8gdGhlIGZvbGxvd2luZyBkYXRhIGlzc3VlczoKCjEuIFRoZSBkb3VibGVkIENMIGltcG9ydCBjb3VudCBpcyBkdWUgdG8gdGhlIGltcG9ydCByb290IGhhdmluZyB0d28gZGlmZmVyZW50IGByZGZzOmxhYmVsYHMuCiAgICAtIFRoaXMgdGVjaG5pY2FsbHkgc2hvdWxkIG5vdCBiZSBhbGxvd2VkIGJ1dCB0aGVyZSBpcyBjdXJyZW50bHkgbm8gd2F5IHRvIHByZXZlbnQvZml4IGl0IGR1cmluZyBpbXBvcnQuIE5vdGUgdGhhdCB3aGlsZSB0aGlzIGR1cGxpY2F0aW9uIGlzIG9idmlvdXMgYmVjYXVzZSBpdCBkdXBsaWNhdGVzIF9hbGwgdGVybXNfLCBtb3JlIGNvbXBsZXggZHVwbGljYXRpb24gbWlnaHQgb2NjdXIgaWYgYSB0ZXJtIHdpdGhpbiBhbiBpbXBvcnQgdHJlZSBoYWQgbXVsdGlwbGUgbGFiZWxzLgoKYGBge3J9CmRtJHF1ZXJ5KAoiUFJFRklYIENMOiA8aHR0cDovL3B1cmwub2JvbGlicmFyeS5vcmcvb2JvL0NMXz4KClNFTEVDVCA/aW1wb3J0X3Jvb3QgP2xhYmVsIChMQU5HKD9sYWJlbCkgYXMgP2xhbmcpCldIRVJFIHsKICAgIFZBTFVFUyA/aW1wb3J0X3Jvb3QgeyBDTDowMDAwMDAwIH0KICAgID9pbXBvcnRfcm9vdCByZGZzOmxhYmVsID9sYWJlbAp9IikKYGBgCgoyLiBUaGUgZGlmZmVyZW5jZXMgaW4gU1lNUCBhbmQgR0VOTyBhcmUgZHVlIHRvIGluY2x1c2lvbiBvZiBvYnNvbGV0ZSBjbGFzc2VzIGluIHRoZSBncm91bmQgdHJ1dGguCiAgICAtIFRoaXMgaXMgdGhlIG9ubHkgcXVlcnkgdGhhdCBleHBsaWNpdGx5IGZpbHRlcnMgb3V0IGBvd2w6ZGVwcmVjYXRlZGAgY2xhc3Nlcywgd2hpY2ggaXMgbmVjZXNzYXJ5IHRvIGlkZW50aWZ5IGltcG9ydCByb290cyAobGlrZSByb290IHRlcm1zLCBvYnNvbGV0ZSBjbGFzc2VzIGRvIE5PVCBoYXZlIHN1cGVyY2xhc3NlcykuCiAgICAKYGBge3J9CmRtJHF1ZXJ5KAoiU0VMRUNUICoKV0hFUkUgewogICAgP2NsYXNzIGEgb3dsOkNsYXNzIDsKICAgICAgICBvd2w6ZGVwcmVjYXRlZCA/b2Jzb2xldGUgLgogICAgRklMVEVSKFJFR0VYKFNUUig/Y2xhc3MpLCAnR0VOT3xTWU1QJykpCn0iKQpgYGAKCgojIyMjIEV4cGxvcmluZyB0aGUgQ0hFQkkgQ291bnQKClRoZSBjb3VudCBvZiBDSEVCSSB0ZXJtcyBpcyBncmVhdGVyIGR1ZSB0byB0aGUgaW5oZXJlbnQgbmF0dXJlIG9mIHRoaXMgYXBwcm9hY2guIFRoZSBDSEVCSSB0ZXJtcyB0aGF0IGhhdmUgcmVsYXRpb25zaGlwcyB0byB0aGUgaW1wb3J0IHJvb3RzIG9mIGJvdGggQ0hFQkkgYW5kIERJU0RSSVYgYXJlOgoKYGBge3J9CmNoZWJpX2R1cCA8LSBkbSRxdWVyeSgKICAgIGZpbGUucGF0aChzcGFycWxfZGlyLCAiaW1wb3J0LWNoZWJpX3Jvb3Rfb3ZlcmxhcC1yZXBvcnQucnEiKQopCmNoZWJpX2R1cApgYGAKCkxvb2tpbmcgYXQgdGhlc2UgdGVybXMgaW4gZG9pZC1tZXJnZWQub3dsIHVzaW5nIFByb3RlZ2UgdGhlIGZvbGxvd2luZyBzdWJDbGFzc09mIHJlbGF0aW9uc2hpcHMgYXJlIGFwcGFyZW50OgoKICAgIHJvY3Vyb25pdW0gPiAzYWxwaGEtaHlkcm94eSBzdGVyb2lkID4gc2Vjb25kYXJ5IGFsY29ob2wgPiBhbGNvaG9sCiAgICAKJ2FsY29ob2wnIGhhcyB0d28gcGFyZW50cyAnb3JnYW5pYyBoeWRyb3h5IGNvbXBvdW5kJyBmcm9tIENIRUJJIGFuZCAnYWxjb2hvbGljIGJldmVyYWdlJyBmcm9tIEZPT0RPTiAoaW4gRElTRFJJVikuIEl0IGlzIGF0IHRoaXMgcG9pbnQgd2hlcmUgdGhlIGR1cGxpY2F0aW9uIG9jY3Vycy4KClRoaXMgZHVwbGljYXRpb24gY291bGQgZ2V0IG1vcmUgY29tcGxpY2F0ZWQgYXMgbW9yZSBpbXBvcnRzIGFyZSB1c2VkIGluIHRoZSBETyBidXQgaXQgbWlnaHQgYWxzbyBiZSByZW1vdmVkIGlmIHRlcm1zIG1pZ3JhdGUgZnJvbSBkaXJlY3QgaW1wb3J0IHRvIHRoZSBETyB0byBpbmRpcmVjdCBpbXBvcnQgdmlhIERJU0RSSVYuCgoKIyMjIyBTdW1tYXJ5CgpUaGlzIHF1ZXJ5IHNob3dzIGV2ZXJ5d2hlcmUgYSB0ZXJtIGFwcGVhcnMgc28gY291bnRzIHdpbGwgbm90IGJlIHVuaXF1ZS4K</div>
+<div id="rmd-source-code">LS0tCnRpdGxlOiAiQ29tcGFyaXNvbiBvZiBWYXJpb3VzIEltcG9ydCBDb3VudHMiCmF1dGhvcjogIkouIEFsbGVuIEJhcm9uIgpkYXRlOiAyMDIyLTA2LTEzCm91dHB1dDoKICAgIGh0bWxfbm90ZWJvb2s6CiAgICAgICAgdG9jOiB0cnVlCiAgICAgICAgdG9jX2Zsb2F0OiB0cnVlCiAgICAgICAgbnVtYmVyX3NlY3Rpb25zOiB0cnVlCiAgICAgICAgY29kZV9mb2xkaW5nOiAiaGlkZSIKICAgICAgICB0aGVtZTogImpvdXJuYWwiCi0tLQoKIyBCYWNrZ3JvdW5kIGFuZCBQdXJwb3NlCgpUaGUgY3VycmVudCBpbXBvcnQgY291bnQgdXNlZCBkdXJpbmcgcmVsZWFzZSBvZiB0aGUgRGlzZWFzZSBPbnRvbG9neSBpcyBpbmNvcnJlY3QuIEl0IGNvdW50cyB0aGUgdG90YWwgdHJpcGxlcyBpbXBvcnRlZCBmcm9tIGEgc2V0IG9mIHNwZWNpZmllZCByZXNvdXJjZXMuIEl0J3MgYWxzbyBzbG93LCB1c2luZyBsb3RzIG9mIFVOSU9OIHN0YXRlbWVudHMuCgpUaGlzIG5vdGVib29rIHByZXNlbnRzIGltcG9ydCBjb3VudHMgY2FsY3VsYXRlZCBpbiBhIHZhcmlldHkgb2YgbWFubmVycyB0byBhaWQgdGhlIGRlY2lzaW9uIGluIGhvdyBiZXN0IHRvIHByZXNlbnQgdGhlc2UuIFRoZSBtb3N0IGJhc2ljIGNvdW50IGlzIGEgc2ltcGxlIGNvcnJlY3Rpb24Kb2YgdGhlIGN1cnJlbnQgaW1wb3J0IHJlcG9ydCBmb3VuZCBpbiB0aGUgSHVtYW5EaXNlYXNlT250b2xvZ3kgcmVwb3NpdG9yeSBhdCBzcmMvc3BhcnFsL2J1aWxkL2ltcG9ydC1yZXBvcnQucnEuCgoKIyBEYXRhIFNvdXJjZQoKQWxsIG9mIHRoZXNlIGltcG9ydCBjb3VudCBxdWVyaWVzIGFyZSBleGVjdXRlZCBhZ2FpbnN0IHRoZSBbZG9pZC1tZXJnZWQub3dsIGZpbGVdKGh0dHBzOi8vZ2l0aHViLmNvbS9EaXNlYXNlT250b2xvZ3kvSHVtYW5EaXNlYXNlT250b2xvZ3kvYmxvYi92MjAyMi0wNi0wNy9zcmMvb250b2xvZ3kvZG9pZC1tZXJnZWQub3dsKSBmcm9tIHJlbGVhc2UgW3YyMDIyLTA2LTA3XShodHRwczovL2dpdGh1Yi5jb20vRGlzZWFzZU9udG9sb2d5L0h1bWFuRGlzZWFzZU9udG9sb2d5L3RyZWUvdjIwMjItMDYtMDcpLgoKIyBBcHByb3hpbWF0ZSBHcm91bmQgVHJ1dGggKGZyb20gQ29tbWFuZCBMaW5lKQoKVGhpcyBjb3VudCB3YXMgZ2VuZXJhdGVkIHdpdGggdGhlIGNvbWJpbmF0aW9uIG9mIGBncmVwYCBhbmQgYHNlZGAgb24gdGhlIGNvbW1hbmRsaW5lLiBJdCBpcyBPTkxZIGZvciBjb21wYXJpc29uIGFzIGFuIGFwcHJveGltYXRpb24gb2YgdGhlIGdyb3VuZCB0cnV0aCBhbmQgaXMgbm90IGludGVuZGVkIGZvciB1c2UgaW4gcmVsZWFzZXMuIFVubGlrZSBzb21lIGNvdW50cyBpdCBpbmNsdWRlcyBET0lEIGFuZCBvYnNvbGV0ZSB0ZXJtcy4KCmBgYHtyIHNldHVwLCBpbmNsdWRlID0gRkFMU0V9CmxpYnJhcnkoaGVyZSkKbGlicmFyeSh0aWR5dmVyc2UpCmxpYnJhcnkoRE8udXRpbHMpCgojIGN1c3RvbSBmdW5jdGlvbnMKY29tcGFyZV90cnV0aCA8LSBmdW5jdGlvbihkZiwgY29sKSB7CiAgICBpbXBvcnRfcGF0dGVybiA8LSBkZltbY29sXV0gJT4lCiAgICBETy51dGlsczo6dmN0cl90b19zdHJpbmcoZGVsaW0gPSAifCIpCgogICAgY2xpX2NvdW50ICU+JQogICAgICAgIGRwbHlyOjptdXRhdGUoCiAgICAgICAgICAgIHt7IGNvbCB9fSA6PSBzdHJpbmdyOjpzdHJfZXh0cmFjdChpbXBvcnQsIGltcG9ydF9wYXR0ZXJuKQogICAgICAgICkgJT4lCiAgICAgICAgZHBseXI6Omdyb3VwX2J5KC5kYXRhW1tjb2xdXSkgJT4lCiAgICAgICAgZHBseXI6OnN1bW1hcml6ZShncm91bmRfdHJ1dGggPSBzdW0oY291bnQpKSAlPiUKICAgICAgICBkcGx5cjo6dW5ncm91cCgpICU+JQogICAgICAgIGRwbHlyOjpyaWdodF9qb2luKGRmLCBieSA9IGNvbCkgJT4lCiAgICAgICAgZHBseXI6Om11dGF0ZShkaWZmID0gY291bnQgLSBncm91bmRfdHJ1dGgpCn0KCiMgbG9hZCBkYXRhCnJlcG8gPC0gRE8udXRpbHM6OkRPcmVwbyhoZXJlOjpoZXJlKCIuLi9PbnRvbG9naWVzL0h1bWFuRGlzZWFzZU9udG9sb2d5IikpCnJlcG8kY2hlY2tvdXRfdGFnKCJ2MjAyMi0wNi0wNyIpCgpkbSA8LSByZXBvJGRvaWRfbWVyZ2VkCnNwYXJxbF9kaXIgPC0gaGVyZTo6aGVyZSgic3BhcnFsIikKYGBgCgpgYGB7Un0KY2xpX2NvdW50IDwtIHN5c3RlbTIoCiAgICBoZXJlOjpoZXJlKCJzY3JpcHRzL2NvdW50X2ltcG9ydHMuenNoIiksCiAgICBhcmdzID0gaGVyZTo6aGVyZSgKICAgICAgICAiLi4vT250b2xvZ2llcy9IdW1hbkRpc2Vhc2VPbnRvbG9neS9zcmMvb250b2xvZ3kvZG9pZC1tZXJnZWQub3dsIgogICAgKSwKICAgIHN0ZG91dCA9IFRSVUUKKSAlPiUKICAgIHN0cmluZ3I6OnN0cl90cmltKCkgJT4lCiAgICBzdHJpbmdyOjpzdHJfc3BsaXRfZml4ZWQoIiAiLCBuID0gMikgJT4lCiAgICB0aWJibGU6OmFzX3RpYmJsZSgubmFtZV9yZXBhaXIgPSAibWluaW1hbCIpICU+JQogICAgcHVycnI6OnNldF9uYW1lcyhjKCJjb3VudCIsICJpbXBvcnQiKSkgJT4lCiAgICBkcGx5cjo6c2VsZWN0KGltcG9ydCwgY291bnQpICU+JQogICAgZHBseXI6Om11dGF0ZShjb3VudCA9IGFzLmludGVnZXIoY291bnQpKQoKY2xpX2NvdW50CmBgYAoKCiMgU1BBUlFMIFByb3BlcnR5IENvdW50cyAtLSBORVchIQoKUHJvcGVydGllcyB1c2VkIGluIERPIGFyZSBub3QgY3VycmVudGx5IGNvdW50ZWQgbWFraW5nIHRoaXMgYW4gZW50aXJlbHkgbmV3IHJlcG9ydC4gVGhleSBjYW4gYmUgY29uc2lkZXJlZCBhIHR5cGUgb2YgaW1wb3J0LCBwYXJ0aWN1bGFybHkgd2l0aCByZWdhcmQgdG8gUk8gYW5kIElBTy4KCmBgYHtyfQpzeXN0ZW0udGltZSgKICAgIHByb3AgPC0gZG0kcXVlcnkoZmlsZS5wYXRoKHNwYXJxbF9kaXIsICJpbXBvcnQtcHJvcGVydGllcy1yZXBvcnQucnEiKSkKKQpwcm9wCmBgYAoKCiMjIENvbXBhcmlzb24gdG8gR3JvdW5kIFRydXRoCgpDb21wYXJpc29uIHdpdGggdGhlICJncm91bmQgdHJ1dGgiIGNvdW50cyBkZW1vbnN0cmF0ZXMgdGhhdCB0aGlzIHF1ZXJ5IGlzIGFjY3VyYXRlLgoKTk9URTogVGhlIGRpZmZlcmVuY2UgYmV0d2VlbiB0aGUgZ3JvdW5kIHRydXRoIGFuZCB0aGUgcHJvcGVydHkgcXVlcnkgZm9yICJkb2lkIiBpcyBkdWUgdG8gdGhlIGluY2x1c2lvbiBvZiAiZG9pZDpjaGViaSIgYW5kICJkb2lkOnNlcXVlbmNlIiBfY2xhc3Nlc18gaW4gdGhlIGdyb3VuZCB0cnV0aCwgd2hpY2ggYXJlIG5vdCBhbm5vdGF0aW9uIG9yIG9iamVjdCBwcm9wZXJ0aWVzLgoKYGBge3J9CmNvbXBhcmVfdHJ1dGgocHJvcCwgImltcG9ydCIpICU+JQogICAgZHBseXI6OnNlbGVjdCgtdHlwZSkKYGBgCgoKIyBTUEFSUUwgQ2xhc3MgQ291bnRzCgojIyBfQ29ycmVjdGVkXyBDb3VudCBRdWVyeSAKClRoaXMgYSBjb3JyZWN0ZWQgdmVyc2lvbiBvZiB0aGUgY3VycmVudCBpbXBvcnQtcmVwb3J0LnJxIFNQQVJRTCBxdWVyeSB0aGF0IGNvdW50cyBfb25seV8gY2xhc3NlcyBvZiBzcGVjaWZpZWQgaW1wb3J0cywgaW5zdGVhZCBvZiBhbGwgdHJpcGxlcy4KCkEgZG93bnNpZGUgb2YgdGhpcyByZXBvcnQgaXMgdGhlIG5lZWQgdG8gbWFudWFsbHkgYWRkIGltcG9ydHMgdG8gYmUgY291bnRlZC4gVGhlIG91dHB1dCBmb3JtYXQgKGluIGNvbHVtbnMpIG1heSBhbHNvIGJlIGNvbnNpZGVyZWQgYSBkb3duc2lkZS4KCmBgYHtyfQpzeXN0ZW0udGltZSgKICAgIGNvcnJlY3RlZCA8LSBkbSRxdWVyeShmaWxlLnBhdGgoc3BhcnFsX2RpciwgImltcG9ydC1jb3JyZWN0ZWQtcmVwb3J0LnJxIikpCikKY29ycmVjdGVkCmBgYAoKCiMjIyBDb21wYXJpc29uIHRvIEdyb3VuZCBUcnV0aAoKVGhlIGRhdGEgc2hvd24gaGFzIGJlZW4gcGl2b3RlZCB0byBtYWtlIGNvbXBhcmlzb24gd2l0aCB0aGUgImdyb3VuZCB0cnV0aCIgY291bnRzIGVhc2llci4gQWxsIGNvdW50cyBhcHBlYXIgYWNjdXJhdGUuCgpgYGB7cn0KY29ycmVjdGVkX2xvbmcgPC0gY29ycmVjdGVkICU+JQogICAgdGlkeXI6OnBpdm90X2xvbmdlcigKICAgICAgICBjb2xzID0gZHBseXI6OmV2ZXJ5dGhpbmcoKSwKICAgICAgICBuYW1lc190byA9ICJpbXBvcnQiLAogICAgICAgIHZhbHVlc190byA9ICJjb3VudCIKICAgICkgJT4lCiAgICBkcGx5cjo6bXV0YXRlKGltcG9ydCA9IHN0cmluZ3I6OnN0cl90b191cHBlcihpbXBvcnQpKQoKY29tcGFyZV90cnV0aChjb3JyZWN0ZWRfbG9uZywgImltcG9ydCIpCmBgYAoKCiMjIEFsbCBJbXBvcnRzCgpUaGlzIHZlcnNpb24gaW5jbHVkZXMgYSBjb3VudCBlcXVpdmFsZW50IHRvIHRoZSBjb3JyZWN0ZWQgY291bnQgYWJvdmUgYnV0IGl0IGluY2x1ZGVzIF9hbGxfIGltcG9ydHMgd2l0aG91dCB0aGUgbmVlZCB0byBzcGVjaWZ5IHRoZW0gaW5kaXZpZHVhbGx5IChubyBVTklPTiBzdGF0ZW1lbnRzKSwgbWFraW5nIGl0IG1vcmUgZmxleGlibGUuCgpBcyBuZXcgaW1wb3J0cyBhcmUgYWRkZWQgdGhleSB3aWxsIGF1dG9tYXRpY2FsbHkgYmUgY291bnRlZC4gVGhvc2UgaW5jbHVkZWQgaW4gdGhpcyByZXBvcnQgYW5kIG5vdCB0aGUgY29ycmVjdGVkIHJlcG9ydCBhYm92ZSBhcmUgbGlzdGVkIGluIHRoZSBjb21wYXJpc29uIHNlY3Rpb24gYmVsb3cuCgpBbHNvLCB0aGVyZSBpcyBubyBkaXNpbmN0aW9uIGJldHdlZW4gZGlyZWN0IGFuZCBpbmRpcmVjdCBpbXBvcnRzLiBUaGlzIGlzIHByaW1hcmlseSByZWxldmFudCBmb3IgRElTRFJJViB3aG9zZSBzdWJjbGFzc2VzIGZyb20gb3RoZXIgbmFtZXNwYWNlcyBhcmUgY291bnRlZCBhcyBpbiB0aGF0IG5hbWVzcGFjZSBhbmQgYXJlIG5vdCBhZmZpbGlhdGVkIGluIGFueSB3YXkgd2l0aCBESVNEUklWIChtZWFuaW5nIENIRUJJIGltcG9ydHMgb2YgRElTRFJJViBhcmUganVzdCBjb3VudGVkIGFzIENIRUJJKS4KCmBgYHtyfQpzeXN0ZW0udGltZSgKICAgIGRlZiA8LSBkbSRxdWVyeShmaWxlLnBhdGgoc3BhcnFsX2RpciwgImltcG9ydC1yZXBvcnQucnEiKSkKKQpkZWYKYGBgCgoKIyMjIENvbXBhcmlzb24gdG8gR3JvdW5kIFRydXRoCgpUaGlzIGNvdW50IGFwcGVhcnMgYWNjdXJhdGUuCgpgYGB7cn0KY29tcGFyZV90cnV0aChkZWYsICJpbXBvcnQiKQpgYGAKCgojIyMgQ29tcGFyaXNvbiB0byBDb3JyZWN0ZWQgUmVwb3J0CgpUaGlzIHJlcG9ydCBhdXRvbWF0aWNhbGx5IGlkZW50aWZpZXMgYWxsIGltcG9ydHMgYnkgZXhjbHVkaW5nIERPSUQgY2xhc3NlcyBhbmQgY291bnRpbmcgYWxsIHJlbWFpbmluZyBjbGFzc2VzIGJ5IG5hbWVzcGFjZS4gVW5saWtlIHRoZSBjdXJyZW50IHJlcG9ydCwgdGhpcyBxdWVyeSB3b3VsZCBhdXRvbWF0aWNhbGx5IGlkZW50aWZ5IGFuZCBjb3VudCBuZXcgaW1wb3J0cy4KCkN1cnJlbnRseSwgdGhpcyByZXBvcnQgaWRlbnRpZmllcyB0aGUgZm9sbG93aW5nIGltcG9ydHMgdGhhdCBhcmUgTk9UIGNvdW50ZWQgYnkgdGhlIGN1cnJlbnQgaW1wb3J0LXJlcG9ydCAob3Igd2hvc2UgbmFtZXNwYWNlIGRvZXNuJ3QgbWF0Y2ggZXhhY3RseSwgZm9yIE5DQklUYXhvbik6IGByIGRwbHlyOjpmaWx0ZXIoZGVmLCAhaW1wb3J0ICVpbiUgY29ycmVjdGVkX2xvbmckaW1wb3J0KSRpbXBvcnQgJT4lIHZjdHJfdG9fc3RyaW5nIChkZWxpbSA9ICIsICIpYC4KCgoKIyMgU3ViLWRpdmlkZWQgSW1wb3J0IENvdW50cwoKVGhlIHJlbWFpbmluZyBjb3VudCBxdWVyaWVzIGhhbmRsZSB1dGlsaXplIGEgZGlmZmVyZW50IGFwcHJvYWNoLCBjb3VudGluZyBjbGFzc2VzIGRpZmZlcmVudGx5IHdoZW4gdGhvc2UgY2xhc3NlcyBhcmUgc3ViY2xhc3NlcyBvZiBhIGRpZmZlcmVudCBuYW1lc3BhY2UgKENIRUJJIHN1YmNsYXNzZXMgaW1wb3J0ZWQgdmlhIERJU0RSSVYgaXMgY291bnRlZCBkaWZmZXJlbnRseSB0aGFuIENIRUJJIHN1YmNsYXNzZXMgaW1wb3J0ZWQgZGlyZWN0bHkgd2l0aCBDSEVCSSkuIFRoaXMgYXBwcm9hY2ggbWFrZXMgaG93IHRlcm1zIGFyZSBpbXBvcnRlZCBpbnRvIHRoZSBETyBjbGVhcmVyLCB3aGV0aGVyIGRpcmVjdGx5IG9yIGluZGlyZWN0bHksIGFuZCBtYXkgaGF2ZSBwYXJ0aWN1bGFyIHVzZWZ1bG5lc3Mgd2l0aCByZWdhcmQgdG8gRElTRFJJViBhbmQgaXQncyB2YXJpZWQgc3ViY2xhc3Nlcy4KCgojIyMgU3BlY2lhbCBIYW5kbGluZyBvZiBESVNEUklWIE9ubHkKClRoaXMgdmVyc2lvbiBpcyBzaW1pbGFyIHRvIHRoZSBjb3VudCBvZiBhbGwgaW1wb3J0IGNsYXNzZXMgYWJvdmUgYnV0IGNhcnZlcyBvdXQgYW4gZXhjZXB0aW9uIHNwZWNpZmljYWxseSBmb3IgRElTRFJJViBhbmQgYWxsIHN1YmNsYXNzZXMgaW4gRElTRFJJVi4gSWYgYSBjbGFzcyBpcyBpbiBESVNEUklWIGl0IGlzIE5PVCBjb3VudGVkIGVsc2V3aGVyZSBhbmQgaXMgT05MWSBjb3VudGVkIGFzIGEgc3ViY2xhc3Mgb2YgRElTRFJJVi4gVGhpcyByZXRhaW5zIHRoZSB1bmlxdWUgY291bnQgb2YgY2xhc3NlcyBieSBuYW1lc3BhY2UgYnV0IGlkZW50aWZpZXMgdGhvc2UgY2xhc3NlcyBicm91Z2h0IGluIGJ5IERJU0RSSVYuCgpgYGB7cn0Kc3lzdGVtLnRpbWUoCiAgICBkaXNkcml2IDwtIGRtJHF1ZXJ5KAogICAgICAgIGZpbGUucGF0aChzcGFycWxfZGlyLCAiaW1wb3J0LWRpc2RyaXZfc3BlY2lhbC1yZXBvcnQucnEiKQogICAgKSAlPiUKICAgICAgICB0aWR5cjo6dW5uZXN0KG5hbWVzcGFjZSwga2VlcF9lbXB0eSA9IFRSVUUpCikKZGlzZHJpdgpgYGAKCkhlcmUgaXQncyBjbGVhciB0aGF0IEV4TywgRm9vZE9uLCBhbmQgTkNJVCBhcmUgT05MWSBpbmRpcmVjdGx5IGltcG9ydGVkIGludG8gdGhlIERPIHZpYSBESVNEUklWLgoKCiMjIyMgQ29tcGFyaXNvbiB0byBHcm91bmQgVHJ1dGgKClR3byBjb21wYXJpc29ucyB0byB0aGUgImdyb3VuZCB0cnV0aCIgYXJlIGluY2x1ZGVkIGhlcmUsIHNob3dpbmcgMSkgdGhlIGNvdW50IGlzIGFjY3VyYXRlIGFuZCAyKSBob3cgdGhlIGNvdW50IGRpZmZlcnMgZnJvbSBwcmV2aW91cyByZXBvcnQgcXVlcmllcy4KCgojIyMjIyBDb21wYXJpc29uIGJ5IE9yaWdpbmFsIE5hbWVzcGFjZQoKVGhpcyBjb21wYXJpc29uIHNob3dzIHRoYXQgdGhlIHRvdGFsIGNsYXNzIGNvdW50cyBmb3IgZWFjaCBuYW1lc3BhY2UgYXJlIHRoZSBzYW1lIGFzIHRoZSBncm91bmQgdHJ1dGguIFRoZSBjb21wYXJpc29uIGlzIGFjY29tcGxpc2hlZCBieSBhZ2dyZWdhdGluZyBhbGwgaW1wb3J0cywgaW5jbHVkaW5nIERJU0RSSVYgc3ViY2xhc3Nlcywgd2l0aCB0aGVpciBvcmlnaW5hbCBuYW1lc3BhY2UuCgpgYGB7cn0KZGlzZHJpdiAlPiUKICAgIHRpZHlyOjpwaXZvdF93aWRlcigKICAgICAgICBuYW1lc19mcm9tID0gYyhpbXBvcnQsIG5hbWVzcGFjZSksCiAgICAgICAgdmFsdWVzX2Zyb20gPSBjb3VudAogICAgKSAlPiUKICAgIHRpZHlyOjpwaXZvdF9sb25nZXIoCiAgICAgICAgY29scyA9IGRwbHlyOjpldmVyeXRoaW5nKCksCiAgICAgICAgbmFtZXNfdG8gPSAiaW1wb3J0IiwKICAgICAgICB2YWx1ZXNfdG8gPSAiY291bnQiCiAgICApICU+JQogICAgZHBseXI6Om11dGF0ZSgKICAgICAgICBpbXBvcnQgPSBzdHJpbmdyOjpzdHJfcmVtb3ZlKGltcG9ydCwgIl9OQSQiKSAlPiUKICAgICAgICAgICAgc3RyaW5ncjo6c3RyX3JlbW92ZSgiLipfIikKICAgICkgJT4lCiAgICBkcGx5cjo6Z3JvdXBfYnkoaW1wb3J0KSAlPiUKICAgIGRwbHlyOjpzdW1tYXJpemUoY291bnQgPSBzdW0oY291bnQpKSAlPiUKICAgIGNvbXBhcmVfdHJ1dGgoImltcG9ydCIpCmBgYAoKCiMjIyMjIENvbXBhcmlzb24gYnkgUGFyZW50IEltcG9ydAoKVGhpcyBjb21wYXJpc29uIHNob3dzIGhvdyB0aGlzIGNvdW50IHN0cmF0ZWd5LCBoYW5kbGluZyBESVNEUklWIHNwZWNpYWxseSwgYWx0ZXJzIHRoZSBjb3VudHMuIEhlcmUgYWxsIHN1YmNsYXNzZXMgb2YgRElTRFJJViBhcmUgY291bnRlZCB3aXRoIERJU0RSSVYgaXJyZXNwZWN0aXZlIG9mIHRoZWlyIG9yaWdpbmFsIG5hbWVzcGFjZS4KCmBgYHtyfQpkaXNkcml2ICU+JQogICAgZHBseXI6Omdyb3VwX2J5KGltcG9ydCkgJT4lCiAgICBkcGx5cjo6c3VtbWFyaXplKGNvdW50ID0gc3VtKGNvdW50KSkgJT4lCiAgICBjb21wYXJlX3RydXRoKCJpbXBvcnQiKQpgYGAKTk9URSB0aGF0IEV4TyBhbmQgb3RoZXIgbmFtZXNwYWNlcyBpbXBvcnRlZCB2aWEgRElTRFJJViBubyBsb25nZXIgYXBwZWFyIGluIHRoaXMgbGlzdCBhcyB0aGV5IGFyZSBpbmNsdWRlZCBhcyBESVNEUklWIGNsYXNzZXMuCgoKIyMjIyBOb3RlIG9uIEFsdGVybmF0ZSBPcHRpb24KCkNvdW50aW5nIGFsbCBjaGlsZHJlbiBvZiBESVNEUklWIGFzIHBhcnQgb2YgdGhlIERJU0RSSVYgaW1wb3J0IHdpdGhvdXQgaWRlbnRpZnlpbmcgdGhlaXIgb3JpZ2luYWwgbmFtZXNwYWNlcyBjb3VsZCBiZSBhbiBhbHRlcm5hdGUgY291bnQgc3RyYXRlZ3kuCgoKIyMjIFNwZWNpYWwgSGFuZGxpbmcgYnkgSW1wb3J0IFJvb3QKClRoaXMgdmVyc2lvbiBpcyBkZXNpZ25lZCB0byBjb3VudCBhbGwgdGVybXMgYmFzZWQgb24gdGhlaXIgcmVsYXRpb25zaGlwIHRvIGltcG9ydCByb290cyAoaS5lLiB0aGUgdG9wLWxldmVsIHRlcm1zIG9mIHRoZSBPV0wgdHJlZSBvbiBkaXNlYXNlLW9udG9sb2d5Lm9yZyBleGNsdWRpbmcgYGRpc2Vhc2VgKS4gSXQgaGFzIHByb3MgYW5kIGNvbnM6CgoqKlBST1M6KioKCjEuIEltcG9ydCBjb3VudHMgYXJlIG9yZ2FuaXplZCBieSByb290LCBtYWtpbmcgdGhpcyBjb3VudCBtb3JlIHJlbGF0YWJsZSB0byB0aGUgZGF0YS4gIAoyLiBUaGlzIGlzIHRoZSBtb3N0IGZsZXhpYmxlIGNvdW50IG9mIGltcG9ydHMgYW5kIHRoZSB0ZXJtcyB3aXRoaW4gaW1wb3J0cy4KCioqQ09OOioqCgotIFRlcm0gY291bnRzIG1heSBub3QgYmUgdW5pcXVlLiBEdXBsaWNhdGlvbiBpcyBhcHBhcmVudCBpbiB0aGUgcmVzdWx0cyBiZWxvdywgcmVzdWx0aW5nIGZyb20gdHdvIHNjZW5hcmlvczoKICAgIDEuIFdoZW4gdGVybXMgaGF2ZSBhIHJlbGF0aW9uc2hpcCB0byBtb3JlIHRoYW4gb25lIGltcG9ydCByb290LiAgCiAgICAyLiBXaGVuIGFuIGltcG9ydCByb290IGhhcyBtb3JlIHRoYW4gb25lIGxhYmVsLiAgCiAgICAtIFRoZXNlIGR1cGxpY2F0aW9ucyBjb3VsZCBwb3RlbnRpYWxseSBiZSBlbGltaW5hdGVkIGJ5IGVuc3VyaW5nIGltcG9ydCByb290cyBoYXZlIGEgc2luZ2xlIGxhYmVsIGFuZCBwb3NzaWJseSBieSBtaWdyYXRpbmcgaW1wb3J0IHRlcm1zIHRvIERJU0RSSVYsIGFzIGFwcHJvcHJpYXRlLgoKCioqTk9URToqKiBJbnN0ZWFkIG9mIHVzaW5nIGFuICJpbXBvcnQiIGNvbHVtbiwgdGhpcyBxdWVyeSBoYXMgYW4gYGltcG9ydF9yb290YCBjb2x1bW4gdGhhdCB1c2VzIHRoZSBsYWJlbHMgZm9yIHJvb3QgdGVybXMgaW5zdGVhZCBvZiB0aGVpciBuYW1lc3BhY2UgaWRlbnRpZmllci4gVGhpcyBpcyBpbiBhbiBlZmZvcnQgdG8gaW1wcm92ZSBjb21tdW5pY2F0aW9uIGFib3V0IGhvdyB0aGlzIGRhdGFzZXQgaXMgZGVyaXZlZCBhbmQgdG8gX2hvcGVmdWxseV8gYXZvaWQgbWlzaW50ZXJwcmV0YXRpb24uCgpgYGB7cn0Kc3lzdGVtLnRpbWUoCiAgICBuc19mbGV4IDwtIGRtJHF1ZXJ5KAogICAgICAgIGZpbGUucGF0aChzcGFycWxfZGlyLCAiaW1wb3J0LWJ5X3Jvb3QtcmVwb3J0LnJxIikKICAgICkgJT4lCiAgICAgICAgdGlkeXI6OnVubmVzdChuYW1lc3BhY2UsIGtlZXBfZW1wdHkgPSBUUlVFKQopCm5zX2ZsZXgKYGBgCgoKIyMjIyBDb21wYXJpc29uIHRvIEdyb3VuZCBUcnV0aAoKT25seSBhIGNvbXBhcmlzb24gYnkgb3JpZ2luYWwgbmFtZXNwYWNlIGlzIHBvc3NpYmxlIGZvciB0aGlzIGNvdW50IHF1ZXJ5IHJlc3VsdCBiZWNhdXNlIHRoZSBpbXBvcnQgaXMgaWRlbnRpZmllZCBpbiBhIGZ1bmRhbWVudGFsbHkgZGlmZmVyZW50IHdheSAoYnkgbGFiZWwgaW5zdGVhZCBvZiBuYW1lc3BhY2UgaWRlbnRpZmllcikuCgpgYGB7cn0KbnNfZmxleCAlPiUKICAgIGRwbHlyOjpncm91cF9ieShuYW1lc3BhY2UpICU+JQogICAgZHBseXI6OnN1bW1hcml6ZShjb3VudCA9IHN1bShjb3VudCkpICU+JQogICAgY29tcGFyZV90cnV0aCgibmFtZXNwYWNlIikKYGBgCgpUaGVyZSBhcmUgYSBudW1iZXIgb2YgZGlmZmVyZW5jZXMgaW4gdGhlc2UgY291bnRzLiBBbGwgdGhlc2UgZGlmZmVyZW5jZXMsIGV4Y2VwdCBpbiB0aGUgY2FzZSBvZiBDSEVCSSwgc2hvdWxkIG5vdCBiZSBwcmVzZW50IGluIHRoaXMgY291bnQgYW5kIGFyZSBkdWUgdG8gdGhlIGZvbGxvd2luZyBkYXRhIGlzc3VlczoKCjEuIFRoZSBkb3VibGVkIENMIGltcG9ydCBjb3VudCBpcyBkdWUgdG8gdGhlIGltcG9ydCByb290IGhhdmluZyB0d28gZGlmZmVyZW50IGByZGZzOmxhYmVsYHMuCiAgICAtIFRoZSBwcmVzZW5jZSBvZiB0d28gbGFiZWxzIGZvciBhIHRlcm0gaXMgYW4gZXJyb3IuIEl0IHdhcyBzb21laG93IGNyZWF0ZWQvYWxsb3dlZCBieSBST0JPVCBmb3IgZG9pZC1tZXJnZWQub3dsIGFuZCBub3QgZm9yIGRvaWQtbWVyZ2VkLm9ibywgd2hlcmUgaXQgd291bGQgaGF2ZSBjYXVzZWQgdGhlIHJlbGVhc2UgdG8gZmFpbC4KICAgIC0gQXMgc2hvd24gYmVsb3csIHRoZXNlIGxhYmVscyBvbmx5IGRpZmZlciBieSB0aGUgcHJlc2VuY2Ugb2YgYSBsYW5ndWFnZSB0YWcuCiAgICAtIFVwZGF0ZXMgbWF5IGJlIG5lZWRlZCB0byBwcmV2ZW50L2ZpeCB0aGlzIHR5cGUgb2YgZXJyb3IgZHVyaW5nIGltcG9ydCBvciByZWxlYXNlLgoKYGBge3J9CmRtJHF1ZXJ5KAoiUFJFRklYIENMOiA8aHR0cDovL3B1cmwub2JvbGlicmFyeS5vcmcvb2JvL0NMXz4KClNFTEVDVCA/aW1wb3J0X3Jvb3QgP2xhYmVsIChMQU5HKD9sYWJlbCkgYXMgP2xhbmcpCldIRVJFIHsKICAgIFZBTFVFUyA/aW1wb3J0X3Jvb3QgeyBDTDowMDAwMDAwIH0KICAgID9pbXBvcnRfcm9vdCByZGZzOmxhYmVsID9sYWJlbAp9IikKYGBgCgoyLiBUaGUgZGlmZmVyZW5jZXMgaW4gU1lNUCBhbmQgR0VOTyBhcmUgZHVlIHRvIGluY2x1c2lvbiBvZiBvYnNvbGV0ZSBjbGFzc2VzIGluIHRoZSBncm91bmQgdHJ1dGggKGEgbGlzdCBpcyBzaG93biBiZWxvdykuCiAgICAtIFRoZSBHRU5PIG9ic29sZXRlIGNsYXNzZXMgbmVlZCB0byBiZSBmaXhlZC4KICAgIC0gVGhlIFNZTVAgb3Nic29sZXRlIGNsYXNzZXMgbGlrZWx5IGp1c3QgbmVlZCB0byBiZSByZW1vdmVkIGJ5IG1ha2luZyBTWU1QIGFuIGluZGlyZWN0IGltcG9ydC4KICAgIC0gKipOT1RFOioqIFRoaXMgaXMgdGhlIG9ubHkgcXVlcnkgdGhhdCBleHBsaWNpdGx5IGZpbHRlcnMgb3V0IGBvd2w6ZGVwcmVjYXRlZGAgY2xhc3Nlcy4gVGhpcyBleHRyYSBzdGVwIGlzIG5lY2Vzc2FyeSB0byBpZGVudGlmeSBpbXBvcnQgcm9vdHMgd2l0aCBTUEFSUUwgd2l0aG91dCBhbHNvIGlkZW50aWZ5aW5nIG9ic29sZXRlIGNsYXNzZXMgKGxpa2Ugcm9vdCB0ZXJtcywgb2Jzb2xldGUgY2xhc3NlcyBkbyBOT1QgaGF2ZSBzdXBlcmNsYXNzZXMpLiBfVGhlIG5lZWQgdG8gZmlsdGVyIG91dCBvYnNvbGV0ZSBjbGFzc2VzIGNvdWxkIGJlIGF2b2lkZWQgYnkgbWFraW5nIGFsbCBpbXBvcnQgcm9vdHMgc3ViY2xhc3NlcyBvZiBgb3dsOlRoaW5nYCAoY3VycmVudGx5IG9ubHkgdHdvIGFyZSkuXwogICAgCmBgYHtyfQpkbSRxdWVyeSgKIlNFTEVDVCAqCldIRVJFIHsKICAgID9jbGFzcyBhIG93bDpDbGFzcyA7CiAgICAgICAgb3dsOmRlcHJlY2F0ZWQgP29ic29sZXRlIC4KICAgIEZJTFRFUihSRUdFWChTVFIoP2NsYXNzKSwgJ0dFTk98U1lNUCcpKQp9IikKYGBgCgoKIyMjIyBFeHBsYWluaW5nIHRoZSBJbmFjY3VyYXRlIENIRUJJIENvdW50CgpUaGUgY291bnQgb2YgQ0hFQkkgdGVybXMgaW4gdGhlIHByZXZpb3VzIHF1ZXJ5IGlzIGdyZWF0ZXIgZHVlIHRvIHRoZSBpbmhlcmVudCBuYXR1cmUgb2YgdGhpcyBhcHByb2FjaC4gU29tZSBDSEVCSSB0ZXJtcyBoYXZlIGEgcmVsYXRpb25zaGlwIHRvIHRoZSBpbXBvcnQgcm9vdHMgb2YgYm90aCBDSEVCSSBhbmQgRElTRFJJVi4gVGhvc2UgdGVybXMgYXJlOgoKYGBge3J9CmNoZWJpX2R1cCA8LSBkbSRxdWVyeSgKICAgIGZpbGUucGF0aChzcGFycWxfZGlyLCAiaW1wb3J0LWNoZWJpX3Jvb3Rfb3ZlcmxhcC1yZXBvcnQucnEiKQopCmNoZWJpX2R1cApgYGAKCkxvb2tpbmcgYXQgdGhlc2UgdGVybXMgaW4gZG9pZC1tZXJnZWQub3dsIHVzaW5nIFByb3RlZ2UgdGhlIGZvbGxvd2luZyBzdWJDbGFzc09mIHJlbGF0aW9uc2hpcHMgYXJlIGFwcGFyZW50OgoKICAgIHJvY3Vyb25pdW0gPiAzYWxwaGEtaHlkcm94eSBzdGVyb2lkID4gc2Vjb25kYXJ5IGFsY29ob2wgPiBhbGNvaG9sCiAgICAKQW5kICdhbGNvaG9sJyBoYXMgdHdvIHBhcmVudHMgJ29yZ2FuaWMgaHlkcm94eSBjb21wb3VuZCcgZnJvbSBDSEVCSSBhbmQgJ2FsY29ob2xpYyBiZXZlcmFnZScgZnJvbSBGT09ET04gKGluIERJU0RSSVYpLiBJdCBpcyBkdWUgdG8gdGhpcyBtdWx0aS1wYXJlbnRhZ2UgYXQgdGhpcyBwb2ludCB0aGF0IHRoZSBkdXBsaWNhdGlvbiBvY2N1cnMuCgpUaGlzIHR5cGUgb2YgZHVwbGljYXRpb24gY291bGQgZ2V0IG1vcmUgY29tcGxpY2F0ZWQgYXMgbW9yZSBpbXBvcnRzIGFyZSB1c2VkIGluIHRoZSBETyBidXQgaXQgbWlnaHQgYWxzbyBiZSByZW1vdmVkIGlmIHRlcm1zIG1pZ3JhdGUgZnJvbSBkaXJlY3QgaW1wb3J0IHRvIHRoZSBETyB0byBpbmRpcmVjdCBpbXBvcnQgdmlhIERJU0RSSVYuCgoKIyMgUGVyc3BlY3RpdmUgJiBSZWNvbW1lbmRhdGlvbnMKCldoaWxlIHRoZSBsYXN0IGFuZCBtb3N0IGZsZXhpYmxlIGNvdW50IG1pZ2h0IGJlIGNvbnNpZGVyZWQgImluYWNjdXJhdGUiIGJlY2F1c2UgQ0hFQkkgdGVybXMgYXJlIGNvdW50ZWQgbXVsdGlwbGUgdGltZXMsIHRob3NlIHRlcm1zIF9hcmVfIGluIGZhY3QgaW1wb3J0ZWQgaW4gYm90aCBDSEVCSSBhbmQgRElTRFJJVi4gV2l0aCB0aGF0IGNvbnRleHQsIGl0IGlzIGFsc28gcG9zc2libGUgdG8gZGVzY3JpYmUgdGhhdCBjb3VudCBhcyB0aGUgb25seSB0cnVseSBhY2N1cmF0ZSBvbmUuCgpXaGljaCBjb3VudCB0byB1c2Ugd2lsbCBkZXBlbmQgb24gdGhlIHB1cnBvc2UgZm9yIHRoZSBjb3VudC4gKipNeSByZWNvbW1lbmRhdGlvbioqIGJhc2VkIG9uIHB1cnBvc2UgaXMgYXMgZm9sbG93czoKCjEuIEdvYWw6IENvdW50IGFsbCB1bmlxdWUgdGVybXMgYnkgbmFtZXNwYWNlIC0tPiBVU0UgW0FsbCBJbXBvcnRzXSgjYWxsLWltcG9ydHMpIGNvdW50LgoyLiBHb2FsOiBJZGVudGlmeSBpbXBvcnRzIGluIGNvbnRleHQgLS0+IFVTRSBbU3BlY2lhbCBIYW5kbGluZyBieSBJbXBvcnQgUm9vdF0oI3NwZWNpYWwtaGFuZGxpbmctYnktaW1wb3J0LXJvb3QpIGNvdW50Lgo=</div>
 
 
 </div>

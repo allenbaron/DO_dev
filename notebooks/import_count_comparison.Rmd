@@ -75,9 +75,7 @@ cli_count
 ```
 
 
-# SPARQL counts
-
-## Property Counts -- NEW!!
+# SPARQL Property Counts -- NEW!!
 
 Properties used in DO are not currently counted making this an entirely new report. They can be considered a type of import, particularly with regard to RO and IAO.
 
@@ -89,21 +87,25 @@ prop
 ```
 
 
-### Comparison to Ground Truth
+## Comparison to Ground Truth
 
-The data shown has been pivoted to make comparison with the "ground truth" counts easier.
+Comparison with the "ground truth" counts demonstrates that this query is accurate.
+
+NOTE: The difference between the ground truth and the property query for "doid" is due to the inclusion of "doid:chebi" and "doid:sequence" _classes_ in the ground truth, which are not annotation or object properties.
 
 ```{r}
 compare_truth(prop, "import") %>%
     dplyr::select(-type)
 ```
 
-The difference between the ground truth and the property query for "doid" is not an error but due to the inclusion of "doid:chebi" and "doid:sequence" classes in the ground truth, which are not annotation or object properties.
 
+# SPARQL Class Counts
 
-## Original Count Query -- Corrected
+## _Corrected_ Count Query 
 
-This a corrected version of the current import-report.rq SPARQL query that counts _only_ classes of specified imports.
+This a corrected version of the current import-report.rq SPARQL query that counts _only_ classes of specified imports, instead of all triples.
+
+A downside of this report is the need to manually add imports to be counted. The output format (in columns) may also be considered a downside.
 
 ```{r}
 system.time(
@@ -112,9 +114,10 @@ system.time(
 corrected
 ```
 
+
 ### Comparison to Ground Truth
 
-The data shown has been pivoted to make comparison with the "ground truth" counts easier.
+The data shown has been pivoted to make comparison with the "ground truth" counts easier. All counts appear accurate.
 
 ```{r}
 corrected_long <- corrected %>%
@@ -131,7 +134,11 @@ compare_truth(corrected_long, "import")
 
 ## All Imports
 
-This version includes a count of all classes imported by namespace. It provides a flexible (including all namespaces, not just those specified), non-duplicated count (like the ground truth and corrected query) and ignores the source of the import (meaning CHEBI imports of DISDRIV are just counted as CHEBI).
+This version includes a count equivalent to the corrected count above but it includes _all_ imports without the need to specify them individually (no UNION statements), making it more flexible.
+
+As new imports are added they will automatically be counted. Those included in this report and not the corrected report above are listed in the comparison section below.
+
+Also, there is no disinction between direct and indirect imports. This is primarily relevant for DISDRIV whose subclasses from other namespaces are counted as in that namespace and are not affiliated in any way with DISDRIV (meaning CHEBI imports of DISDRIV are just counted as CHEBI).
 
 ```{r}
 system.time(
@@ -143,12 +150,14 @@ def
 
 ### Comparison to Ground Truth
 
+This count appears accurate.
+
 ```{r}
 compare_truth(def, "import")
 ```
 
 
-### Comparison to Current (Corrected) Report
+### Comparison to Corrected Report
 
 This report automatically identifies all imports by excluding DOID classes and counting all remaining classes by namespace. Unlike the current report, this query would automatically identify and count new imports.
 
@@ -158,12 +167,12 @@ Currently, this report identifies the following imports that are NOT counted by 
 
 ## Sub-divided Import Counts
 
-The two remaining count queries handle classes differently when those classes are subclasses of a different namespace. This helps identify more clearly how terms are imported into the DO, whether directly or indirectly, and has particular usefulness with regard to DISDRIV and it's varied subclasses.
+The remaining count queries handle utilize a different approach, counting classes differently when those classes are subclasses of a different namespace (CHEBI subclasses imported via DISDRIV is counted differently than CHEBI subclasses imported directly with CHEBI). This approach makes how terms are imported into the DO clearer, whether directly or indirectly, and may have particular usefulness with regard to DISDRIV and it's varied subclasses.
 
 
 ### Special Handling of DISDRIV Only
 
-This version is similar to the count of all import classes above but carves out a special exception for DISDRIV and all subclasses in DISDRIV. If a class is in DISDRIV it is NOT counted elsewhere and is ONLY counted as a subclass of DISDRIV. This retains the unique count of classes by namespace but identifies those classes brought in by DISDRIV.
+This version is similar to the count of all import classes above but carves out an exception specifically for DISDRIV and all subclasses in DISDRIV. If a class is in DISDRIV it is NOT counted elsewhere and is ONLY counted as a subclass of DISDRIV. This retains the unique count of classes by namespace but identifies those classes brought in by DISDRIV.
 
 ```{r}
 system.time(
@@ -180,9 +189,10 @@ Here it's clear that ExO, FoodOn, and NCIT are ONLY indirectly imported into the
 
 #### Comparison to Ground Truth
 
-Here are two different versions of comparison to the "ground truth". 
+Two comparisons to the "ground truth" are included here, showing 1) the count is accurate and 2) how the count differs from previous report queries.
 
-#### Comparison by Original Namespace
+
+##### Comparison by Original Namespace
 
 This comparison shows that the total class counts for each namespace are the same as the ground truth. The comparison is accomplished by aggregating all imports, including DISDRIV subclasses, with their original namespace.
 
@@ -207,7 +217,7 @@ disdriv %>%
 ```
 
 
-#### Comparison by Parent Import
+##### Comparison by Parent Import
 
 This comparison shows how this count strategy, handling DISDRIV specially, alters the counts. Here all subclasses of DISDRIV are counted with DISDRIV irrespective of their original namespace.
 
@@ -217,25 +227,32 @@ disdriv %>%
     dplyr::summarize(count = sum(count)) %>%
     compare_truth("import")
 ```
-NOTE that ExO and other namespaces imported via DISDRIV no longer appear in this list.
+NOTE that ExO and other namespaces imported via DISDRIV no longer appear in this list as they are included as DISDRIV classes.
+
+
+#### Note on Alternate Option
+
+Counting all children of DISDRIV as part of the DISDRIV import without identifying their original namespaces could be an alternate count strategy.
 
 
 ### Special Handling by Import Root
 
-This version is designed to count all terms based on their relationship to import roots. It has a number of pros and at least one con:
+This version is designed to count all terms based on their relationship to import roots (i.e. the top-level terms of the OWL tree on disease-ontology.org excluding `disease`). It has pros and cons:
 
-PROS:
-1. Import counts are organized by root, meaning the terms of the OWL tree on disease-ontology.org with the `disease` branch excluded.
-2. Most flexible count of imports and the terms within imports.
+**PROS:**
 
-CONS:
-1. Term counts may not be unique when they have relationship to more than one import root.
-2. Term counts may not be duplicated when an import root has more than one label.
-    - Technically, having more than one label is an error in OBO ontologies but it is not yet prevented/fixed during import (there is an example below).
+1. Import counts are organized by root, making this count more relatable to the data.  
+2. This is the most flexible count of imports and the terms within imports.
 
-It is possible for a term to have a relationship to more than one import root even if the term itself is only in one import. This is apparent with CHEBI terms which are in DISDRIV (shown below).
+**CON:**
 
-Note: Instead of using the "import" column, this query uses the labels for root terms (`import_root` column) in an effort to improve communication about how it derived and avoid misinterpretation.
+- Term counts may not be unique. Duplication is apparent in the results below, resulting from two scenarios:
+    1. When terms have a relationship to more than one import root.  
+    2. When an import root has more than one label.  
+    - These duplications could potentially be eliminated by ensuring import roots have a single label and possibly by migrating import terms to DISDRIV, as appropriate.
+
+
+**NOTE:** Instead of using an "import" column, this query has an `import_root` column that uses the labels for root terms instead of their namespace identifier. This is in an effort to improve communication about how this dataset is derived and to _hopefully_ avoid misinterpretation.
 
 ```{r}
 system.time(
@@ -250,7 +267,7 @@ ns_flex
 
 #### Comparison to Ground Truth
 
-Only the comparison by original namespace is possible for this count query result because the import is identified in a fundamentally different way.
+Only a comparison by original namespace is possible for this count query result because the import is identified in a fundamentally different way (by label instead of namespace identifier).
 
 ```{r}
 ns_flex %>%
@@ -259,10 +276,12 @@ ns_flex %>%
     compare_truth("namespace")
 ```
 
-Only the CHEBI count differs because of the way these counts are derived. All other differences should not be present in this count and are due to the following data issues:
+There are a number of differences in these counts. All these differences, except in the case of CHEBI, should not be present in this count and are due to the following data issues:
 
 1. The doubled CL import count is due to the import root having two different `rdfs:label`s.
-    - This technically should not be allowed but there is currently no way to prevent/fix it during import. Note that while this duplication is obvious because it duplicates _all terms_, more complex duplication might occur if a term within an import tree had multiple labels.
+    - The presence of two labels for a term is an error. It was somehow created/allowed by ROBOT for doid-merged.owl and not for doid-merged.obo, where it would have caused the release to fail.
+    - As shown below, these labels only differ by the presence of a language tag.
+    - Updates may be needed to prevent/fix this type of error during import or release.
 
 ```{r}
 dm$query(
@@ -275,8 +294,10 @@ WHERE {
 }")
 ```
 
-2. The differences in SYMP and GENO are due to inclusion of obsolete classes in the ground truth.
-    - This is the only query that explicitly filters out `owl:deprecated` classes, which is necessary to identify import roots (like root terms, obsolete classes do NOT have superclasses).
+2. The differences in SYMP and GENO are due to inclusion of obsolete classes in the ground truth (a list is shown below).
+    - The GENO obsolete classes need to be fixed.
+    - The SYMP osbsolete classes likely just need to be removed by making SYMP an indirect import.
+    - **NOTE:** This is the only query that explicitly filters out `owl:deprecated` classes. This extra step is necessary to identify import roots with SPARQL without also identifying obsolete classes (like root terms, obsolete classes do NOT have superclasses). _The need to filter out obsolete classes could be avoided by making all import roots subclasses of `owl:Thing` (currently only two are)._
     
 ```{r}
 dm$query(
@@ -289,9 +310,9 @@ WHERE {
 ```
 
 
-#### Exploring the CHEBI Count
+#### Explaining the Inaccurate CHEBI Count
 
-The count of CHEBI terms is greater due to the inherent nature of this approach. The CHEBI terms that have relationships to the import roots of both CHEBI and DISDRIV are:
+The count of CHEBI terms in the previous query is greater due to the inherent nature of this approach. Some CHEBI terms have a relationship to the import roots of both CHEBI and DISDRIV. Those terms are:
 
 ```{r}
 chebi_dup <- dm$query(
@@ -304,11 +325,16 @@ Looking at these terms in doid-merged.owl using Protege the following subClassOf
 
     rocuronium > 3alpha-hydroxy steroid > secondary alcohol > alcohol
     
-'alcohol' has two parents 'organic hydroxy compound' from CHEBI and 'alcoholic beverage' from FOODON (in DISDRIV). It is at this point where the duplication occurs.
+And 'alcohol' has two parents 'organic hydroxy compound' from CHEBI and 'alcoholic beverage' from FOODON (in DISDRIV). It is due to this multi-parentage at this point that the duplication occurs.
 
-This duplication could get more complicated as more imports are used in the DO but it might also be removed if terms migrate from direct import to the DO to indirect import via DISDRIV.
+This type of duplication could get more complicated as more imports are used in the DO but it might also be removed if terms migrate from direct import to the DO to indirect import via DISDRIV.
 
 
-#### Summary
+## Perspective & Recommendations
 
-This query shows everywhere a term appears so counts will not be unique.
+While the last and most flexible count might be considered "inaccurate" because CHEBI terms are counted multiple times, those terms _are_ in fact imported in both CHEBI and DISDRIV. With that context, it is also possible to describe that count as the only truly accurate one.
+
+Which count to use will depend on the purpose for the count. **My recommendation** based on purpose is as follows:
+
+1. Goal: Count all unique terms by namespace --> USE [All Imports](#all-imports) count.
+2. Goal: Identify imports in context --> USE [Special Handling by Import Root](#special-handling-by-import-root) count.
