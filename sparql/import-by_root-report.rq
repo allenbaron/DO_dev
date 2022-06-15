@@ -1,19 +1,16 @@
-# Return a count of each import by root (auto-identified by query)
+# Return a count of each import by root (auto-identified)
 #
 # NOTES:
 # - QUERY against doid-merged.owl
-# - Class counts are NOT unique (e.g. CHEBI duplicates in DISDRIV & chebi
-#	are both counted).
+# - Class counts are unique within an import branch but NOT a full namespace
+#(e.g. CHEBI duplicates in DISDRIV & chebi are counted in each).
 # - Exact count duplicates may appear for roots with >1 rdfs:label
-# - Equivalent to import-by_root_specified-report.rq, except for ORDER
-# - ~ 15s execution
 
 PREFIX rdfs: <http://www.w3.org/2000/01/rdf-schema#>
 PREFIX owl: <http://www.w3.org/2002/07/owl#>
 PREFIX obo: <http://purl.obolibrary.org/obo/>
 PREFIX oboInOwl: <http://www.geneontology.org/formats/oboInOwl#>
 
-# DISTINCT removes duplicates caused by multiple rdfs:labelled roots
 SELECT ?import_root ?namespace (COUNT(DISTINCT ?class) as ?count)
 WHERE {
 	{
@@ -21,7 +18,7 @@ WHERE {
 		SELECT ?root
 		WHERE {
 			{
-				# root has no superclass
+				# root has no superclass (exclusion of deprecated required)
 				?root a owl:Class .
 				FILTER NOT EXISTS { ?root rdfs:subClassOf ?any . }
 				FILTER(!isBlank(?root) && !CONTAINS(STR(?root), "DOID"))
