@@ -1,0 +1,193 @@
+---
+title: "DO Data Patterns"
+output: 
+    html_notebook:
+        toc: true
+        toc_float: true
+        code_folding: hide
+        df_print: paged
+---
+
+# Purpose
+
+To identify the patterns used in the Human Disease Ontology and to explore somewhat how they have changed over time. _For information regarding definitions or data types, see the corresponding R notebooks._
+
+```{r setup, include = FALSE}
+library(tidyverse)
+library(DO.utils)
+```
+
+```{r init_repo}
+r <- DO.utils::DOrepo("~/Documents/Ontologies/HumanDiseaseOntology")
+```
+
+
+# Synonym Patterns
+
+```{r}
+q <- '# Return a list of all non-obsolete synonyms with metadata
+
+PREFIX rdfs: <http://www.w3.org/2000/01/rdf-schema#>
+PREFIX owl: <http://www.w3.org/2002/07/owl#>
+PREFIX oboInOwl: <http://www.geneontology.org/formats/oboInOwl#>
+
+SELECT ?id ?label ?syn_type ?synonym
+WHERE {
+    ?class a owl:Class ;
+        ?pred ?synonym .
+    FILTER(CONTAINS(STR(?class), "DOID"))
+    FILTER(REGEX(STR(?pred), "[Ss]ynonym"))
+    
+	OPTIONAL { ?class oboInOwl:id ?id . }
+    OPTIONAL { ?class rdfs:label ?label . }
+    
+    BIND(STRAFTER(STR(?pred), "oboInOwl#") AS ?syn_type)
+    FILTER NOT EXISTS { ?class owl:deprecated ?obsolete . }
+}'
+
+syn <- r$doid$query(q) %>%
+    tibble::as_tibble()
+```
+
+```{r}
+q <- '# Return a list of all non-obsolete cross-references with metadata
+
+PREFIX rdfs: <http://www.w3.org/2000/01/rdf-schema#>
+PREFIX owl: <http://www.w3.org/2002/07/owl#>
+PREFIX oboInOwl: <http://www.geneontology.org/formats/oboInOwl#>
+
+SELECT ?id ?label ?xref
+WHERE {
+    ?class a owl:Class ;
+        oboInOwl:hasDbXref ?xref .
+    FILTER(CONTAINS(STR(?class), "DOID"))
+    
+	OPTIONAL { ?class oboInOwl:id ?id . }
+    OPTIONAL { ?class rdfs:label ?label . }
+
+    FILTER NOT EXISTS { ?class owl:deprecated ?obsolete . }
+}'
+
+xref <- r$doid$query(q) %>%
+    tibble::as_tibble()
+```
+
+
+## OMIM
+
+```{r}
+omim_syn <- syn %>%
+    dplyr::filter(
+        id %in% dplyr::filter(xref, stringr::str_detect(xref, "OMIM"))$id
+    )
+```
+
+1. How many synonyms for diseases with OMIM xrefs use direct OMIM patterns?
+
+Omim patterns may include:
+
+- fully upper-case, may have commas and/or end with a number
+- upper-case abbreviations
+
+```{r}
+is_letter <- function(x) {
+    x %in% c(letters, LETTERS)
+}
+
+has_num <- function(x) {
+    stringr::str_detect(x, "[0-9]")
+}
+
+is_roman_numeral <- function(x, .max = 100) {
+    x %in% as.character(as.roman(1:.max))
+}
+
+is_short <- function(x, n_short = 4) {
+    stringr::str_length(x) <= n_short
+}
+
+ignore <- function(x) {
+    is_letter(x) | has_num(x) | is_roman_numeral(x) | is_short(x)
+}
+
+has_space <- function(x) {
+    stringr::str_detect(x, " ")
+}
+
+has_dict_word <- function(x) {
+    tokens <- stringr::str_split(x, " ")
+    token_df <- tibble::tibble(
+        idx = vctrs::vec_rep_each(seq_along(tokens), lengths(tokens)),
+        token = purrr::flatten_chr(tokens),
+        ignore = ignore(token),
+        is_word = hunspell::hunspell_check(token),
+        has_word = is_word & !ignore
+    )
+    
+    token_df %>%
+        dplyr::group_by(idx) %>%
+        dplyr::summarize(has_word = any(has_word)) %>%
+        .$has_word
+}
+
+is_abbreviation <- function(x) {
+    stringr::str_detect(x,"^[A-Z0-9]{1,8}[ +/\\-]?([A-Z0-9]{1,8})?$") &
+        !(has_dict_word(x) & has_space(x))
+}
+```
+
+```{r}
+omim_syn <- omim_syn %>%
+    dplyr::mutate(
+        synonym = stringr::str_squish(synonym),
+        comma = stringr::str_count(synonym, ","),
+        abbrev = is_abbreviation(synonym),
+        uppercase = stringr::str_detect(synonym, "[A-Z]+") &
+            !stringr::str_detect(synonym, "[a-z]+")
+    )
+
+dplyr::count(omim_syn, uppercase, abbrev)
+```
+
+Very few synonyms are uppercase that are not abbreviations. I guess that should be avoided.
+
+What about arranging things with commas?
+
+```{r}
+dplyr::count(omim_syn, comma) %>%
+    dplyr::mutate(pct = round(n / sum(n) * 100, 1))
+```
+
+Commas are VERY uncommon in synonyms for diseases with OMIM xrefs and where they are found they are generally limited in quantity. Looking more closely at individual records, multiple commas first...
+
+```{r}
+dplyr::filter(omim_syn, comma > 0) %>%
+    dplyr::select(synonym, comma, id) %>%
+    dplyr::arrange(dplyr::desc(comma))
+```
+
+How has the inclusion of commas changed over time?
+
+```{r}
+omim_w_time <- omim_syn %>%
+    dplyr::mutate(
+        time = dplyr::row_number(
+            as.integer(stringr::str_remove(id, ".*:"))
+        )
+    )
+
+ggplot(omim_w_time, aes(x = time, y = comma)) +
+    geom_jitter()
+```
+
+Including the synonyms without commas really emphasizes that most don't have them but makes it hard to see if changes have occurred.
+
+```{r}
+omim_w_time %>%
+    dplyr::filter(comma > 0) %>%
+    ggplot(aes(x = time, y = comma)) +
+    geom_jitter() +
+    geom_smooth(method = "loess", formula = "y ~ x")
+```
+
+It doesn't look like there's much change. It must be that synonyms with commas are generally NOT added but added as needed.

@@ -1,0 +1,137 @@
+---
+title: "DO data types"
+output: 
+    html_notebook:
+        toc: true
+        toc_float: true
+        code_folding: hide
+        df_print: paged
+---
+
+# Purpose
+
+To identify the most appropriate format for various data in the Human Disease Ontology. _For information regarding definitions, see the corresponding R notebook._
+
+```{r setup, include = FALSE}
+library(tidyverse)
+library(DO.utils)
+```
+
+```{r init_repo}
+r <- DO.utils::DOrepo("~/Documents/Ontologies/HumanDiseaseOntology")
+```
+
+
+# Synonyms
+
+```{r}
+q <- '# Return a list of all non-obsolete synonyms with metadata
+
+PREFIX rdfs: <http://www.w3.org/2000/01/rdf-schema#>
+PREFIX owl: <http://www.w3.org/2002/07/owl#>
+PREFIX oboInOwl: <http://www.geneontology.org/formats/oboInOwl#>
+
+SELECT ?id ?label ?syn_type ?synonym ?lang ?data_type
+WHERE {
+    ?class a owl:Class ;
+        ?pred ?synonym .
+    FILTER(CONTAINS(STR(?class), "DOID"))
+    FILTER(REGEX(STR(?pred), "[Ss]ynonym"))
+    
+	OPTIONAL { ?class oboInOwl:id ?id . }
+    OPTIONAL { ?class rdfs:label ?label . }
+    
+    BIND(STRAFTER(STR(?pred), "oboInOwl#") AS ?syn_type)
+    BIND(LANG(?synonym) AS ?lang)
+    BIND(DATATYPE(?synonym) AS ?data_type)
+    FILTER NOT EXISTS { ?class owl:deprecated ?obsolete . }
+}'
+
+syn <- r$doid$query(q) %>%
+    tibble::as_tibble()
+```
+
+
+1. Are synonyms commonly formatted with a language tag (`@en`) or RDF data type (`xsd:string`)?
+
+Only one of language tag/data type can be specified for a literal but language tag always implies the string data type. The ratio of synonyms with language tags is then the indicator of which is more common.
+
+```{r}
+dplyr::count(syn, lang)
+dplyr::count(syn, data_type)
+```
+
+**Most synonyms have the English language tag (`@en`).**
+
+
+2. What synonyms types are included in DO and how common is each?
+
+```{r}
+dplyr::count(syn, syn_type, sort = TRUE)
+```
+
+Most are exact but a number of types are used.
+
+
+# Xref
+
+```{r}
+q <- '# Return a list of all non-obsolete cross-references with metadata
+
+PREFIX rdfs: <http://www.w3.org/2000/01/rdf-schema#>
+PREFIX owl: <http://www.w3.org/2002/07/owl#>
+PREFIX oboInOwl: <http://www.geneontology.org/formats/oboInOwl#>
+
+SELECT ?id ?label ?xref ?lang ?data_type
+WHERE {
+    ?class a owl:Class ;
+        oboInOwl:hasDbXref ?xref .
+    FILTER(CONTAINS(STR(?class), "DOID"))
+    
+	OPTIONAL { ?class oboInOwl:id ?id . }
+    OPTIONAL { ?class rdfs:label ?label . }
+    
+    BIND(LANG(?synonym) AS ?lang)
+    BIND(DATATYPE(?synonym) AS ?data_type)
+    FILTER NOT EXISTS { ?class owl:deprecated ?obsolete . }
+}'
+
+xref <- r$doid$query(q) %>%
+    tibble::as_tibble() %>%
+    tidyr::unnest(lang, keep_empty = TRUE) %>%
+    tidyr::unnest(data_type, keep_empty = TRUE)
+```
+
+
+1. Are xrefs commonly formatted with a language tag (`@en`) or RDF data type (`xsd:string`)?
+
+```{r}
+dplyr::count(xref, lang)
+dplyr::count(xref, data_type)
+```
+
+Neither of those exist in the doid.owl file. This might be due to the use of ROBOT to create doid.owl.
+
+
+2. For the sake of editing purposes, how are these handled in the doid-edit.owl file?
+
+```{r}
+de <- DO.utils:::read_doid_edit("~/Documents/Ontologies/HumanDiseaseOntology")
+de_xref <- tibble(
+    raw = de[
+        stringr::str_detect(de, "hasDbXref") & !stringr::str_detect(de,"IAO") &
+            stringr::str_detect(de, "DOID")
+    ],
+    data_type = dplyr::case_when(
+        stringr::str_detect(raw, "@en") ~ "lang:en",
+        stringr::str_detect(raw, "xsd:string") ~ "xsd:string",
+        TRUE ~ NA_character_
+    )
+)
+```
+
+```{r}
+dplyr::count(de_xref, data_type)
+```
+
+Overwhelmingly, use `xsd:string`.
