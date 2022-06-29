@@ -1,7 +1,7 @@
 ---
 title: "Evaluation of Definition Structure"
 author: "J. Allen Baron"
-date: 2022-04-06
+date: "Created: 2022-04-06<br style='line-height: 1.5;'>Updated: 2022-06-28"
 output: 
     html_notebook:
         toc: true
@@ -524,6 +524,144 @@ g3 %>%
 ```
 
 That apparently is not a very useful exercise.
+
+
+## Genetic Information
+
+```{r include = FALSE}
+# simple-ish function for lengthening a column by splitting
+inflate_col_ <- function(df, col, sep = " | ", fixed = TRUE,
+                         values_drop_na = TRUE) {
+    col_nm <- rlang::as_string(rlang::ensym(col))
+    n_max <- max(
+        stringr::str_count(df[[col_nm]], stringr::coll(sep)),
+        na.rm = TRUE
+    ) + 1
+    
+    sep_esc <- if (fixed) paste0("\\Q", sep, "\\E") else sep
+    
+    df_wider <- tidyr::separate(
+        df,
+        {{ col }},
+        into = paste0("..inflate", 1:n_max),
+        sep = sep_esc,
+        fill = "right"
+    )
+    df_inflated <- tidyr::pivot_longer(
+        df_wider,
+        cols = tidyselect::starts_with("..inflate"),
+        names_to = "..inflate_delete",
+        values_to = col_nm,
+        values_drop_na = values_drop_na
+    ) %>%
+        dplyr::select(-..inflate_delete)
+    df_inflated
+}
+```
+
+Not all "has_material_basis_in" uses in definitions refer to a genetic basis and no one term or pattern exists to identify all of these. Most, if not all, can be matched with a search for words like mutation, gene, chromosome, etc. The breakdown of matches used to identify genetic "has_material_basis_in" definitions is as follows (with some definitions having multiple matches):
+
+
+```{r}
+tmp <- def %>%
+    dplyr::select(id:def) %>%
+    dplyr::mutate(
+        genetic_basis = stringr::str_extract_all(
+            def,
+            "(mut|vari)ation|chromosom|inherit| gene |[0-9]+[pq][0-9]+"
+        ) %>%
+            purrr::map_chr(
+                ~ stringr::str_replace_all(.x, "[0-9]+[pq][0-9]+", "chrom_loc") %>%
+                    unique() %>%
+                    sort() %>%
+                    DO.utils::vctr_to_string(delim = " | ")
+            )
+    ) %>%
+    dplyr::filter(
+        stringr::str_detect(def, "material[ _]basis[ _]"),
+        genetic_basis != ""
+    )
+
+tmp %>%
+    dplyr::count(genetic_basis) %>%
+    inflate_col_(genetic_basis) %>%
+    dplyr::count(genetic_basis, wt = n, sort = TRUE)
+```
+
+Combined, those patterns identify `r format(dplyr::n_distinct(tmp$id), big.mark = ",")` (of `r format(dplyr::n_distinct(def$id), big.mark = ",")`) definitions with genetic bases (~ `r round(dplyr::n_distinct(tmp$id) / dplyr::n_distinct(def$id) * 100, 1)`%).
+
+The most common patterns are as follows:
+
+```{r}
+hmbi <- tmp %>%
+    dplyr::mutate(
+        hmbi = stringr::str_remove(def, ".*basis[ _]in[ _]+"),
+        # replace gene symbols with placeholder
+        hmbi = stringr::str_replace_all(
+            hmbi,
+            c(" [A-Z0-9\\-]{3,}([ .,])" = " GENE_SYM\\1",
+              " [X0-9]+[pq][0-9.]*([ .,])" = " CHROM_SYM\\1")
+        )
+    )
+```
+
+
+```{r}
+words <- hmbi %>%
+    dplyr::select(label, hmbi) %>%
+    tidytext::unnest_tokens(hmbi, output = "words") %>%
+    dplyr::group_by(label) %>%
+    dplyr::mutate(pos = dplyr::row_number()) %>%
+    dplyr::ungroup()
+
+words %>%
+    dplyr::group_by(pos, words) %>%
+    dplyr::summarize(n = length(words)) %>%
+    dplyr::mutate(
+        rank = dplyr::row_number(dplyr::desc(n)),
+        words = paste0(words, " (", n, ")")
+    ) %>%
+    dplyr::ungroup() %>%
+    dplyr::arrange(pos, rank) %>%
+    dplyr::select(-n) %>%
+    tidyr::pivot_wider(id_cols = rank, names_from = pos, values_from = words)
+```
+
+
+```{r}
+g3 <- hmbi %>%
+    dplyr::select(label, hmbi) %>%
+    tidytext::unnest_ngrams(hmbi, n = 3, output = "words", to_lower = FALSE) %>%
+    dplyr::group_by(label) %>%
+    dplyr::mutate(pos = dplyr::row_number()) %>%
+    dplyr::ungroup()
+
+dplyr::count(g3, words, sort = TRUE)
+```
+The major pattern BY FAR is probably "has_material_basis_in mutation in the <GENE SYMBOL> gene on chromosome <CYTOGENETIC LOCATION>." It's challenging to know how often gene names are included but it might be possible to measure how often the gene symbol appears without the gene name.
+
+```{r}
+hmbi %>%
+    dplyr::mutate(
+        gene_phrase = stringr::str_extract(
+            hmbi,
+            "([A-Za-z0-9._\\-,]+ ){0,3}genes?( [A-Za-z0-9._\\-,]+){0,3}"
+        )
+    ) %>%
+    dplyr::count(gene_phrase, sort = TRUE) %>%
+    dplyr::mutate(pct = round(n / sum(n) * 100, 2))
+```
+```{r}
+gene_id <- hmbi %>%
+    dplyr::mutate(
+        gene_id = stringr::str_extract(hmbi,"the.*gene|gene for .*")
+    ) %>%
+    dplyr::count(gene_id, sort = TRUE) %>%
+    dplyr::mutate(pct = round(n / sum(n) * 100, 2))
+
+gene_id
+```
+It seems ~ `r sum(gene_id$pct[c(1, 4:9)])` of all genetic has_material_basis_in statements have only the gene symbol (and not any type of name). While that's not a definitive majority, it is probably the predominant pattern, as the remaining ~ 50% is more variable.
 
 
 # Review and Fix?
