@@ -1,0 +1,15 @@
+# Return terms imported in both DISDRIV & CHEBI
+
+PREFIX rdfs: <http://www.w3.org/2000/01/rdf-schema#>
+PREFIX owl: <http://www.w3.org/2002/07/owl#>
+PREFIX obo: <http://purl.obolibrary.org/obo/>
+PREFIX oboInOwl: <http://www.geneontology.org/formats/oboInOwl#>
+PREFIX doid: <http://purl.obolibrary.org/obo/doid#>
+
+SELECT ?class ?label
+WHERE {
+	?class a owl:Class ;
+		rdfs:subClassOf* doid:chebi ;
+		rdfs:subClassOf* obo:DISDRIV_0000000 ;
+		rdfs:label ?label .
+}

@@ -1,0 +1,44 @@
+# Return a count of each import by root (manually specified)
+#
+# NOTES:
+# - QUERY against doid-merged.owl
+# - Class counts are NOT unique (e.g. CHEBI duplicates in DISDRIV & chebi
+#	are both counted).
+# - Exact count duplicates may appear for roots with >1 rdfs:label
+# - Equivalent to import-by_root_auto-report.rq, except for ORDER
+# - ~ 13s execution
+
+PREFIX rdfs: <http://www.w3.org/2000/01/rdf-schema#>
+PREFIX owl: <http://www.w3.org/2002/07/owl#>
+PREFIX obo: <http://purl.obolibrary.org/obo/>
+PREFIX oboInOwl: <http://www.geneontology.org/formats/oboInOwl#>
+
+SELECT ?import_root ?namespace (COUNT(?class) AS ?count)
+WHERE {
+    # specify imports & order
+    VALUES (?root ?order) {
+        (obo:UBERON_0001062 1)  # anatomy (anatomical entity)
+        (obo:CL_0000000 2)      # cell
+        (doid:chebi 3)          # chebi -- root not counted
+        (obo:DISDRIV_0000000 4) # disease driver
+        (obo:ECO_0000000 5)     # evidence
+        (obo:FOODON_00002403 6) # food material
+        (obo:GENO_0000141 7)    # inheritance pattern
+        (obo:NCBITaxon_1 8)     # ncbitaxon
+        (obo:OMIM_000000 9)     # omim_susceptibility
+        (obo:HP_0003674 10)       # onset
+        (obo:UPHENO_0001001 11) # phenotype
+        (doid:sequence 12)      # sequence -- root not counted
+        (obo:SYMP_0000462 13)   # symptom
+        (obo:TRANS_0000000 14)  # transmission process
+    }
+
+    ?root rdfs:label ?import_root .
+
+    ?class a owl:Class ;
+        rdfs:subClassOf* ?root .
+    FILTER(!isBlank(?class) && !CONTAINS(STR(?class), "doid"))
+    BIND(STRBEFORE(STRAFTER(STR(?class), "obo/"), "_") AS ?namespace)
+}
+GROUP BY ?import_root ?namespace
+ORDER BY ?order

@@ -1,0 +1,340 @@
+---
+title: "Comparison of Various Import Counts"
+author: "J. Allen Baron"
+date: 2022-06-13
+output:
+    html_notebook:
+        toc: true
+        toc_float: true
+        number_sections: true
+        code_folding: "hide"
+        theme: "journal"
+---
+
+# Background and Purpose
+
+The current import count used during release of the Disease Ontology is incorrect. It counts the total triples imported from a set of specified resources. It's also slow, using lots of UNION statements.
+
+This notebook presents import counts calculated in a variety of manners to aid the decision in how best to present these. The most basic count is a simple correction
+of the current import report found in the HumanDiseaseOntology repository at src/sparql/build/import-report.rq.
+
+
+# Data Source
+
+All of these import count queries are executed against the [doid-merged.owl file](https://github.com/DiseaseOntology/HumanDiseaseOntology/blob/v2022-06-07/src/ontology/doid-merged.owl) from release [v2022-06-07](https://github.com/DiseaseOntology/HumanDiseaseOntology/tree/v2022-06-07).
+
+# Approximate Ground Truth (from Command Line)
+
+This count was generated with the combination of `grep` and `sed` on the commandline. It is ONLY for comparison as an approximation of the ground truth and is not intended for use in releases. Unlike some counts it includes DOID and obsolete terms.
+
+```{r setup, include = FALSE}
+library(here)
+library(tidyverse)
+library(DO.utils)
+
+# custom functions
+compare_truth <- function(df, col) {
+    import_pattern <- df[[col]] %>%
+    DO.utils::vctr_to_string(delim = "|")
+
+    cli_count %>%
+        dplyr::mutate(
+            {{ col }} := stringr::str_extract(import, import_pattern)
+        ) %>%
+        dplyr::group_by(.data[[col]]) %>%
+        dplyr::summarize(ground_truth = sum(count)) %>%
+        dplyr::ungroup() %>%
+        dplyr::right_join(df, by = col) %>%
+        dplyr::mutate(diff = count - ground_truth)
+}
+
+# load data
+repo <- DO.utils::DOrepo(here::here("../Ontologies/HumanDiseaseOntology"))
+repo$checkout_tag("v2022-06-07")
+
+dm <- repo$doid_merged
+sparql_dir <- here::here("sparql")
+```
+
+```{R}
+cli_count <- system2(
+    here::here("scripts/count_imports.zsh"),
+    args = here::here(
+        "../Ontologies/HumanDiseaseOntology/src/ontology/doid-merged.owl"
+    ),
+    stdout = TRUE
+) %>%
+    stringr::str_trim() %>%
+    stringr::str_split_fixed(" ", n = 2) %>%
+    tibble::as_tibble(.name_repair = "minimal") %>%
+    purrr::set_names(c("count", "import")) %>%
+    dplyr::select(import, count) %>%
+    dplyr::mutate(count = as.integer(count))
+
+cli_count
+```
+
+
+# SPARQL Property Counts -- NEW!!
+
+Properties used in DO are not currently counted making this an entirely new report. They can be considered a type of import, particularly with regard to RO and IAO.
+
+```{r}
+system.time(
+    prop <- dm$query(file.path(sparql_dir, "import-properties-report.rq"))
+)
+prop
+```
+
+
+## Comparison to Ground Truth
+
+Comparison with the "ground truth" counts demonstrates that this query is accurate.
+
+NOTE: The difference between the ground truth and the property query for "doid" is due to the inclusion of "doid:chebi" and "doid:sequence" _classes_ in the ground truth, which are not annotation or object properties.
+
+```{r}
+compare_truth(prop, "import") %>%
+    dplyr::select(-type)
+```
+
+
+# SPARQL Class Counts
+
+## _Corrected_ Count Query 
+
+This a corrected version of the current import-report.rq SPARQL query that counts _only_ classes of specified imports, instead of all triples.
+
+A downside of this report is the need to manually add imports to be counted. The output format (in columns) may also be considered a downside.
+
+```{r}
+system.time(
+    corrected <- dm$query(file.path(sparql_dir, "import-corrected-report.rq"))
+)
+corrected
+```
+
+
+### Comparison to Ground Truth
+
+The data shown has been pivoted to make comparison with the "ground truth" counts easier. All counts appear accurate.
+
+```{r}
+corrected_long <- corrected %>%
+    tidyr::pivot_longer(
+        cols = dplyr::everything(),
+        names_to = "import",
+        values_to = "count"
+    ) %>%
+    dplyr::mutate(import = stringr::str_to_upper(import))
+
+compare_truth(corrected_long, "import")
+```
+
+
+## All Imports
+
+This version includes a count equivalent to the corrected count above but it includes _all_ imports without the need to specify them individually (no UNION statements), making it more flexible.
+
+As new imports are added they will automatically be counted. Those included in this report and not the corrected report above are listed in the comparison section below.
+
+Also, there is no disinction between direct and indirect imports. This is primarily relevant for DISDRIV whose subclasses from other namespaces are counted as in that namespace and are not affiliated in any way with DISDRIV (meaning CHEBI imports of DISDRIV are just counted as CHEBI).
+
+```{r}
+system.time(
+    def <- dm$query(file.path(sparql_dir, "import-report.rq"))
+)
+def
+```
+
+
+### Comparison to Ground Truth
+
+This count appears accurate.
+
+```{r}
+compare_truth(def, "import")
+```
+
+
+### Comparison to Corrected Report
+
+This report automatically identifies all imports by excluding DOID classes and counting all remaining classes by namespace. Unlike the current report, this query would automatically identify and count new imports.
+
+Currently, this report identifies the following imports that are NOT counted by the current import-report (or whose namespace doesn't match exactly, for NCBITaxon): `r dplyr::filter(def, !import %in% corrected_long$import)$import %>% vctr_to_string (delim = ", ")`.
+
+
+
+## Sub-divided Import Counts
+
+The remaining count queries handle utilize a different approach, counting classes differently when those classes are subclasses of a different namespace (CHEBI subclasses imported via DISDRIV is counted differently than CHEBI subclasses imported directly with CHEBI). This approach makes how terms are imported into the DO clearer, whether directly or indirectly, and may have particular usefulness with regard to DISDRIV and it's varied subclasses.
+
+
+### Special Handling of DISDRIV Only
+
+This version is similar to the count of all import classes above but carves out an exception specifically for DISDRIV and all subclasses in DISDRIV. If a class is in DISDRIV it is NOT counted elsewhere and is ONLY counted as a subclass of DISDRIV. This retains the unique count of classes by namespace but identifies those classes brought in by DISDRIV.
+
+```{r}
+system.time(
+    disdriv <- dm$query(
+        file.path(sparql_dir, "import-disdriv_special-report.rq")
+    ) %>%
+        tidyr::unnest(namespace, keep_empty = TRUE)
+)
+disdriv
+```
+
+Here it's clear that ExO, FoodOn, and NCIT are ONLY indirectly imported into the DO via DISDRIV.
+
+
+#### Comparison to Ground Truth
+
+Two comparisons to the "ground truth" are included here, showing 1) the count is accurate and 2) how the count differs from previous report queries.
+
+
+##### Comparison by Original Namespace
+
+This comparison shows that the total class counts for each namespace are the same as the ground truth. The comparison is accomplished by aggregating all imports, including DISDRIV subclasses, with their original namespace.
+
+```{r}
+disdriv %>%
+    tidyr::pivot_wider(
+        names_from = c(import, namespace),
+        values_from = count
+    ) %>%
+    tidyr::pivot_longer(
+        cols = dplyr::everything(),
+        names_to = "import",
+        values_to = "count"
+    ) %>%
+    dplyr::mutate(
+        import = stringr::str_remove(import, "_NA$") %>%
+            stringr::str_remove(".*_")
+    ) %>%
+    dplyr::group_by(import) %>%
+    dplyr::summarize(count = sum(count)) %>%
+    compare_truth("import")
+```
+
+
+##### Comparison by Parent Import
+
+This comparison shows how this count strategy, handling DISDRIV specially, alters the counts. Here all subclasses of DISDRIV are counted with DISDRIV irrespective of their original namespace.
+
+```{r}
+disdriv %>%
+    dplyr::group_by(import) %>%
+    dplyr::summarize(count = sum(count)) %>%
+    compare_truth("import")
+```
+NOTE that ExO and other namespaces imported via DISDRIV no longer appear in this list as they are included as DISDRIV classes.
+
+
+#### Note on Alternate Option
+
+Counting all children of DISDRIV as part of the DISDRIV import without identifying their original namespaces could be an alternate count strategy.
+
+
+### Special Handling by Import Root
+
+This version is designed to count all terms based on their relationship to import roots (i.e. the top-level terms of the OWL tree on disease-ontology.org excluding `disease`). It has pros and cons:
+
+**PROS:**
+
+1. Import counts are organized by root, making this count more relatable to the data.  
+2. This is the most flexible count of imports and the terms within imports.
+
+**CON:**
+
+- Term counts may not be unique. Duplication is apparent in the results below, resulting from two scenarios:
+    1. When terms have a relationship to more than one import root.  
+    2. When an import root has more than one label.  
+    - These duplications could potentially be eliminated by ensuring import roots have a single label and possibly by migrating import terms to DISDRIV, as appropriate.
+
+
+**NOTE:** Instead of using an "import" column, this query has an `import_root` column that uses the labels for root terms instead of their namespace identifier. This is in an effort to improve communication about how this dataset is derived and to _hopefully_ avoid misinterpretation.
+
+```{r}
+system.time(
+    ns_flex <- dm$query(
+        file.path(sparql_dir, "import-by_root-report.rq")
+    ) %>%
+        tidyr::unnest(namespace, keep_empty = TRUE)
+)
+ns_flex
+```
+
+
+#### Comparison to Ground Truth
+
+Only a comparison by original namespace is possible for this count query result because the import is identified in a fundamentally different way (by label instead of namespace identifier).
+
+```{r}
+ns_flex %>%
+    dplyr::group_by(namespace) %>%
+    dplyr::summarize(count = sum(count)) %>%
+    compare_truth("namespace")
+```
+
+There are a number of differences in these counts. All these differences, except in the case of CHEBI, should not be present in this count and are due to the following data issues:
+
+1. The doubled CL import count is due to the import root having two different `rdfs:label`s.
+    - The presence of two labels for a term is an error. It was somehow created/allowed by ROBOT for doid-merged.owl and not for doid-merged.obo, where it would have caused the release to fail.
+    - As shown below, these labels only differ by the presence of a language tag.
+    - Updates may be needed to prevent/fix this type of error during import or release.
+
+```{r}
+dm$query(
+"PREFIX CL: <http://purl.obolibrary.org/obo/CL_>
+
+SELECT ?import_root ?label (LANG(?label) as ?lang)
+WHERE {
+    VALUES ?import_root { CL:0000000 }
+    ?import_root rdfs:label ?label
+}")
+```
+
+2. The differences in SYMP and GENO are due to inclusion of obsolete classes in the ground truth (a list is shown below).
+    - The GENO obsolete classes need to be fixed.
+    - The SYMP osbsolete classes likely just need to be removed by making SYMP an indirect import.
+    - **NOTE:** This is the only query that explicitly filters out `owl:deprecated` classes. This extra step is necessary to identify import roots with SPARQL without also identifying obsolete classes (like root terms, obsolete classes do NOT have superclasses). _The need to filter out obsolete classes could be avoided by making all import roots subclasses of `owl:Thing` (currently only two are)._
+    
+```{r}
+dm$query(
+"SELECT *
+WHERE {
+    ?class a owl:Class ;
+        owl:deprecated ?obsolete .
+    FILTER(REGEX(STR(?class), 'GENO|SYMP'))
+}")
+```
+
+
+#### Explaining the Inaccurate CHEBI Count
+
+The count of CHEBI terms in the previous query is greater due to the inherent nature of this approach. Some CHEBI terms have a relationship to the import roots of both CHEBI and DISDRIV. Those terms are:
+
+```{r}
+chebi_dup <- dm$query(
+    file.path(sparql_dir, "import-chebi_root_overlap-report.rq")
+)
+chebi_dup
+```
+
+Looking at these terms in doid-merged.owl using Protege the following subClassOf relationships are apparent:
+
+    rocuronium > 3alpha-hydroxy steroid > secondary alcohol > alcohol
+    
+And 'alcohol' has two parents 'organic hydroxy compound' from CHEBI and 'alcoholic beverage' from FOODON (in DISDRIV). It is due to this multi-parentage at this point that the duplication occurs.
+
+This type of duplication could get more complicated as more imports are used in the DO but it might also be removed if terms migrate from direct import to the DO to indirect import via DISDRIV.
+
+
+## Perspective & Recommendations
+
+While the last and most flexible count might be considered "inaccurate" because CHEBI terms are counted multiple times, those terms _are_ in fact imported in both CHEBI and DISDRIV. With that context, it is also possible to describe that count as the only truly accurate one.
+
+Which count to use will depend on the purpose for the count. **My recommendation** based on purpose is as follows:
+
+1. Goal: Count all unique terms by namespace --> USE [All Imports](#all-imports) count.
+2. Goal: Identify imports in context --> USE [Special Handling by Import Root](#special-handling-by-import-root) count.
