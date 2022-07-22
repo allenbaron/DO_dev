@@ -1,0 +1,54 @@
+# Return a count of all properties by ORIGINAL namespace
+
+PREFIX rdfs: <http://www.w3.org/2000/01/rdf-schema#>
+PREFIX owl: <http://www.w3.org/2002/07/owl#>
+PREFIX obo: <http://purl.obolibrary.org/obo/>
+PREFIX oboInOwl: <http://www.geneontology.org/formats/oboInOwl#>
+PREFIX dc: <http://purl.org/dc/elements/1.1/>
+PREFIX dcterms: <http://purl.org/dc/terms/>
+
+SELECT ?namespace ?prop_type (COUNT(?prop) AS ?count) ?namespace_full
+WHERE {
+	{
+		# Convert OBO namespaces to prefixes
+		VALUES ?property { owl:AnnotationProperty owl:ObjectProperty }
+		?prop a ?property .
+		FILTER(STRSTARTS(STR(?prop), "http://purl.obolibrary.org/obo"))
+		BIND(
+			IF(
+				REGEX(STR(?prop), "[#_]"),
+				REPLACE(STR(?prop), "([^_#]+[_#]).*", "$1"),
+				REPLACE(STR(?prop), "(.*/).*", "$1")
+			) AS ?namespace_full
+		)
+		BIND(REPLACE(STR(?prop), ".*obo/([^#_/]+)[#_/].*", "$1") AS ?namespace)
+	}
+	UNION
+	{
+		# Convert common, non-OBO namespaces to prefixes
+		VALUES ?property { owl:AnnotationProperty owl:ObjectProperty }
+		?prop a ?property .
+		BIND(
+			IF(
+				REGEX(STR(?prop), "[#_]"),
+				REPLACE(STR(?prop), "([^_#]+[_#]).*", "$1"),
+				REPLACE(STR(?prop), "(.*/).*", "$1")
+			) AS ?namespace_full
+		)
+		VALUES (?namespace_full ?namespace) {
+			("http://www.w3.org/XML/1998/namespace" "xml")
+			("http://www.w3.org/2001/XMLSchema#" "xsd")
+			("http://www.w3.org/1999/02/22-rdf-syntax-ns#" "rdf")
+			("http://www.w3.org/2000/01/rdf-schema#" "rdfs")
+			("http://www.w3.org/2002/07/owl#" "owl")
+			("http://www.geneontology.org/formats/oboInOwl#" "oboInOwl")
+			("http://purl.org/dc/elements/1.1/" "dc")
+			("http://purl.org/dc/terms/" "dcterms")
+			("http://www.w3.org/2004/02/skos/core#" "skos")
+		}
+	}
+
+	BIND(REPLACE(LCASE(STR(?property)), ".*#([^p]+).*", "$1") AS ?prop_type)
+}
+GROUP BY ?namespace_full ?namespace ?prop_type
+ORDER BY ?namespace ?prop_type
