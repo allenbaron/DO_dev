@@ -1,0 +1,54 @@
+---
+title: "Understanding DO's Imports"
+output: 
+    html_notebook:
+        toc: true
+        toc_float: true
+        df_print: paged
+---
+
+# Background
+
+Currently all indirect imports are processed with a common `robot remove` command when created by the Makefile in src/ontology/imports/:
+
+```
+remove \
+	 --select complement \
+	 --select annotation-properties \
+	 --term-file annotations.txt \
+```
+
+While annotations.txt in src/ontology/imports contains 4 elements:
+
+- rdfs:label
+- oboInOwl:id
+- obo:IAO_0000115
+- owl:deprecated
+
+This command is designed to retain only these 4 elements (it removes their complement = all axioms that includes any annotation property other than these 4 elements).
+
+
+## Con
+
+The downside to this approach is that all definitions with oboInOwl:hasDbXref source annotations result in the entire definition being removed.
+
+
+```{r setup, include = FALSE}
+library(tidyverse)
+library(DO.utils)
+```
+
+
+```{r}
+# list imports
+import_files <- list.files("/Users/allenbaron/Documents/Ontologies/HumanDiseaseOntology/src/ontology/imports/build", pattern = "^[a-z]+\\.owl")
+
+# setup imports for queries
+imports <- purrr::map(import_files, owl_xml)
+```
+
+
+```{r}
+# explore annotated{.} in 
+```
+
