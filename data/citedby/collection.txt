@@ -4263,8 +4263,8 @@ Sulfonate. Environ Sci Technol. 2022 Mar 15;56(6):3623-3633. doi:
 792. Forgetta V, Jiang L, Vulpescu NA, Hogan MS, Chen S, Morris JA, Grinek S, Benner
 C, Jang DK, Hoang Q, Burtt N, Flannick JA, McCarthy MI, Fauman E, Greenwood CMT, 
 Maurano MT, Richards JB. An effector index to predict target genes at GWAS loci. 
-Hum Genet. 2022 Feb 11. doi: 10.1007/s00439-022-02434-z. [Epub ahead of print]
-PubMed [citation] PMID: 35147782
+Hum Genet. 2022 Aug;141(8):1431-1447. doi: 10.1007/s00439-022-02434-z. Epub 2022 
+Feb 11. PubMed [citation] PMID: 35147782
 
 793. Reisle C, Williamson LM, Pleasance E, Davies A, Pellegrini B, Bleile DW, Mungall 
 KL, Chuah E, Jones MR, Ma Y, Lewis E, Beckie I, Pham D, Matiello Pletz R,
@@ -4315,9 +4315,9 @@ BMC Res Notes. 2021 Nov 27;14(1):433. doi: 10.1186/s13104-021-05835-x. PubMed
 [citation] PMID: 34838100, PMCID: PMC8627056
 
 802. Zhang X, Wu F, Yang N, Zhan X, Liao J, Mai S, Huang Z. In silico Methods for
-Identification of Potential Therapeutic Targets. Interdiscip Sci. 2021 Nov 26.
-doi: 10.1007/s12539-021-00491-y. [Epub ahead of print] Review. PubMed [citation] 
-PMID: 34826045, PMCID: PMC8616973
+Identification of Potential Therapeutic Targets. Interdiscip Sci. 2022
+Jun;14(2):285-310. doi: 10.1007/s12539-021-00491-y. Epub 2021 Nov 26. Review.
+PubMed [citation] PMID: 34826045, PMCID: PMC8616973
 
 803. Dafniet B, Cerisier N, Boezio B, Clary A, Ducrot P, Dorval T, Gohier A, Brown D, 
 Audouze K, Taboureau O. Development of a chemogenomics library for phenotypic
@@ -4404,8 +4404,8 @@ disease mechanisms. Nucleic Acids Res. 2021 Aug 20;49(14):7939-7953. doi:
 
 818. Yan VKC, Li X, Ye X, Ou M, Luo R, Zhang Q, Tang B, Cowling BJ, Hung I, Siu CW,
 Wong ICK, Cheng RCK, Chan EW. Drug Repurposing for the Treatment of COVID-19: A
-Knowledge Graph Approach. Adv Ther (Weinh). 2021 May 20:2100055. doi:
-10.1002/adtp.202100055. [Epub ahead of print] Erratum in: Adv Ther (Weinh). 2021 
+Knowledge Graph Approach. Adv Ther (Weinh). 2021 Jul;4(7):2100055. doi:
+10.1002/adtp.202100055. Epub 2021 May 20. Erratum in: Adv Ther (Weinh). 2021
 Oct;4(10):2100179. PubMed [citation] PMID: 34179346, PMCID: PMC8212091
 
 819. Vieira LM, Jorge NAN, de Sousa JB, Setubal JC, Stadler PF, Walter MEMT. Competing
@@ -4591,8 +4591,8 @@ utilization of Chinese clinical data. BMC Med Inform Decis Mak. 2021 Nov
 
 852. Filice RW, Kahn CE Jr. Biomedical Ontologies to Guide AI Development in
 Radiology. J Digit Imaging. 2021 Dec;34(6):1331-1341. doi:
-10.1007/s10278-021-00527-1. Epub 2021 Nov 1. Review. PubMed [citation] PMID:
-34724143, PMCID: PMC8669056
+10.1007/s10278-021-00527-1. Epub 2021 Nov 1. Review. Erratum in: J Digit Imaging.
+2022 Jul 15;:. PubMed [citation] PMID: 34724143, PMCID: PMC8669056
 
 853. Siramshetty VB, Grishagin I, Nguyễn ÐT, Peryea T, Skovpen Y, Stroganov O, Katzel 
 D, Sheils T, Jadhav A, Mathé EA, Southall NT. NCATS Inxight Drugs: a
@@ -4688,10 +4688,33 @@ Integrative Data and Knowledge Representation and Multiscale Modeling in Systems
 Medicine. Methods Mol Biol. 2022;2486:233-244. doi: 10.1007/978-1-0716-2265-0_12.
 PubMed [citation] PMID: 35437726
 
-870. Zhang F, Zhang Y, Hou T, Ren F, Liu X, Zhao R, Zhang X. Screening of Genes
-Related to Breast Cancer Prognosis Based on the DO-UniBIC Method. Am J Med Sci.
+870. Zhang F, Zhang Y, Hou T, Ren F, Liu X, Zhao R, Zhang X. Screening of genes
+related to breast cancer prognosis based on the DO-UniBIC method. Am J Med Sci.
 2022 Apr 23. pii: S0002-9629(22)00187-2. doi: 10.1016/j.amjms.2022.04.022. [Epub 
 ahead of print] PubMed [citation] PMID: 35472336
+
+871. Viet SM, Falman JC, Merrill LS, Faustman EM, Savitz DA, Mervish N, Barr DB,
+Peterson LA, Wright R, Balshaw D, O'Brien B. Human Health Exposure Analysis
+Resource (HHEAR): A model for incorporating the exposome into health studies. Int
+J Hyg Environ Health. 2021 Jun;235:113768. doi: 10.1016/j.ijheh.2021.113768. Epub
+2021 May 23. Review. PubMed [citation] PMID: 34034040, PMCID: PMC8205973
+
+872. Balshaw DM, Collman GW, Gray KA, Thompson CL. The Children's Health Exposure
+Analysis Resource: enabling research into the environmental influences on
+children's health outcomes. Curr Opin Pediatr. 2017 Jun;29(3):385-389. doi:
+10.1097/MOP.0000000000000491. Review. PubMed [citation] PMID: 28383342, PMCID:
+PMC5491986
+
+873. Kahn CE Jr. Analysis of Causal Relationships in Integrated Ontologies of
+Diseases, Phenotypes, and Radiological Diagnosis. Stud Health Technol Inform.
+2022 Jun 6;290:258-262. doi: 10.3233/SHTI220074. PubMed [citation] PMID: 35673013
+
+874. Krysiak K, Danos AM, Kiwala S, McMichael JF, Coffman AC, Barnell EK, Sheta L,
+Saliba J, Grisdale CJ, Kujan L, Pema S, Lever J, Spies NC, Chiorean A, Rieke DT, 
+Clark KA, Jani P, Takahashi H, Horak P, Ritter DI, Zhou X, Ainscough BJ, et al. A
+community approach to the cancer-variant-interpretation bottleneck. Nat Cancer.
+2022 May;3(5):522-525. doi: 10.1038/s43018-022-00379-w. No abstract available.
+PubMed [citation] PMID: 35624339
 
 
 
