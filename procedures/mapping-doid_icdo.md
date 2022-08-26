@@ -166,9 +166,8 @@ GILDA identified some good matches but missed a number that are sufficiently sim
 
 Of the 1,143 ICD-O terms, 335 already have xrefs in the DO and 808 ICD-O terms were included for matching. Of those, only 38 did not have matches (these had a mean string length of 65 characters, so the cutoff might have been too low for them), while 789 terms had matches to one or more DOIDs (total matches = 1,282). Of the matches, the score breakdown is as follows:
 
-                |   ICD-O Terms    |   Total matches
-    Score       |  (can be in 1+)  | (can have 1+ matches)  
-----------------|------------------|-------------------
+Score           |   ICD-O Terms (can be in 1+) |   Total matches (can have 1+ matches)  
+----------------|------------------|-------------------  
     1.0 (exact) |       160        |        171
     0.9-0.99    |        13        |         13
     0.8         |        68        |         68
@@ -180,8 +179,7 @@ Of the 1,143 ICD-O terms, 335 already have xrefs in the DO and 808 ICD-O terms w
     0.2         |         7        |          8
     0.1         |         4        |          4
     0.0         |         0        |          0
-    NA (none)   |        38        |         38
-----------------|------------------|-------------------
- TOTAL (no NA)  |     1,101        |      1,282
+    _NA (none)_   |        _38_        |         _38_
+ **TOTAL (no NA)**  |     **1,101**        |      **1,282**
 
 **NOTE:** 3 of the ICD-O terms in the DO do not appear in this dataset. Were they obsoleted?
