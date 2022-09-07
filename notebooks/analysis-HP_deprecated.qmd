@@ -1,0 +1,263 @@
+---
+title: "Analysis: HP deprecated terms in ext.owl"
+author: "J. Allen Baron"
+date: 2022-09-06
+format: html
+editor: visual
+---
+
+# Purpose
+
+To determine why the DO's ext.owl file has `owl:deprecated` declarations for numerous HP terms (see [Github Issue #1047](https://github.com/DiseaseOntology/HumanDiseaseOntology/issues/1047)).
+
+# Hypothesis & Approach
+
+I suspect that these HP terms are declared this way because from DO's perspective they are not considered phenotypes and this prevents them from being used accidentally in DO during curation. *Most likely*, these are "phenotype" terms that would be considered "diseases" by DO.
+
+If the following is true for any of these HP terms, those declarations can be removed: 1. Terms are being actively excluded because they are in the exclude-hp.owl file. 2. Terms are not to imported to DO at all and will likely never be, making them of no concern. 3. Terms should be imported in DO and these declarations are incorrect.
+
+## Sequential Plan
+
+For those terms which are identified as matching a condition, they will be noted and no longer be processed.
+
+1.  Identify which terms, if any, is already in exclude-hp.txt.
+2.  Identify which terms, if any, match diseases in DO.
+3.  Identify which terms, if any, should be considered diseases but for some reason are not in DO.
+4.  Identify which terms, if any, are on HP branches (or sub-branches) that will likely *never* be imported.
+
+If any terms remain at this point, further discussion with the DO team will be necessary to determine how to handle them.
+
+```{r library}
+#| include: false
+library(here)
+library(tidyverse)
+library(DO.utils)
+library(git2r)
+```
+
+```{r custom_fn}
+#| include: false
+tidy_query <- function(owl_xml, .query) {
+    owl_xml$query(.query) %>%
+    tibble::as_tibble(x = .) %>%
+    DO.utils::unnest_cross(cols = where(is.list), keep_empty = TRUE) %>%
+    dplyr::mutate(
+        id = stringr::str_replace(class, ".*/([A-Z]+)_([0-9]+)", "\\1:\\2")
+    ) %>%
+    dplyr::select(id, dplyr::everything()) %>%
+    dplyr::select(-class)
+}
+```
+
+
+# Data
+
+```{r path_info}
+repo_path <- here::here("../Ontologies/HumanDiseaseOntology")
+import_path <- file.path(repo_path, "src/ontology/imports")
+src_path <- file.path(import_path, "build")
+```
+
+-   HP info is from the owl file with versionIRI `r readLines(file.path(src_path, "hp.version"))`.
+-   All other info was extracted from the DO repository at commit `r stringr::str_extract(git2r::branch_target(git2r::repository_head(repo_path)), ".{8}")`.
+
+```{r file_load}
+DOrepo <- DO.utils::DOrepo(repo_path)
+ext_owl <- readr::read_lines(file.path(repo_path, "src/ontology/ext.owl"))
+hp_owl <- DO.utils::owl_xml(file.path(src_path, "hp.owl"))
+```
+
+```{r query}
+hp_query <- '
+    SELECT ?class ?label ?branch ?sub_branch ?obsolete
+    WHERE {
+        ?class a owl:Class .
+        
+        FILTER(contains(str(?class), "HP_"))
+
+        OPTIONAL { ?class rdfs:label ?label . }
+        OPTIONAL { ?class owl:deprecated ?obsolete . }
+        OPTIONAL {
+            ?class rdfs:subClassOf* ?class_lvl2 .
+            ?class_lvl2 rdfs:label ?sub_branch ;
+                rdfs:subClassOf ?class_lvl1 .
+            ?class_lvl1 rdfs:label ?branch ;
+                rdfs:subClassOf obo:HP_0000001 .
+        }
+    }'
+
+do_query <- '
+    SELECT ?class ?label ?syn_type ?synonym ?obsolete
+    WHERE {
+        ?class a owl:Class .
+        
+        FILTER(CONTAINS(STR(?class), "DOID"))
+
+        OPTIONAL { ?class rdfs:label ?label . }
+        OPTIONAL { ?class owl:deprecated ?obsolete . }
+        OPTIONAL {
+            ?class ?pred ?synonym .
+            FILTER(REGEX(STR(?pred), "[Ss]ynonym"))
+            BIND(STRAFTER(STR(?pred), "oboInOwl#") AS ?syn_type)
+        }
+    }'
+```
+
+```{r hp_data_prep}
+hp <- hp_owl$query(hp_query) %>%
+    tibble::as_tibble() %>%
+    DO.utils::unnest_cross(cols = where(is.list), keep_empty = TRUE) %>%
+    class_to_id() %>%
+    DO.utils::collapse_col
+
+hp_dep <- tibble::tibble(
+    id = stringr::str_replace(
+        ext_owl[stringr::str_detect(ext_owl, "owl:deprecated")],
+        ".*HP_([0-9]+).*",
+        "HP:\\1"
+    )
+) %>%
+    dplyr::left_join(
+        unique(dplyr::select(hp, id, label)),
+        by = "id"
+    )
+
+hp_exc <- tibble::tibble(
+    id = readr::read_lines(file.path(import_path, "exclude-hp.txt"))
+) %>%
+    dplyr::left_join(
+        unique(dplyr::select(hp, id, label)),
+        by = "id"
+    )
+```
+
+HP info is as follows:
+
+- `hp`: all data from HP source file (includes `r format(dplyr::n_distinct(hp$id), big.mark = ",")` HP terms).
+
+```{r}
+#| echo: false
+hp
+```
+
+-   `hp_dep`: deprecated HP terms in ext.owl (**analyzing this**).
+
+```{r}
+#| echo: false
+hp_dep
+```
+
+-   `hp_exc`: excluded HP terms in exclude-hp.owl.
+
+```{r}
+#| echo: false
+hp_exc
+```
+
+```{r do_data_prep}
+doid <- tidy_query(DOrepo$doid, do_query)
+
+do_long <- doid %>%
+    tidyr::pivot_wider(
+        names_from = syn_type,
+        values_from = synonym,
+        values_fn = list
+    ) %>%
+    DO.utils::unnest_cross(cols = where(is.list), keep_empty = TRUE) %>%
+    dplyr::select(-`NA`) %>%
+    tidyr::pivot_longer(
+        cols = c(label, dplyr::contains("Synonym")),
+        names_to = "type",
+        values_to = "txt",
+        values_drop_na = TRUE
+    ) %>%
+    dplyr::mutate(
+        txt_tidy = stringr::str_to_lower(txt) %>%
+            stringr::str_squish()
+    )
+```
+
+
+DO info is as follows:
+
+- `doid`: `r format(dplyr::n_distinct(doid$id), big.mark = ",")` DO terms with their synonyms (and the synonym "type").
+
+```{r}
+#| echo: false
+doid
+```
+
+-   `do_long`: same as `doid` but long-form for string matching.
+
+```{r}
+#| echo: false
+do_long
+```
+
+
+# Verification
+
+Checking to see if any expected HP terms do not exist in `hp`:
+
+- For `hp_exc`
+```{r}
+hp_exc %>%
+    dplyr::filter(is.na(label))
+
+hp_exc <- hp_exc %>%
+    dplyr::filter(!is.na(label))
+```
+
+Okay, that makes sense since UPHENO is a different ontology. I'm not sure why that's in the exclude-hp.owl file but it's not hurting anything.
+
+- For `hp_dep`
+```{r}
+hp_dep %>%
+    dplyr::filter(is.na(label))
+
+hp_dep <- hp_dep %>%
+    dplyr::filter(!is.na(label))
+```
+That's unexpected. This term is deprecated in ext.owl but doesn't exist in the official hp.owl file. Looking at hp.owl it's apparent that this term once existed but has now been merged into 'Onset' (HP:0003674). It appears to have been dropped completely from hp.owl instead of deprecated.
+
+**That deprecated declaration can be removed.**
+
+
+# Analysis
+
+## Deprecated HP in exclude-hp.owl
+
+```{r}
+in_exc <- hp_dep %>%
+    dplyr::filter(id %in% hp_exc$id)
+```
+
+`r dplyr::n_distinct(in_exc$id)` deprecated HP terms in ext.owl are already in exclude-hp.owl.
+
+Apparently, these declarations weren't just accidentally retained when the exclude-hp.owl file was created. Moving on...
+
+
+## Deprecated HP Matching DO Diseases
+
+First, capturing ALL HP terms exactly matching DO terms or their synonyms (ignoring spaces & capitalizaation). Synonym matches are only retained if there
+is not a label match.
+
+```{r}
+hp_match <- hp %>%
+    dplyr::mutate(
+        label_tidy = stringr::str_to_lower(label) %>%
+            stringr::str_squish()
+    )
+
+overlap <- dplyr::left_join(
+    hp_match,
+    dplyr::rename_with(do_long, .fn = ~ paste0("do_", .x), .cols = !txt_tidy),
+    by = c("label_tidy" = "txt_tidy")
+) %>%
+    dplyr::group_by(id) %>%
+    dplyr::filter(
+        dplyr::case_when(
+            do_type == "label" ~ TRUE,
+            do_type
+```
+
