@@ -1,7 +1,9 @@
 # Create WEBSITE statistics plots
 # J. Allen Baron
 # Created: 2022-02-28
+# Last Updated: 2022-09-14
 
+library(here)
 library(DO.utils)
 
 
@@ -16,30 +18,27 @@ library(DO.utils)
 # 2. data/DO_release/branch_counts.csv
 # 3. data/DO_release/cross_references.csv
 
+latest_release <- "v2022-08-29"
+repo_path <- here::here("../Ontologies/HumanDiseaseOntology")
+svn_path <- here::here("../DO_website")
+plot_outdir <- file.path(svn_path, "media/images/statistics")
 
 # Automatically Update Data -----------------------------------------------
 
 source("scripts/DO_release_details.R") # data/DO_release/DO_release_details.csv
 
+repo <- DO.utils::DOrepo(repo_path)
 
 # Generate Plots ----------------------------------------------------------
 
-plot_citedby()
-plot_term_def_counts()
-plot_branch_counts()
-plot_xref_counts()
-plot_def_src("../Ontologies/HumanDiseaseOntology")
+DO.utils::plot_citedby(out_dir = plot_outdir)
+DO.utils::plot_term_def_counts(out_dir = plot_outdir)
+DO.utils::plot_branch_counts(out_dir = plot_outdir)
+DO.utils::plot_xref_counts(out_dir = plot_outdir)
+DO.utils::plot_def_src(repo_path)
 
 
 # Generate html page updates ----------------------------------------------
 
-user_list_file <- file.path(
-    "graphics",
-    "website",
-    paste0(
-        stringr::str_remove_all(Sys.Date(), "-"),
-        "-",
-        "website_user_list.html"
-    )
-)
-make_user_list_html(user_list_file)
+DO.utils::make_use_case_html()
+DO.utils::update_website_count_tables(repo, latest_release, svn_path)
