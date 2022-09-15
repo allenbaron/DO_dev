@@ -11,6 +11,7 @@ reports <- list.files(
     full.names = TRUE
 )
 class_q <- here::here("sparql/DO-id_label.rq")
+releases <- c("v2022-07-27", "v2022-08-29")
 
 
 # Custom Functions --------------------------------------------------------
@@ -85,7 +86,7 @@ repo <- DO.utils::DOrepo(repo_path)
 report_res <- tag_exec_queries(
     repo,
     queries = reports,
-    tags = c("v2022-07-27", "v2022-08-29"),
+    tags = releases,
     nm = stringr::str_replace(
         reports,
         ".*/(.+)-report.rq",
@@ -94,7 +95,7 @@ report_res <- tag_exec_queries(
 )
 
 report_merge <- purrr::map(
-    DO.utils::invert_sublists(res, use_sublist_names = TRUE),
+    DO.utils::invert_sublists(report_res, use_sublist_names = TRUE),
     dplyr::bind_rows,
     .id = "tag"
 ) %>%
@@ -109,9 +110,10 @@ report_merge <- purrr::map(
         )
     ) %>%
     purrr::map(
-        ~ tidyr::pivot_wider(.x, names_from = tag, values_from = count) %>%
+        # unique to avoid list-cols
+        ~ tidyr::pivot_wider(unique(.x), names_from = tag, values_from = count) %>%
             dplyr::mutate(
-                diff = `v2022-08-29` - `v2022-07-27`
+                diff = .data[[releases[2]]] - .data[[releases[1]]]
             )
     )
 
@@ -123,8 +125,8 @@ View(report_merge)
 class_res <- tag_exec_queries(
     repo,
     queries = class_q,
-    tags = c("v2022-07-27", "v2022-08-29"),
-    nm = classes
+    tags = releases,
+    nm = "classes"
 )
 
 new_class <- dplyr::filter(
