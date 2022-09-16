@@ -50,7 +50,7 @@ if (any(missing_file)) {
             values_drop_na = TRUE
         ) %>%
         dplyr::mutate(
-            txt_lc = stringr::str_to_lower(txt)
+            txt_std = stringr::str_squish(stringr::str_to_lower(txt))
         ) %>%
         dplyr::left_join(
             dplyr::select(syn, id, label),
@@ -63,15 +63,15 @@ if (any(missing_file)) {
         dplyr::filter(stringr::str_detect(id, "DOID"))
 
     dup_do <- do_only %>%
-        dplyr::filter(DO.utils::all_duplicated(txt_lc)) %>%
-        dplyr::arrange(txt_lc, id, dplyr::desc(txt_type))
+        dplyr::filter(DO.utils::all_duplicated(txt_std)) %>%
+        dplyr::arrange(txt_std, id, dplyr::desc(txt_type))
 
     # Within DOID match file - easiest to handle
     if (missing_file["do_same"]) {
         dup_do_same <- dup_do %>%
-            dplyr::group_by(txt_lc) %>%
+            dplyr::group_by(txt_std) %>%
             dplyr::filter(dplyr::n_distinct(id) == 1) %>%
-            dplyr::group_by(id, txt_lc) %>%
+            dplyr::group_by(id, txt_std) %>%
             # add recommendation on degree of certainty for removal
             dplyr::mutate(
                 remove = dplyr::case_when(
@@ -101,7 +101,7 @@ if (any(missing_file)) {
     # Cross DOID match file
     if (missing_file["do_diff"]) {
         dup_do_diff <- dup_do %>%
-            dplyr::group_by(txt_lc) %>%
+            dplyr::group_by(txt_std) %>%
             dplyr::filter(dplyr::n_distinct(id) > 1) %>%
             dplyr::ungroup()
         readr::write_csv(dup_do_diff, comparison_output["do_diff"])
@@ -110,20 +110,20 @@ if (any(missing_file)) {
     # DO-import match file - hardest to handle
     if (missing_file["do_imp"]) {
         do_info <- do_only %>%
-            dplyr::select(id, label, txt_lc, txt_type) %>%
+            dplyr::select(id, label, txt_std, txt_type) %>%
             dplyr::rename_with(.cols = c(id, label, txt_type), ~ paste0("do_", .x))
 
         dup_do_imp <- syn_compare %>%
-            dplyr::filter(DO.utils::all_duplicated(txt_lc)) %>%
-            dplyr::arrange(txt_lc, id, dplyr::desc(txt_type)) %>%
-            dplyr::group_by(txt_lc) %>%
+            dplyr::filter(DO.utils::all_duplicated(txt_std)) %>%
+            dplyr::arrange(txt_std, id, dplyr::desc(txt_type)) %>%
+            dplyr::group_by(txt_std) %>%
             dplyr::filter(
                 any(stringr::str_detect(id, "DOID")),
                 !stringr::str_detect(id, "DOID")
             ) %>%
             dplyr::ungroup() %>%
-            dplyr::left_join(do_info, by = "txt_lc") %>%
-            dplyr::select(do_id:do_txt_type, txt_lc, id, txt, txt_type) %>%
+            dplyr::left_join(do_info, by = "txt_std") %>%
+            dplyr::select(do_id:do_txt_type, txt_std, id, txt, txt_type) %>%
             dplyr::arrange(do_id, id)
 
         readr::write_csv(dup_do_imp, comparison_output["do_imp"])
