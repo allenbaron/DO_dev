@@ -1,5 +1,6 @@
 # identify synonyms that differ only by capitalization
 
+library(googlesheets4)
 library(here)
 library(tidyverse)
 library(DO.utils)
@@ -7,29 +8,29 @@ library(DO.utils)
 
 # Establish file names ----------------------------------------------------
 
-output_dir <- here::here("data/DO")
-output_names <- c(
-    do_same = "syn_cap_dup-same_id", # comparisons within same DOID
-    do_diff = "syn_cap_dup-diff_id", # comparison across DOIDs
-    do_imp = "syn_cap_dup-DO_import" # comparison between DOIDs & imports
+# DO_synonym_capitalization_dups google sheet
+gs <- googlesheets4::gs4_get("1oIMi55zpShoWVyS509SHQCRZ-aasM-CO80adPtzbNxA")
+sheet_ids <- c(
+    # order matters!!
+    "do_same", # comparisons within same DOID
+    "do_diff", # comparison across DOIDs
+    "do_imp" # comparison between DOIDs & imports
 )
-comparison_output <- paste0(
-    output_names,
+sheet_names <- paste0(
+    sheet_ids,
     "-",
-    DO.utils::today_datestamp(),
-    ".csv"
-) %>%
-    purrr::map_chr(~ file.path(output_dir, .x)) %>%
-    purrr::set_names(nm = names(output_names))
+    DO.utils::today_datestamp()
+)
+
 syn_query <- here::here("sparql/id_label_synonym.rq")
 
 # Create files if analysis not run already today --------------------------
 
-# DO self comparison files - within ID, across IDs (diff_id), with imports
-missing_file <- !file.exists(comparison_output)
-names(missing_file) <- names(output_names)
+# avoid overwrite
+sheets_in_gs <- googlesheets4::sheet_names(gs)
+missing_sheet <- !sheet_names %in% sheets_in_gs
 
-if (any(missing_file)) {
+if (any(missing_sheet)) {
     r <- DO.utils::DOrepo("../Ontologies/HumanDiseaseOntology")
 
     syn <- r$doid_merged$query(syn_query) %>%
@@ -67,7 +68,7 @@ if (any(missing_file)) {
         dplyr::arrange(txt_std, id, dplyr::desc(txt_type))
 
     # Within DOID match file - easiest to handle
-    if (missing_file["do_same"]) {
+    if (missing_sheet[1]) {
         dup_do_same <- dup_do %>%
             dplyr::group_by(txt_std) %>%
             dplyr::filter(dplyr::n_distinct(id) == 1) %>%
@@ -92,23 +93,23 @@ if (any(missing_file)) {
             #   - drop labels from dataset (those won't be removed)
             #   - order rows/columns for ease
             dplyr::filter(txt_type != "label") %>%
-            dplyr::arrange(id, dplyr::desc(remove)) %>%
+            dplyr::arrange(id, txt_std, dplyr::desc(remove)) %>%
             dplyr::select(id:label, remove, dplyr::everything())
 
-        readr::write_csv(dup_do_same, comparison_output["do_same"])
+        googlesheets4::write_sheet(dup_do_same, gs, sheet_names[1])
     }
 
     # Cross DOID match file
-    if (missing_file["do_diff"]) {
+    if (missing_sheet[2]) {
         dup_do_diff <- dup_do %>%
             dplyr::group_by(txt_std) %>%
             dplyr::filter(dplyr::n_distinct(id) > 1) %>%
             dplyr::ungroup()
-        readr::write_csv(dup_do_diff, comparison_output["do_diff"])
+        googlesheets4::write_sheet(dup_do_diff, gs, sheet_names[2])
     }
 
     # DO-import match file - hardest to handle
-    if (missing_file["do_imp"]) {
+    if (missing_sheet[3]) {
         do_info <- do_only %>%
             dplyr::select(id, label, txt_std, txt_type) %>%
             dplyr::rename_with(.cols = c(id, label, txt_type), ~ paste0("do_", .x))
@@ -126,15 +127,21 @@ if (any(missing_file)) {
             dplyr::select(do_id:do_txt_type, txt_std, id, txt, txt_type) %>%
             dplyr::arrange(do_id, id)
 
-        readr::write_csv(dup_do_imp, comparison_output["do_imp"])
+        googlesheets4::write_sheet(dup_do_imp, gs, sheet_names[3])
     }
 
     rlang::inform(
-        c("Review new synonym capitalization duplicate file(s):",
-          setNames(
-              comparison_output[missing_file],
-              rep("i", sum(missing_file))
-          )
+        c(
+            paste0(
+                "Review new synonym capitalization duplicate sheet(s) in ",
+                gs$name,
+                " at\n",
+                gs$spreadsheet_url
+            ),
+            setNames(
+                sheet_names[missing_sheet],
+                rep("i", sum(missing_sheet))
+            )
         )
     )
 }
