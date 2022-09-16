@@ -71,13 +71,19 @@ if (any(missing_file)) {
         dup_do_same <- dup_do %>%
             dplyr::group_by(txt_lc) %>%
             dplyr::filter(dplyr::n_distinct(id) == 1) %>%
-            dplyr::group_by(id) %>%
+            dplyr::group_by(id, txt_lc) %>%
             # add recommendation on degree of certainty for removal
             dplyr::mutate(
                 remove = dplyr::case_when(
-                    any(txt_type == "label") & txt_type != "label" ~ "yes",
-                    txt != txt_lc ~ "preferred",
                     txt_type == "label" ~ "no",
+                    any(txt_type == "label") & txt_type != "label" ~ "yes",
+                    any(txt_type == "hasExactSynonym") &
+                            txt_type != "hasExactSynonym" ~ "yes",
+                    any(txt_type != "hasExactSynonym") &
+                        txt_type == "hasExactSynonym" ~ "no",
+                    dplyr::n_distinct(txt_type) > 1 &
+                        txt != txt_std ~ "preferred - type diff",
+                    txt != txt_std ~ "preferred",
                     TRUE ~ "maybe"
                 )
             ) %>%
