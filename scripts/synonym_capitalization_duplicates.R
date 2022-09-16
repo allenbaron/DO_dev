@@ -22,7 +22,40 @@ sheet_names <- paste0(
     DO.utils::today_datestamp()
 )
 
+repo_path <- here::here("../Ontologies/HumanDiseaseOntology")
 syn_query <- here::here("sparql/id_label_synonym.rq")
+
+
+# Custom functions --------------------------------------------------------
+
+do_same_continue <- function() {
+    answer <- NA_character_
+    while (!answer %in% c("yes", "no")) {
+        answer <- readline(
+            wrap_onscreen(
+                paste(
+                    "Has", sheet_names[1], "in google sheet", gs$name,
+                    "been reviewed & prepared for use in processing doid-edit.owl? yes/no",
+                    sep = " "
+                )
+            )
+        )
+    }
+    answer == "yes"
+}
+
+# makes messages more visible
+inform_cyan <- function(msg) {
+    if (any(rlang::names2(msg) != "")) {
+        nm <- names(msg)
+        msg %>%
+            cli::col_cyan() %>%
+            purrr::set_names(nm) %>%
+            cli::cli_inform()
+    } else {
+        cli::cli_inform(cli::col_cyan(msg))
+    }
+}
 
 # Create files if analysis not run already today --------------------------
 
@@ -31,7 +64,7 @@ sheets_in_gs <- googlesheets4::sheet_names(gs)
 missing_sheet <- !sheet_names %in% sheets_in_gs
 
 if (any(missing_sheet)) {
-    r <- DO.utils::DOrepo("../Ontologies/HumanDiseaseOntology")
+    r <- DO.utils::DOrepo(repo_path)
 
     syn <- r$doid_merged$query(syn_query) %>%
         tibble::as_tibble() %>%
@@ -130,7 +163,7 @@ if (any(missing_sheet)) {
         googlesheets4::write_sheet(dup_do_imp, gs, sheet_names[3])
     }
 
-    rlang::inform(
+    inform_cyan(
         c(
             paste0(
                 "Review new synonym capitalization duplicate sheet(s) in ",
@@ -144,37 +177,37 @@ if (any(missing_sheet)) {
             )
         )
     )
+} else {
+    inform_cyan("All sheets already exist.")
 }
 
 
 
-# EXTRA -------------------------------------------------------------------
+# Automatically delete uncurate do_same -----------------------------------
 
-stop("DONE!")
-
-# if automating update of doid-edit.owl ... decided against it since manual
-#   review is necessary anyway
-do_same_continue <- function() {
-    answer <- NULL
-    while (!answer %in% c("yes", "no")) {
-        answer <- readline(
-            paste0(
-                strwrap(
-                    paste0(
-                        "Has ",
-                        comparison_output["do_same"],
-                        " been reviewed & prepared for use in processing doid-edit.owl? yes/no"
-                    ),
-                    exdent = 4
-                ),
-                collapse = "\n"
-            )
-        )
-    }
-    answer
-}
-
+# if automating update of doid-edit.owl, automatically delete anything not
+#   curated on today's do_same sheet
 same_continue <- do_same_continue()
 if (same_continue) {
-    # edit doid-edit.owl automatically here
+    de <- DO.utils:::read_doid_edit(repo_path)
+    do_same <- googlesheets4::read_sheet(gs, sheet_names[1])
+
+    rm_pattern <- do_same %>%
+        dplyr::filter(is.na(curation)) %>%
+        dplyr::mutate(
+            init = paste0("AnnotationAssertion\\(oboInOwl:", txt_type, " "),
+            mid = stringr::str_replace(id, "DOID:", "obo:DOID_"),
+            end = paste0(' "', txt, '"')
+        ) %>%
+        dplyr::select(init, mid, end) %>%
+        apply(1, function(...) DO.utils::vctr_to_string(..., "")) %>%
+        DO.utils::vctr_to_string(delim = "|")
+
+    de_rm <- de[!stringr::str_detect(de, rm_pattern)]
+
+    de_path <- file.path(repo_path, "src/ontology/doid-edit.owl")
+    readr::write_lines(de_rm, de_path)
+    inform_cyan(paste0(de_path, " has been updated."))
+} else {
+    inform_cyan("NO automated removal performed on doid-edit.owl")
 }
