@@ -461,7 +461,7 @@ omim_mismatch <- suggested_omim_compare %>%
         !is.na(doid_omim),
         xref_omim != doid_omim
     ) %>%
-    dplyr::select(doid:xref_label, dplyr::ends_with("omim")) %>%
+    dplyr::select(doid:xref_label, dplyr::ends_with("omim"), review) %>%
     DO.utils::collapse_col(dplyr::ends_with("omim"))
 
 googlesheets4::write_sheet(
