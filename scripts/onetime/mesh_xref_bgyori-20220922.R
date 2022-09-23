@@ -366,13 +366,9 @@ existing_xrefs <- r$doid$query("sparql/DO-xref-w_obs.rq") %>%
         ns = stringr::str_remove(xref, ":.*")
     )
 
-existing_mesh <- existing_xrefs %>%
-    dplyr::filter(ns == "MESH") %>%
-    dplyr::select(doid, doid_label, xref)
-
 existing_omim <- existing_xrefs %>%
     dplyr::filter(ns == "OMIM") %>%
-    dplyr::select(doid, doid_label, omim = xref)
+    dplyr::select(doid, doid_omim = xref)
 
 do_labels <- r$doid$query("sparql/DO-synonym-w_dep.rq") %>%
     tibble::as_tibble() %>%
@@ -425,11 +421,12 @@ mesh_summary <- request_mesh_summary(mesh_uid)
 mesh_omim <- mesh_summary %>%
     dplyr::select(xref = DS_MeSHUI, def = DS_ScopeNote) %>%
     dplyr::mutate(
-        xref = format_xref(xref, "add", "MESH"),
-        omim = stringr::str_extract(def, "OMIM:[ 0-9_]+") %>%
+        xref = format_xref(xref, "add", "MESH") %>%
+            as.character(),
+        xref_omim = stringr::str_extract(def, "OMIM:[ 0-9_]+") %>%
             stringr::str_remove_all(" ")
     ) %>%
-    dplyr::filter(!is.na(omim)) %>%
+    dplyr::filter(!is.na(xref_omim)) %>%
     dplyr::select(-def)
 
 
@@ -439,6 +436,13 @@ mesh_omim <- mesh_summary %>%
 all_do <- dplyr::full_join(existing_xrefs, do_labels) %>%
     unique()
 
+# Identify general problems
+# ignore:
+#   - xrefs for deprecated terms
+#   - xrefs suggestions that already exist
+# set aside for review:
+#   - xrefs suggested for multiple DOIDs
+#   - xrefs that are not matched on a diseases main label
 suggested_other <- filter_problematic(
     suggested_xref,
     all_do,
@@ -446,6 +450,28 @@ suggested_other <- filter_problematic(
     gs = mesh_biomappings_gs
 )
 
+# Identify OMIM mismatches
+suggested_omim_compare <- suggested_other %>%
+    dplyr::left_join(mesh_omim, by = "xref") %>%
+    dplyr::left_join(existing_omim, by = "doid")
+
+omim_mismatch <- suggested_omim_compare %>%
+    dplyr::filter(
+        !is.na(xref_omim),
+        !is.na(doid_omim),
+        xref_omim != doid_omim
+    ) %>%
+    dplyr::select(doid:xref_label, dplyr::ends_with("omim")) %>%
+    DO.utils::collapse_col(dplyr::ends_with("omim"))
+
+googlesheets4::write_sheet(
+    omim_mismatch,
+    mesh_biomappings_gs,
+    "omim_mismatch"
+)
+
+# Retain for further comparison
+suggested_other <- dplyr::anti_join(suggested_other, omim_mismatch)
 
 
 # Identify xrefs that are likely to be correct  ----------------------------
