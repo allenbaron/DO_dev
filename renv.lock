@@ -30,8 +30,8 @@
       "RemoteRepo": "DO.utils",
       "RemoteUsername": "allenbaron",
       "RemoteRef": "main",
-      "RemoteSha": "72fc4ea79275f7685a6753b01deac062833202d5",
-      "Hash": "aafc2e4f1fc5656d2ceede96c10388c5"
+      "RemoteSha": "f07c9e7e7a5af9c60b95b5769f6792b8c8301924",
+      "Hash": "e28037a5b892a883d72e66051429ddc6"
     },
     "DT": {
       "Package": "DT",
