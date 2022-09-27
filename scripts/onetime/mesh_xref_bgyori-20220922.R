@@ -423,8 +423,13 @@ mesh_omim <- mesh_summary %>%
     dplyr::mutate(
         xref = format_xref(xref, "add", "MESH") %>%
             as.character(),
-        xref_omim = stringr::str_extract(def, "OMIM:[ 0-9_]+") %>%
-            stringr::str_remove_all(" ")
+        xref_omim = stringr::str_extract_all(def, "OMIM:[ 0-9_]+") %>%
+            purrr::map_chr(
+                ~ stringr::str_remove_all(.x, " ") %>%
+                    unique_to_string()
+            ) %>%
+            dplyr::na_if("") %>%
+            dplyr::na_if("NA")
     ) %>%
     dplyr::filter(!is.na(xref_omim)) %>%
     dplyr::select(-def)
