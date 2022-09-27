@@ -476,8 +476,12 @@ googlesheets4::write_sheet(
 )
 
 # Retain for further comparison
-suggested_other <- dplyr::anti_join(suggested_other, omim_mismatch)
+add_omim <- suggested_omim_compare %>%
+    dplyr::filter(is.na(doid_omim), !is.na(xref_omim)) %>%
+    dplyr::select(xref, xref_omim)
 
+suggested_other <- dplyr::anti_join(suggested_other, omim_mismatch) %>%
+    dplyr::left_join(add_omim, by = "xref")
 
 # Identify xrefs that are likely to be correct  ----------------------------
 
@@ -561,7 +565,7 @@ suggested_other <- dplyr::anti_join(suggested_other, likely$diff_rn)
 # Save data to google sheets ----------------------------------------------
 
 retain_vars <- c("doid", "doid_label", "relation", "xref", "xref_label",
-                 "review")
+                 "xref_omim", "review")
 
 # likely just add
 suggested_likely <- dplyr::bind_rows(likely) %>%
