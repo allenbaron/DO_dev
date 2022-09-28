@@ -418,6 +418,7 @@ rentrez::set_entrez_key(keyring::key_get("ENTREZ_KEY"))
 mesh_uid <- unique(suggested_xref$xref) %>%
     request_mesh_uid()
 mesh_summary <- request_mesh_summary(mesh_uid)
+
 mesh_omim <- mesh_summary %>%
     dplyr::select(xref = DS_MeSHUI, def = DS_ScopeNote) %>%
     dplyr::mutate(
@@ -434,6 +435,23 @@ mesh_omim <- mesh_summary %>%
     dplyr::filter(!is.na(xref_omim)) %>%
     dplyr::select(-def)
 
+mesh_terms <- mesh_summary %>%
+    dplyr::select(xref = DS_MeSHUI, term = DS_MeshTerms) %>%
+    dplyr::mutate(
+        xref = format_xref(xref, "add", "MESH") %>%
+            as.character()
+    ) %>%
+    tidyr::hoist(term, preferred = 1) %>%
+    # requires two unnesting iterations
+    tidyr::unnest(term, keep_empty = TRUE) %>%
+    tidyr::unnest(term, keep_empty = TRUE) %>%
+    dplyr::rename(entry_term = term) %>%
+    tidyr::pivot_longer(
+        cols = c(preferred, entry_term),
+        names_to = "xref_label_type",
+        values_to = "xref_label"
+    ) %>%
+    unique()
 
 
 # Separate out problematic suggested xrefs ---------------------------------
@@ -441,7 +459,7 @@ mesh_omim <- mesh_summary %>%
 all_do <- dplyr::full_join(existing_xrefs, do_labels) %>%
     unique()
 
-# Identify general problems
+# Separate out general problems
 # ignore:
 #   - xrefs for deprecated terms
 #   - xrefs suggestions that already exist
@@ -455,7 +473,7 @@ suggested_other <- filter_problematic(
     gs = mesh_biomappings_gs
 )
 
-# Identify OMIM mismatches
+# Separate out OMIM mismatches
 suggested_omim_compare <- suggested_other %>%
     dplyr::left_join(mesh_omim, by = "xref") %>%
     dplyr::left_join(existing_omim, by = "doid")
@@ -476,13 +494,32 @@ googlesheets4::write_sheet(
     "omim_mismatch"
 )
 
-# Retain for further comparison
 add_omim <- suggested_omim_compare %>%
     dplyr::filter(is.na(doid_omim), !is.na(xref_omim)) %>%
     dplyr::select(xref, xref_omim)
 
 suggested_other <- dplyr::anti_join(suggested_other, omim_mismatch) %>%
     dplyr::left_join(add_omim, by = "xref")
+
+
+# Separate out DO matches to MeSH synonyms (also may be problematic)
+mesh_syn_match <- suggested_other %>%
+    dplyr::left_join(mesh_terms, by = c("xref", "xref_label")) %>%
+    dplyr::filter(is.na(xref_label_type) | xref_label_type != "preferred") %>%
+    dplyr::mutate(reason_removed = "not_mesh_preferred") %>%
+    dplyr::rename(exists_as = xref_label_type) %>%
+    dplyr::select(reason_removed, doid, doid_label, exists_as, relation, xref,
+                  xref_label, review)
+
+googlesheets4::sheet_append(
+    mesh_biomappings_gs,
+    mesh_syn_match,
+    sheet = "err_review"
+)
+
+suggested_other <- dplyr::anti_join(suggested_other, mesh_syn_match)
+
+
 
 # Identify xrefs that are likely to be correct  ----------------------------
 
