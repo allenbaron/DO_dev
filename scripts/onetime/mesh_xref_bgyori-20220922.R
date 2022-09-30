@@ -465,7 +465,9 @@ all_do <- dplyr::full_join(existing_xrefs, do_labels) %>%
 #   - xrefs suggestions that already exist
 # set aside for review:
 #   - xrefs suggested for multiple DOIDs
-#   - xrefs that are not matched on a diseases main label
+#   - xrefs that are not matched on a diseases main label --> this analysis is
+#       probably not correct, because main labels were provided in dataset but
+#       synonyms often match --> see later analysis
 suggested_other <- filter_problematic(
     suggested_xref,
     all_do,
@@ -599,16 +601,135 @@ likely$diff_rn <- suggested_other %>%
 suggested_other <- dplyr::anti_join(suggested_other, likely$diff_rn)
 
 
+# Synonym matches ---------------------------------------------------------
+
+do_labels2 <- do_labels %>%
+    dplyr::select(-deprecated) %>%
+    dplyr::rename_with(
+        .cols = dplyr::starts_with("syn"),
+        .fn = ~ paste0("doid_", .x)
+    ) %>%
+    dplyr::mutate(
+        dplyr::across(
+            c(doid_label, doid_synonym),
+            ~ stringr::str_to_lower(.x),
+            .names = "{.col}_lc"
+        ),
+        dplyr::across(
+            dplyr::ends_with("_lc"),
+            function(.x) {
+                to_roman_lc(.x) %>%
+                    stringr::str_remove_all("[[:space:]]+") %>%
+                    stringr::str_remove_all("[[:punct:]]+")
+            },
+            .names = "{.col}_rn"
+        )
+    ) %>%
+    dplyr::select(!dplyr::ends_with("_lc")) %>%
+    unique()
+
+mesh_terms2 <- mesh_terms %>%
+    tidyr::pivot_wider(
+        names_from = xref_label_type,
+        values_from = xref_label,
+        values_fn = list
+    ) %>%
+    DO.utils::unnest_cross(where(is.list), keep_empty = TRUE) %>%
+    dplyr::rename(xref_label = preferred, xref_synonym = entry_term) %>%
+    dplyr::mutate(
+        dplyr::across(
+            c(xref_label, xref_synonym),
+            ~ stringr::str_to_lower(.x),
+            .names = "{.col}_lc"
+        ),
+        dplyr::across(
+            dplyr::ends_with("_lc"),
+            function(.x) {
+                to_roman_lc(.x) %>%
+                    stringr::str_remove_all("[[:space:]]+") %>%
+                    stringr::str_remove_all("[[:punct:]]+")
+            },
+            .names = "{.col}_rn"
+        )
+    ) %>%
+    dplyr::select(!dplyr::ends_with("_lc")) %>%
+    unique()
+
+suggested_syn <- suggested_other %>%
+    dplyr::select(doid, xref) %>%
+    dplyr::left_join(
+        dplyr::select(do_labels2, doid, dplyr::ends_with("rn")),
+        by = "doid"
+    ) %>%
+    dplyr::left_join(
+        dplyr::select(mesh_terms2, xref, dplyr::ends_with("rn")),
+        by = "xref") %>%
+    dplyr::group_by(doid, xref) %>%
+    dplyr::mutate(
+        match_type = dplyr::case_when(
+            doid_label_lc_rn == xref_label_lc_rn ~ "exact",
+            !is.na(doid_synonym_lc_rn) & doid_synonym_lc_rn == xref_label_lc_rn ~ "DO_synonym",
+            !is.na(xref_synonym_lc_rn) & xref_synonym_lc_rn == doid_label_lc_rn ~ "MESH_synonym",
+            !is.na(xref_synonym_lc_rn) & !is.na(doid_synonym_lc_rn) & doid_label_lc_rn %in% xref_label_lc_rn ~ "DO-MESH_synonym",
+            TRUE ~ "unknown"
+        ),
+        keep = dplyr::case_when(
+            match_type == "exact" ~ TRUE,
+            all(match_type != "exact") & match_type == "DO_synonym" ~ TRUE,
+            all(!match_type %in% c("exact", "DO_synonym")) & match_type == "MESH_synonym" ~ TRUE,
+            all(!match_type %in% c("exact", "DO_synonym", "MESH_synonym")) & match_type == "DO-MESH_synonym" ~ TRUE,
+            TRUE ~ FALSE
+        )
+    ) %>%
+    dplyr::ungroup() %>%
+    dplyr::filter(keep) %>%
+    dplyr::mutate(
+        doid_synonym_lc_rn = dplyr::if_else(
+            match_type %in% c("DO_synonym", "DO-MESH_synonym"),
+            doid_synonym_lc_rn,
+            NA_character_
+        ),
+        xref_synonym_lc_rn = dplyr::if_else(
+            match_type %in% c("MESH_synonym", "DO-MESH_synonym"),
+            xref_synonym_lc_rn,
+            NA_character_
+        )
+    ) %>%
+    dplyr::select(!keep) %>%
+    DO.utils::collapse_col(.cols = c(doid_synonym_lc_rn, xref_synonym_lc_rn)) %>%
+    dplyr::left_join(
+        dplyr::select(do_labels2, doid, doid_syn_type, doid_synonym, doid_synonym_lc_rn),
+        by = c("doid", "doid_synonym_lc_rn")
+    ) %>%
+    dplyr::left_join(
+        dplyr::select(mesh_terms2, xref, xref_synonym, xref_synonym_lc_rn),
+        by = c("xref", "xref_synonym_lc_rn")
+    ) %>%
+    DO.utils::collapse_col_flex(
+        doid_synonym,
+        xref_synonym,
+        method = "first"
+    ) %>%
+    dplyr::select(doid, xref, match_type, dplyr::ends_with("synonym"))
+
+suggested_other <- dplyr::left_join(
+    suggested_other,
+    suggested_syn,
+    by = c("doid", "xref")
+)
+
+
 
 # Save data to google sheets ----------------------------------------------
 
 retain_vars <- c("doid", "doid_label", "relation", "xref", "xref_label",
-                 "xref_omim", "review")
+                 "xref_omim")
 
 # likely just add
 suggested_likely <- dplyr::bind_rows(likely) %>%
     dplyr::select(
         dplyr::one_of(retain_vars),
+        review,
         dplyr::contains("_label_")
     ) %>%
     tidyr::pivot_longer(
@@ -644,7 +765,10 @@ googlesheets4::write_sheet(
 # need to review manually
 suggested_other <- dplyr::select(
     suggested_other,
-    dplyr::one_of(retain_vars)
+    dplyr::one_of(retain_vars),
+    match_type,
+    dplyr::ends_with("synonym"),
+    review
 )
 
 googlesheets4::write_sheet(
