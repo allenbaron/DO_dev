@@ -1,0 +1,19 @@
+# Return a list of all non-obsolete class IDs, labels, & parents
+
+PREFIX rdfs: <http://www.w3.org/2000/01/rdf-schema#>
+PREFIX owl: <http://www.w3.org/2002/07/owl#>
+PREFIX oboInOwl: <http://www.geneontology.org/formats/oboInOwl#>
+
+SELECT ?id ?label ?parent_id ?parent_label
+WHERE {
+    ?class a owl:Class ;
+        oboInOwl:id ?id ;
+        rdfs:label ?label ;
+        rdfs:subClassOf ?superclass .
+    ?superclass oboInOwl:id ?parent_id ;
+        rdfs:label ?parent_label .
+
+    FILTER (CONTAINS(STR(?class), "DOID"))
+
+    FILTER NOT EXISTS { ?class owl:deprecated ?obsolete . }
+}
