@@ -1,0 +1,14 @@
+ERROR	deprecated_boolean_datatype
+ERROR	deprecated_class_reference
+ERROR	deprecated_property_reference
+ERROR	duplicate_definition
+ERROR	duplicate_label
+ERROR	illegal_use_of_built_in_vocabulary
+ERROR	label_formatting
+ERROR	label_whitespace
+ERROR	missing_label
+ERROR	misused_obsolete_label
+ERROR	misused_replaced_by
+ERROR	multiple_definitions
+ERROR	multiple_equivalent_class_definitions
+ERROR	multiple_labels

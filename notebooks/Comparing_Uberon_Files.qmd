@@ -1,0 +1,531 @@
+---
+title: "Classification by uberon_import.owl"
+author: "J. Allen Baron"
+format: 
+    html:
+        df-print: "paged"
+        toc: true
+        code-fold: true
+        code-summary: "Show the code"
+        self-contained: true
+---
+
+## Purpose
+
+Compare how different Uberon imports affect DO's classification.
+
+
+## Technical Info
+
+```{r}
+#| include: false
+library(here)
+library(git2r)
+library(tidyverse)
+library(DO.utils)
+library(glue)
+```
+
+```{r}
+repo <- here::here("../Ontologies/HumanDiseaseOntology")
+init_head <- git2r::repository_head(repo)
+
+git2r::checkout(repo, branch = "v2022-09-29")
+new_head <- git2r::repository_head(repo)
+```
+
+- `doid-edit.owl` version used is from commit `r stringr::str_trunc(new_head$sha, 8, ellipsis = "")`. All `doid-merged.owl` files are built from this version.
+- Uberon version is [2022-09-30](https://github.com/obophenotype/uberon/releases/tag/v2022-09-30) for all files.
+    - Initially tried [2022-06-30](https://github.com/obophenotype/uberon/releases/tag/v2022-06-30), which is the current version used as import to DO but _ALL_ of the Uberon source files failed validation with multiple error types!
+- `r system2("robot", args = "--version")`
+
+
+### Uberon Source Files
+
+1. uberon.owl
+2. uberon-base.owl
+3. human-view.owl
+4. uberon-simple.owl
+5. uberon-full.owl
+
+```{r dl_uberon}
+local_save <- here::here("data/uberon")
+src_save_dir <- file.path(local_save, "src")
+if (!dir.exists(src_save_dir)) {
+    dir.create(src_save_dir, recursive = TRUE)
+}
+
+uberon_files <- c("uberon.owl", "human-view.owl", "uberon-simple.owl", 
+                 "uberon-full.owl", "uberon-base.owl")
+
+dl_basepath <- "https://github.com/obophenotype/uberon/releases/download/v2022-09-30/"
+dl_paths <- paste0(dl_basepath, uberon_files)
+
+files <- file.path(src_save_dir, uberon_files)
+files_exist <- file.exists(files)
+
+if (any(!files_exist)) {
+    purrr::walk2(
+        .x = dl_paths[!files_exist],
+        .y = files[!files_exist],
+        ~ download.file(.x, .y)
+    )
+}
+```
+
+
+## Validate doid-edit.owl & Uberon Source Files
+
+```{r validation_fn}
+validate_import <- function(repo, import_file, profile_file) {
+    tmp_file <- basename(import_file) %>%
+        tools::file_path_sans_ext() %>%
+        paste0("-error.tsv") %>%
+        file.path(dirname(import_file), .)
+    cmd <- glue::glue(
+        'report --input {import_file}',
+        '--output {report_save}',
+        '--profile {profile_file}',
+        import_file = import_file,
+        report_save = tmp_file,
+        profile_file = profile_file,
+        .sep = " "
+    )
+    res <- suppressWarnings(
+        system2("robot", args = cmd, stderr = TRUE, stdout = TRUE)
+    )
+    if (res[1] != "No violations found.") {
+        message(
+            paste0(
+                "Errors exist in ", basename(import_file), ". ", res[1]
+            )
+        )
+        invisible(tmp_file)
+    } else {
+        message(paste0("No errors found in ", basename(import_file)))
+    }
+}
+
+validate_de <- function(repo) {
+    suppressWarnings(
+        res <- system2(
+            "cd",
+            args = c(repo, " && make test"),
+            stdout = FALSE,
+            stderr = FALSE
+        )
+    )
+    if ("status" %in% names(attributes(res))) {
+        message("doid-edit.owl file has errors!! Check report in repository.")
+    } else {
+        message("No errors found in doid-edit.owl")
+    }
+}
+```
+
+```{r validate_de_src}
+validate_de(repo)
+err_src <- purrr::map(
+    files,
+    ~ validate_import(
+        repo,
+        import_file = .x,
+        profile_file = here::here("data/uberon/import_profile.txt")
+    )
+) %>%
+    as.character()
+```
+
+NOTE: All Uberon files have errors if _all_ of the default `robot report` ERROR-level reports are used, including the -base.owl file.
+
+Uberon source files exhibit the following errors:
+
+```{r uberon_src_err}
+err_res <- purrr::map(
+    err_src,
+    ~ readr::read_tsv(.x, col_types = "c") %>%
+        dplyr::mutate(
+            src_file = basename(.x) %>%
+                stringr::str_remove("-err.*") %>%
+                factor(
+                    levels = c("uberon-base", "uberon", "human-view",
+                               "uberon-simple", "uberon-full")
+                )
+        )
+    ) %>%
+    dplyr::bind_rows()
+
+err_res %>%
+    dplyr::count(src_file, `Rule Name`)
+```
+
+Some of these are due to Uberon's imports. Those directly attributable to Uberon for each file are:
+
+```{r}
+err_res %>%
+    dplyr::filter(
+        stringr::str_detect(Subject, "[Uu][Bb][Ee][Rr][Oo][Nn]")
+    ) %>%
+    dplyr::count(src_file, `Rule Name`)
+```
+
+- `duplicate_definition` can be ignored because DO doesn't keep import definitions.
+- `duplicate_label` will need to be dealt with using a SPARQL update statement.
+- All the non-Uberon issues, _should_ just disappear.
+
+
+## Create Various Uberon Imports
+
+```{r import_build_fn}
+build_std <- function(repo, src_file, save_dir) {
+    if (!dir.exists(save_dir)) dir.create(save_dir)
+    
+    import_nm <- basename(src_file) %>%
+        tools::file_path_sans_ext() %>%
+        paste0("_import.owl")
+    import_path <- file.path(save_dir, import_nm)
+    
+    term_file <- file.path(repo, "src/ontology/imports/uberon_terms.txt")
+    ann_file <- file.path(repo, "src/ontology/imports/annotations.txt")
+    
+    cmd <- glue::glue(
+        'extract',
+        '--input {src_file}',
+        '--method mireot',
+        '--lower-terms {term_file}',
+        'remove',
+        '--select complement',
+        '--select annotation-properties',
+        '--term-file {annotations_file}',
+        'remove',
+        '--select "UBERON:*"',
+        '--select complement',
+        '--select classes',
+        'query',
+        '--update {rm_dup_label}',
+        'annotate',
+        '--remove-annotations',
+        '--ontology-iri "http://purl.obolibrary.org/obo/doid/imports/uberon_import.owl"',
+        '--version-iri "http://purl.obolibrary.org/obo/doid/imports/{nm}"',
+        '--output {import_path}',
+        term_file = term_file,
+        import_path = import_path,
+        src_file = src_file,
+        annotations_file = ann_file,
+        nm = import_nm,
+        rm_dup_label = here::here("sparql/remove_dup_labels.ru"),
+        .sep = " "
+    )
+    
+    system2("robot", args = cmd)
+    import_path
+}
+
+build_part_of <- function(repo, src_file, save_dir, no_ancestors = TRUE) {
+    if (!dir.exists(save_dir)) dir.create(save_dir)
+
+    import_nm <- basename(src_file) %>%
+        tools::file_path_sans_ext() %>%
+        paste0(
+        "-po",
+        if (no_ancestors) {
+            "_noA"
+        } else {
+            ''
+        },
+        "_import.owl")
+    import_path <- file.path(save_dir, import_nm)
+    
+    term_file <- file.path(repo, "src/ontology/imports/uberon_terms.txt")
+    ann_file <- file.path(repo, "src/ontology/imports/annotations.txt")
+
+    cmd <- glue::glue(
+        'relax',
+        '--input {src_file}',
+        'filter',
+        '--term-file {term_file}',
+        '--term-file {annotations_file}',
+        '--term BFO:0000050',
+        '--select "self ancestors"',
+        '--signature true',
+        if (no_ancestors) { 
+            'remove --term BFO:0000050 --select ancestors'
+        } else {
+            ''
+        },
+        'remove',
+        '--select "UBERON:*"',
+        '--select complement',
+        '--select classes',
+        'query',
+        '--update {rm_dup_label}',
+        'annotate',
+        '--remove-annotations',
+        '--ontology-iri "http://purl.obolibrary.org/obo/doid/imports/uberon_import.owl"',
+        '--version-iri "http://purl.obolibrary.org/obo/doid/imports/{nm}"',
+        '--output {import_path}',
+        term_file = term_file,
+        import_path = import_path,
+        src_file = src_file,
+        annotations_file = ann_file,
+        nm = import_nm,
+        rm_dup_label = here::here("sparql/remove_dup_labels.ru"),
+        .sep = " "
+    )
+    
+    system2("robot", args = cmd)
+    import_path
+}
+
+build_base <- function(repo, src_file, save_dir, reason = FALSE,
+                       reasoner = NULL) {
+    if (!dir.exists(save_dir)) dir.create(save_dir)
+
+    import_nm <- basename(src_file) %>%
+        tools::file_path_sans_ext() %>%
+        paste0(
+            if (isTRUE(reason)) {
+                "_reas"
+            } else if (reason == "rrr") {
+                "_rrr"
+            } else if (isFALSE(reason)) {
+                ''
+            } else {
+                stop("`reason` must be T, F, or 'rrr'")
+            },
+            if (!is.null(reasoner)) {
+                paste0("_", reasoner)
+            } else {
+                ''
+            },
+            "_import.owl"
+        )
+    import_path <- file.path(save_dir, import_nm)
+    
+    term_file <- file.path(repo, "src/ontology/imports/uberon_terms.txt")
+    ann_file <- file.path(repo, "src/ontology/imports/annotations.txt")
+
+    if (!is.null(reasoner)) {
+        reasoner_stmt <- paste0("--reasoner ", reasoner)
+    } else {
+        reasoner_stmt <- ""
+    }
+    cmd <- glue::glue(
+        if (isTRUE(reason)) {
+            'reason --input {src_file} {reasoner_arg} filter'
+        } else if (reason == "rrr") {
+            'reason --input {src_file} {reasoner_arg} reduce relax filter'
+        } else {
+            'filter --input {src_file}'
+        },
+        '--term-file {term_file}',
+        '--select "self ancestors annotations"',
+        'query',
+        '--update {rm_dup_label}',
+        'annotate',
+        '--remove-annotations',
+        '--ontology-iri "http://purl.obolibrary.org/obo/doid/imports/uberon_import.owl"',
+        '--version-iri "http://purl.obolibrary.org/obo/doid/imports/{nm}"',
+        '--output {import_path}',
+        term_file = term_file,
+        import_path = import_path,
+        src_file = src_file,
+        nm = import_nm,
+        rm_dup_label = here::here("sparql/remove_dup_labels.ru"),
+        reasoner_arg = reasoner_stmt,
+        .sep = " "
+    )
+    
+    system2("robot", args = cmd)
+    import_path
+}
+```
+
+```{r import_build}
+imports_dir <- file.path(local_save, "imports")
+std_import <- build_std(repo, files[1], save_dir = imports_dir)
+po_imports <- purrr::map(
+    files[1:4],
+    ~ build_part_of(repo, .x, save_dir = imports_dir)
+)
+po_imports[[length(po_imports) + 1]] <- build_part_of(
+    repo,
+    files[1],
+    save_dir = imports_dir,
+    FALSE
+)
+base_imports <- purrr::map(
+    list("rrr", TRUE, FALSE),
+    ~ build_base(repo, files[5], save_dir = imports_dir, reason = .x)
+)
+base_imports[[length(base_imports) + 1]] <- build_base(
+    repo,
+    files[5],
+    save_dir = imports_dir,
+    reason = "rrr",
+    reasoner = "whelk"
+)
+
+all_imports <- list(std_import, po_imports, base_imports) %>%
+    unlist()
+```
+
+
+### Validate Import Files & doid-edit.owl
+
+```{r validate_imports}
+err_import <- purrr::map(
+    all_imports,
+    ~ validate_import(
+        repo,
+        import_file = .x,
+        profile_file = here::here("data/uberon/import_profile.txt")
+    )
+)
+```
+
+
+## Create doid-merged.owl files
+
+```{r dm_create_fn}
+create_dm <- function(repo, import_path, save_dir) {
+    if (!dir.exists(save_dir)) dir.create(save_dir)
+
+    rel_prefix <- paste0(
+        "http://purl.obolibrary.org/obo/doid/releases/",
+        Sys.Date()
+    )
+    
+    dm_id <- basename(import_path) %>%
+        tools::file_path_sans_ext()
+    dm_nm <- paste0("dm-", dm_id, ".owl")
+    
+    dm_path <- file.path(save_dir, dm_nm)
+    de <- file.path(repo, "src/ontology/doid-edit.owl")
+    
+    import_dir <- file.path(repo, "src/ontology/imports")
+    import_official <- file.path(import_dir, "uberon_import.owl")
+    import_bkp <- file.path(import_dir, "import.bkp.owl")
+    
+    file.copy(import_official, import_bkp, overwrite = TRUE)
+    on.exit({
+        file.copy(import_bkp, import_official, overwrite = TRUE)
+        file.remove(import_bkp)
+    })
+    file.copy(import_path, import_official, overwrite = TRUE)
+
+    cmd <- glue::glue(
+        'reason',
+        '--input {doid_edit}',
+        '--create-new-ontology false',
+        '--annotate-inferred-axioms false',
+        '--exclude-duplicate-axioms true',
+        'merge',
+        '--collapse-import-closure true',
+        'annotate',
+        '--version-iri "{rel_prefix}{dm_nm}"',
+        '--ontology-iri "{rel_prefix}doid-merged.owl"',
+        '--output {dm_path}',
+        .sep = " ",
+        doid_edit = de,
+        rel_prefix = rel_prefix,
+        dm_nm = dm_nm,
+        dm_path = dm_path
+    )
+    
+    system2("robot", args = cmd)
+    dm_path
+}
+```
+
+```{r}
+dm_dir <- file.path(local_save, "dm")
+dm_files <- purrr::map(
+    all_imports,
+    ~ create_dm(repo, .x, save_dir = dm_dir)
+) %>%
+    as.character()
+```
+
+
+### Identify Class Parents
+
+```{r load_query}
+query_parent <- function(dm) {
+    dm$query(here::here("sparql/DO-id_label_parent.rq")) %>%
+        tidy_sparql()
+}
+```
+
+```{r}
+dm_owl <- purrr::map(dm_files, owl_xml)
+
+all_dm <- basename(dm_files) %>%
+    tools::file_path_sans_ext()
+
+dm_data <- purrr::map2(
+    .x = dm_owl,
+    .y = all_dm,
+    ~ query_parent(.x) %>%
+        dplyr::mutate(file = .y)
+) %>%
+    dplyr::bind_rows()
+```
+
+
+## Analyze Results
+
+Total DO-parent pairs in each doid-merged.owl:
+```{r}
+dplyr::count(dm_data, file)
+```
+
+
+Number of DO-parent pairs across files:
+```{r compare_fn}
+in_file <- function(x, all_files) {
+    present <- all_files %in% x
+    n <- sum(present)
+    n_max <- length(all_files)
+    n_x <- length(x)
+    
+    if (n == n_max) {
+        out <- rep("all", n_x)
+    } else if (n > n_max %/% 2) {
+        include <- DO.utils::unique_to_string(all_files[!present])
+        out <- rep(paste0("MISSING_IN: ", include), n_x)
+    } else {
+        include <- DO.utils::unique_to_string(all_files[present])
+        out <- rep(include, n_x)
+    }
+    out
+}
+```
+
+
+```{r}
+dm_compare <- dm_data %>%
+    dplyr::group_by(id, parent_id) %>%
+    dplyr::mutate(file = in_file(file, all_dm)) %>%
+    dplyr::group_by(id) %>%
+    dplyr::mutate(parent_diff = any(file != "all")) %>%
+    dplyr::ungroup() %>%
+    unique()
+
+dplyr::count(dm_compare, file)
+```
+
+DO-parent pairs that are not in all files:
+```{r}
+dplyr::filter(dm_compare, parent_diff) %>%
+    dplyr::arrange(id, file)
+```
+
+For full list see `r file.path(local_save, "dm_compare.tsv")`.
+```{r}
+readr::write_tsv(
+    dm_compare,
+    file = file.path(local_save, "dm_compare.tsv")
+)
+```
+
