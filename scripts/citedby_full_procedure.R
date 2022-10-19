@@ -9,14 +9,16 @@ library(DO.utils) # requires >= v0.1.7.900
 library(googlesheets4)
 
 ###### MANUAL STEP REQUIRED!!! ######
-# Download data manually to data/citedby_collection.txt by selecting:
+# Download data manually to data/citedby/collection.txt by selecting:
 #   'Send to:' > 'File' > 'Summary (text)' (Format drop down) > 'Create File'
 #   URL: https://www.ncbi.nlm.nih.gov/myncbi/browse/collection/49204559/
 #####################################
 
-# improvements needed
-#   1. abbreviated titles for Scopus data
-#   2. retain scopus_eid, citedby, etc for matches (not straight preference)
+# Desired Improvements
+#   1. Abbreviated titles for Scopus data
+#   2. Retain scopus_eid, citedby, etc for matches (not straight preference)
+#   3. Incorporate unexported DO.utils functions used here into appropriate
+#       exported parent function.
 
 
 # Files -------------------------------------------------------------------
@@ -132,9 +134,9 @@ cb_scop_merge <- cb_scop_by_id %>%
 
 # PubMed collection data --------------------------------------------------
 
-# get "cited by" articles identified in MyNCBI collection; enough of these are
+# Get "cited by" articles identified in MyNCBI collection; enough of these are
 #   not redundant with the PubMed + Scopus cited by results to make this
-#   necessary
+#   important.
 
 # extract PubMed IDs & get data from Entrez API to make formatting easier
 collection_txt <- read_pubmed_txt(collection_file)
