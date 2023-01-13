@@ -112,3 +112,18 @@ ggplot2::ggsave(
     units = "in",
     dpi = 600
 )
+
+
+
+# Set contributors --------------------------------------------------------
+
+cont_gs <- "1kD7rgOWO2uVUwKYoKFSLBEpv1WZFf-GDhEusAq_H5sM"
+trans_cont <- googlesheets4::read_sheet(
+    ss = cont_gs,
+    sheet = "TRANS",
+    col_types = "c"
+)
+
+format_contrib_html <- function(cont_df) {
+    paste0(
+        name,
