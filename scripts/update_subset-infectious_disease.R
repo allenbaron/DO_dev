@@ -10,7 +10,7 @@ library(googlesheets4)
 # convert edit file to OWL for SPARQL query
 de_path <- here::here("../Ontologies/HumanDiseaseOntology/src/ontology/doid-edit.owl")
 de_tmp <- tempfile(fileext = ".owl")
-system2("robot", glue::glue("convert --input {de_path} --output {de_tmp}"))
+system2("robot", glue::glue("reason --input {de_path} convert --output {de_tmp}"))
 
 # query to identify terms
 owl <- DO.utils::owl_xml(de_tmp)
