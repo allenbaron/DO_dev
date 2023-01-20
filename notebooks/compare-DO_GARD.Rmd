@@ -1,0 +1,631 @@
+---
+title: "Comparison: DO and GARD"
+date: "2023-01-18"
+output:
+    html_notebook:
+        toc: true
+        toc_float: true
+        code_folding: hide
+        df_print: paged
+        number_sections: true
+---
+
+
+# Purpose
+
+To determine how many [GARD](https://rarediseases.info.nih.gov) diseases are in the Human Disease Ontology.
+
+```{r setup, include = FALSE}
+library(tidyverse)
+library(DO.utils)
+library(here)
+library(git2r)
+library(lubridate)
+library(googlesheets4)
+
+# curation google sheet
+gard_gs <- "1r-L2zoE2hIb6N9wopSARug4WV3PHDs5wFlmnqtCHRNI"
+```
+
+
+# Data
+
+## GARD
+
+All GARD diseases are extracted from the GARD sitemap. Data include GARD numeric identifiers and names (with some slight formatting differences relative to presented names).
+```{r gard_data}
+gard_xml <- readr::read_file("https://rarediseases.info.nih.gov/sitemap.xml")
+
+gard_info <- stringr::str_match_all(
+    gard_xml,
+    "https://rarediseases.info.nih.gov/diseases/([0-9]+)/([^< /\"]+)"
+    )[[1]]
+
+gard <- tibble::tibble(
+    gard_id = paste0("GARD:", gard_info[, 2]),
+    label = stringr::str_replace_all(gard_info[, 3], "-", " ")
+) %>%
+    unique()
+```
+
+```{r save_gard, include = FALSE, eval = FALSE}
+# save GARD data, can only be run interactively
+readr::write_tsv(gard, here::here("data/mapping/GARD.tsv"))
+```
+
+GARD data include `r format(nrow(gard), big.mark = ",")` diseases, which matches the number of diseases listed on GARD's [browser](https://rarediseases.info.nih.gov/diseases) on the date this analysis started (2023-01-18).
+
+
+## Human Disease Ontology
+
+```{r do_repo}
+repo <- here::here("../Ontologies/HumanDiseaseOntology")
+repo_tags <- tibble::tibble(
+    tag = git2r::tags(repo),
+    label = names(tag),
+    date = lubridate::fast_strptime(
+        label,
+        format = c("v%Y-%m-%d", "v%Y-%m-%dv2", "%Y-%m-%d", "vv%Y-%m-%d",
+                   "v%Y-%m0%d",  "v%Y-%m/%d", "v%Y-%m-%d.2", "v%Y-%m-%d_v2")
+    )
+)
+latest_tag <- repo_tags %>%
+    dplyr::filter(date == max(date)) %>%
+    .$tag
+```
+
+DO data is from release `r names(latest_tag)`.
+
+```{r query_fxn, include = FALSE}
+query_release_doid <- function(repo, release, query) {
+    head <- git2r::repository_head(repo)
+    on.exit(git2r::checkout(head))
+    
+    git2r::checkout(release)
+
+    do_owl <<- DO.utils::owl_xml(file.path(repo, "src/ontology/doid.owl"))
+
+    do_owl$query(query) %>%
+        DO.utils::tidy_sparql()
+}
+```
+
+
+```{r do_data}
+do <- query_release_doid(
+    repo,
+    latest_tag[[1]],
+    query = "
+        SELECT ?doid ?label ?gard_id
+        WHERE {
+            ?class a owl:Class ;
+                oboInOwl:id ?doid ;
+                rdfs:label ?label .
+            OPTIONAL {
+                ?class oboInOwl:hasDbXref ?gard_id .
+                FILTER(CONTAINS(str(?gard_id), 'GARD'))
+            }
+            FILTER NOT EXISTS { ?class owl:deprecated ?any . }
+        }"
+)
+
+do_syn <-  do_owl$query("
+    SELECT ?doid ?synonym
+    WHERE {
+        ?class a owl:Class ;
+            oboInOwl:id ?doid ;
+            oboInOwl:hasExactSynonym ?synonym .
+
+        FILTER NOT EXISTS { ?class owl:deprecated ?any . }
+    }"
+) %>%
+    tidy_sparql()
+```
+
+
+## Mondo
+
+Mondo is used only as a bridge to identify DO-GARD relationships via cross-references. Mondo 2023-01-04 release is used in this analysis.
+
+```{r mondo_data}
+mondo_owl <- DO.utils::owl_xml(
+    here::here("../Ontologies/mondo/mondo-20230104.owl")
+)
+
+mondo_bridge <- mondo_owl$query(
+    "SELECT ?doid ?mondo_gard_id ?mondo_label
+    WHERE {
+        ?class a owl:Class ;
+            oboInOwl:hasDbXref ?doid ;
+            oboInOwl:hasDbXref ?mondo_gard_id ;
+            rdfs:label ?mondo_label .
+        FILTER(CONTAINS(str(?doid), 'DOID'))
+        FILTER(CONTAINS(str(?mondo_gard_id), 'GARD'))
+    }"
+) %>%
+    tidy_sparql() %>%
+    dplyr::mutate(
+        gard_id = stringr::str_replace_all(
+            mondo_gard_id,
+            "GARD:[0]+([0-9]+)",
+            "GARD:\\1"
+        )
+    ) %>%
+    dplyr::relocate(gard_id, .before = mondo_gard_id)
+```
+
+```{r save_mondo, include = FALSE, eval = FALSE}
+# save Mondo data, can only be run interactively
+readr::write_tsv(mondo_bridge, here::here("data/mapping/mondo_bridge-DO_GARD.tsv"))
+```
+
+
+# GARD-DO Relationships
+
+Identifying DO-GARD mappings is ordered by quality as follows:
+
+1. Already in DO = GARD xrefs in DO
+2. Likely in DO, but missing GARD xref
+    A. DO-GARD xref matches in Mondo
+    B. DO-GARD exact string matches
+3. Maybe in DO = DO-GARD label approximate string matches
+
+
+## GARD Already in DO (mappings/xrefs)
+
+```{r already_in}
+gard_in_do <- dplyr::filter(do, !is.na(gard_id)) %>%
+    dplyr::left_join(dplyr::rename(gard, gard_label = label), by = "gard_id") %>%
+    dplyr::mutate(gard_deprec = is.na(gard_label))
+```
+
+- DO diseases with GARD xref = `r format(dplyr::n_distinct(gard_in_do$doid), big.mark = ",")`
+- GARD diseases in DO = `r format(dplyr::n_distinct(gard_in_do$gard_id), big.mark = ",")`
+- Total DO-GARD mappings = `r format(nrow(gard_in_do), big.mark = ",")`
+
+
+### Mappings in Need of Curation Review
+
+A. Deprecated GARD xrefs that are in DO.
+
+```{r do_gard_deprec}
+do_gard_deprec <- gard_in_do %>%
+    dplyr::filter(gard_deprec)
+
+do_gard_deprec
+```
+
+```{r curate-do_gard_deprec, include = FALSE, eval = FALSE}
+googlesheets4::write_sheet(do_gard_deprec, gard_gs, "DO-GARD_deprec")
+```
+
+
+B. DO diseases with more than one GARD xref.
+
+```{r do_multi_gard}
+do_multi_gard <- gard_in_do %>%
+    dplyr::filter(DO.utils::all_duplicated(doid)) %>%
+    dplyr::arrange(doid, gard_id) %>%
+    dplyr::mutate(gard_deprec = dplyr::na_if(gard_deprec, FALSE))
+
+do_multi_gard
+```
+
+```{r curate-do_multi_gard, include = FALSE, eval = FALSE}
+googlesheets4::write_sheet(do_multi_gard, gard_gs, "DO-multi_GARD_xref")
+```
+
+
+C. GARD diseases linked to more than one DO disease.
+
+```{r gard_dup}
+gard_in_do_dup <- gard_in_do %>%
+    dplyr::filter(DO.utils::all_duplicated(gard_id)) %>%
+    dplyr::arrange(gard_id, doid) %>%
+    dplyr::mutate(gard_deprec = dplyr::na_if(gard_deprec, FALSE))
+
+gard_in_do_dup
+```
+
+```{r curate-gard_dup, include = FALSE, eval = FALSE}
+googlesheets4::write_sheet(gard_in_do_dup, gard_gs, "GARD_xref-multi_DO")
+```
+
+All three of these sets of DO-GARD xrefs **should be reviewed** and likely updated.
+
+
+```{r do_gard_ok, include = FALSE}
+do_gard_ok <- gard_in_do %>%
+    dplyr::filter(
+        !gard_id %in% do_gard_deprec$gard_id,
+        !doid %in% do_multi_gard$doid,
+        !gard_id %in% gard_in_do_dup$gard_id
+    ) %>%
+    dplyr::mutate(gard_deprec = dplyr::na_if(gard_deprec, FALSE))
+```
+
+
+```{r save-do_gard_ok, include = FALSE, eval = FALSE}
+googlesheets4::write_sheet(do_gard_ok, gard_gs, "DO-GARD_ok")
+```
+
+Total DO-GARD mappings not needing curation review: `r format(nrow(do_gard_ok), big.mark = ",")`.
+
+
+## GARD Easily Added to DO
+
+### GARD-DO Bridged Mappings (Mondo)
+
+Using Mondo as a bridge, the following DO-GARD mappings may be correct:
+
+```{r mondo_bridge}
+mondo_do_gard <- mondo_bridge %>%
+    dplyr::left_join(dplyr::select(do, doid, do_label = label), by = "doid") %>%
+    dplyr::left_join(dplyr::rename(gard, gard_label = label), by = "gard_id") %>%
+    dplyr::select(doid, do_label, gard_id, gard_label) %>%
+    # remove deprecated GARD xrefs
+    dplyr::filter(!is.na(gard_label)) %>%
+    # remove DO-GARD mappings in DO, handled in [1]
+    dplyr::mutate(do_gard = paste0(doid, gard_id)) %>%
+    dplyr::filter(
+        !do_gard %in% 
+            dplyr::mutate(gard_in_do, do_gard =  paste0(doid, gard_id))$do_gard
+    ) %>%
+    dplyr::select(-do_gard) %>%
+    # identify where Mondo suggests alternate GARD xrefs
+    dplyr::mutate(
+        suggesting_alt_gard = dplyr::na_if(doid %in% gard_in_do$doid, FALSE)
+    ) %>%
+    dplyr::arrange(doid, gard_id)
+
+mondo_do_gard
+```
+
+```{r curate-mondo_bridge, include = FALSE, eval = FALSE}
+googlesheets4::write_sheet(mondo_do_gard, gard_gs, "DO-GARD_xref_bridge")
+```
+
+Total GARD xrefs that are likely in DO: `r nrow(mondo_do_gard)`.
+
+
+```{r cum_do_gard1, include = FALSE}
+do_potential_gard <- union(gard_in_do$doid, mondo_do_gard$doid)
+potential_gard <- union(gard_in_do$gard_id, mondo_do_gard$gard_id)
+```
+
+
+### Exact GARD-DO Term Matches
+
+String matching may identify other DO-GARD mapping candidates. String matching approaches are consist of exact matches and approximate (or fuzzy) matches.
+
+For both approaches, comparison is made after initial standardization of disease labels (or synonyms), which consists of replacing all punctuation and extra spaces with a single space and converting words to lowercase. Numbers are _not_ standardized (e.g. roman numerals are not converted to normal numbers).
+
+Exact matches specifically are also approached step-wise prioritizing matches between DO and GARD labels over GARD labels and DO synonyms.
+
+#### Exact GARD-DO Label Matches
+
+```{r label_std}
+do_std <- do %>%
+    dplyr::filter(!doid %in% do_potential_gard) %>%
+    dplyr::mutate(
+        label_std = label %>%
+            stringr::str_to_lower() %>%
+            stringr::str_replace_all(
+                "([:blank:]|[:punct:]|[:space:])+",
+                " "
+            )
+    ) %>%
+    dplyr::select(-gard_id)
+
+gard_std <- gard %>%
+    dplyr::filter(!gard_id %in% potential_gard) %>%
+    dplyr::mutate(
+        label_std = label %>%
+            stringr::str_to_lower() %>%
+            stringr::str_replace_all(
+                "([:blank:]|[:punct:]|[:space:])+",
+                " "
+            )
+    )
+```
+
+```{r label_exact_match}
+do_gard_exact_label <- do_std %>%
+    dplyr::filter(label_std %in% gard_std$label_std) %>%
+    dplyr::left_join(
+        dplyr::rename(gard_std, gard_label = label),
+        by = "label_std"
+    ) %>%
+    dplyr::mutate(match_type = "label-exact") %>%
+    dplyr::relocate(doid:label, match_type, gard_id:gard_label, label_std)
+```
+
+DO and GARD have `r nrow(do_gard_exact_label)` exact label matches.
+
+```{r show-label_exact, echo = FALSE}
+do_gard_exact_label
+```
+
+```{r cum_do_gard2, include = FALSE}
+do_potential_gard <- union(do_potential_gard, do_gard_exact_label$doid)
+potential_gard <- union(potential_gard, do_gard_exact_label$gard_id)
+
+do_std <- do_std %>%
+    dplyr::filter(!doid %in% do_potential_gard)
+gard_std <- gard_std %>%
+    dplyr::filter(!gard_id %in% potential_gard)
+```
+
+
+#### Exact GARD Label-DO Synonym Matches
+
+```{r std_syn}
+do_syn_std <- do_syn %>%
+    dplyr::mutate(
+        synonym_std = synonym %>%
+            stringr::str_to_lower() %>%
+            stringr::str_replace_all(
+                "([:blank:]|[:punct:]|[:space:])+",
+                " "
+            )
+    ) %>%
+    dplyr::filter(!duplicated(synonym_std))
+```
+
+```{r syn_exact_match}
+do_gard_exact_syn <- do_syn_std %>%
+    dplyr::filter(synonym_std %in% gard_std$label_std) %>%
+    dplyr::left_join(
+        dplyr::rename(gard_std, gard_label = label),
+        by = c("synonym_std" = "label_std")
+    ) %>%
+    dplyr::mutate() %>%
+    dplyr::group_by(doid) %>%
+    dplyr::mutate(
+        match_type = dplyr::if_else(
+            length(doid) > 1,
+            "synonym-exact-mult_match",
+            "synonym-exact"
+        )
+    ) %>%
+    dplyr::ungroup() %>%
+    dplyr::relocate(
+        gard_id:gard_label, match_type, doid:synonym, term_std = synonym_std
+    ) %>%
+    dplyr::arrange(gard_id)
+```
+
+`r nrow(do_gard_exact_syn)` GARD terms have exact DO synonym matches. Some of these GARD terms match synonyms from more than one DO term.
+
+```{r show-syn_exact, echo = FALSE}
+do_gard_exact_syn
+```
+
+```{r cum_do_gard3, include = FALSE}
+do_potential_gard <- union(do_potential_gard, do_gard_exact_syn$doid)
+potential_gard <- union(potential_gard, do_gard_exact_syn$gard_id)
+
+do_std <- do_std %>%
+    dplyr::filter(!doid %in% do_potential_gard)
+gard_std <- gard_std %>%
+    dplyr::filter(!gard_id %in% potential_gard)
+do_syn_std <- do_syn_std %>%
+    dplyr::filter(!doid %in% do_potential_gard)
+```
+
+
+#### Summary: Exact Term Matches
+
+```{r}
+do_gard_exact <- dplyr::bind_rows(
+    dplyr::rename(do_gard_exact_label, term_std = label_std),
+    do_gard_exact_syn
+) %>%
+    dplyr::mutate(
+        do_term = dplyr::if_else(is.na(label), synonym, label),
+        do_term_type = dplyr::if_else(is.na(label), "synonym", "label")
+    ) %>%
+    dplyr::select(
+        doid, do_term, do_term_type, match_type, gard_id:gard_label, term_std
+    )
+```
+
+Total GARD-DO exact matches: `r format(dplyr::n_distinct(do_gard_exact$gard_id), big.mark = ",")`.
+
+```{r curate-exact_match, include = FALSE, eval = FALSE}
+googlesheets4::write_sheet(do_gard_exact, gard_gs, "DO-GARD_exact_match")
+```
+
+
+## GARD Possibly Added to DO
+
+Approximate string matches _can_ be very inaccurate, so thee results below  will need particularly _careful_ scrutiny.
+
+For approximate string matching the 'longest common substring distance' matching algorithm is used with a maximum difference equal to the lower of the two string sets 3rd quartile of string length (rounded down).
+
+
+### Approximate GARD-DO Label Matches
+
+```{r approx_fn, include = FALSE}
+max_dist <- function(x, y) {
+    x_3q <- summary(stringr::str_length(x))[5]
+    y_3q <- summary(stringr::str_length(y))[5]
+    
+    floor(min(c(x_3q, y_3q)))
+}
+
+add_match_score <- function(match_tbl, col_nm = "score") {
+    dplyr::mutate(
+        match_tbl,
+        {{ col_nm }} := 1 - dist / 
+            pmin(
+                stringr::str_length(x),
+                stringr::str_length(table_match)
+            )
+    )
+}
+```
+
+```{r fz_label_prep}
+label_dist <- max_dist(do_std$label_std, gard_std$label_std)
+```
+
+The maximum difference for comparison of the DO & GARD labels is `r label_dist`.
+
+```{r fz_label_match}
+system.time(
+    gard_do_fz <- DO.utils::match_fz(
+        gard_std$label_std,
+        do_std$label_std,
+        maxDist = label_dist
+    )
+)
+
+gard_do_fz <- gard_do_fz %>%
+    add_match_score() %>%
+    dplyr::rename(gard_std = x, do_std = table_match) %>%
+    dplyr::arrange(dplyr::desc(score))
+```
+
+```{r show-fz_label, echo = FALSE}
+gard_do_fz
+```
+
+
+### Approximate GARD Label-DO Synonym Matches
+
+```{r fz_syn_prep}
+syn_dist <- max_dist(do_syn_std$synonym_std, gard_std$label_std)
+```
+
+The maximum difference for comparison of the DO & GARD labels is `r syn_dist`.
+
+```{r fz_syn_match}
+system.time(
+    gard_do_fz_syn <- DO.utils::match_fz(
+        gard_std$label_std,
+        do_syn_std$synonym_std,
+        maxDist = syn_dist
+    )
+)
+
+gard_do_fz_syn <- gard_do_fz_syn %>%
+    add_match_score() %>%
+    dplyr::rename(gard_std = x, do_syn_std = table_match) %>%
+    dplyr::arrange(dplyr::desc(score))
+```
+
+```{r show-fz_syn, echo = FALSE}
+gard_do_fz_syn
+```
+
+### Summary: Approximate Term Matches
+
+```{r fz_all}
+# prep for merge - add DO info for each dataset
+gard_do_fz <- gard_do_fz %>%
+    dplyr::left_join(
+        dplyr::select(do_std, doid, do_std = label_std),
+        by = "do_std"
+    ) %>%
+    dplyr::mutate(do_term_type = "label")
+
+gard_do_fz_syn <- gard_do_fz_syn %>%
+    dplyr::rename(do_std = do_syn_std) %>%
+    dplyr::left_join(
+        dplyr::select(do_syn_std, doid, do_std = synonym_std),
+        by = "do_std"
+    ) %>%
+    dplyr::mutate(do_term_type = "synonym")
+
+# merge
+fz_all <- dplyr::bind_rows(
+    gard_do_fz,
+    gard_do_fz_syn
+) %>%
+    # add GARD info
+    dplyr::left_join(
+        dplyr::select(gard_std, gard_id, gard_std = label_std),
+        by = "gard_std"
+    ) %>%
+    # drop term type from non-matches & drop duplicates
+    dplyr::mutate(
+        do_term_type = dplyr::if_else(
+            is.na(doid),
+            NA_character_,
+            do_term_type
+        )
+    ) %>%
+    unique() %>%
+    # sort by GARD matching group with best scoring groups first and within
+    #   group
+    dplyr::group_by(gard_id) %>%
+    dplyr::mutate(
+        best_score = ifelse(
+            all(is.na(score)),
+            NA,
+            max(score, na.rm = TRUE)
+        )
+    ) %>%
+    dplyr::ungroup() %>%
+    dplyr::arrange(
+        dplyr::desc(best_score),
+        gard_id,
+        dplyr::desc(score),
+        do_term_type
+    ) %>%
+    dplyr::mutate(
+        gard_group = cumsum(
+            gard_id != tidyr::replace_na(dplyr::lag(gard_id), "")
+        )
+    ) %>%
+    dplyr::relocate(
+        gard_group, gard_id, gard_std, score, dist, doid, do_std, do_term_type
+    ) %>%
+    dplyr::rename(chr_diff = dist)
+```
+
+Drop matches below a score of 0.6. Quick manual evaluation suggests this cutoff retains most real and related hits, while dropping the majority of totally unrelated results. A sizable number of poor hits are retained with the goal of being more inclusive.
+
+```{r fz_quality}
+# discard poor matches (being generous here in thos
+fz_gt60 <- dplyr::filter(fz_all, score >= 0.6)
+```
+
+This dataset includes approximate matches from DO for `r dplyr::n_distinct(fz_gt60$gard_id)` GARD diseases.
+
+```{r curate-fz_match, include = FALSE, eval = FALSE}
+googlesheets4::write_sheet(fz_gt60, gard_gs, "GARD-DO_fz_match")
+```
+
+
+# Summary: Overall
+
+```{r GARD_no_DO, include = FALSE}
+gard_no_do <- gard %>%
+    dplyr::filter(!gard_id %in% c(gard_in_do$gard_id, do_gard_exact$gard_id, fz_gt60$gard_id))
+```
+
+```{r save-GARD_no_DO, include = FALSE, eval = FALSE}
+googlesheets4::write_sheet(gard_no_do, gard_gs, "GARD_no_match")
+```
+
+
+Disease Set         | count
+:--|:--
+All GARD diseases   | `r format(dplyr::n_distinct(gard$gard_id), big.mark = ",")`
+   |  
+_GARD diseases in DO (need review)_* | `r dplyr::n_distinct(gard_in_do$gard_id) - dplyr::n_distinct(do_gard_ok$gard_id)`
+_GARD diseases in DO (okay)_ | `r format(dplyr::n_distinct(do_gard_ok$gard_id), big.mark = ",")`
+**TOTAL** GARD diseases in DO | `r format(dplyr::n_distinct(gard_in_do$gard_id), big.mark = ",")`
+   |  
+GARD diseases with strong matches in DO | `r dplyr::n_distinct(do_gard_exact$gard_id)`
+**TOTAL** in DO + strong matches | `r format(dplyr::n_distinct(c(gard_in_do$gard_id, do_gard_exact$gard_id)), big.mark = ",")`
+   |  
+GARD diseases with approximate matches in DO | `r dplyr::n_distinct(fz_gt60$gard_id)`
+**TOTAL** in DO + any matches | `r format(dplyr::n_distinct(c(gard_in_do$gard_id, do_gard_exact$gard_id, fz_gt60$gard_id)), big.mark = ",")`
+   |  
+Remaining GARD diseases | `r format(dplyr::n_distinct(gard_no_do$gard_id), big.mark = ",")`
+
+*Some GARD diseases have been deprecated, resulting in slight adding discrepancies.
+
