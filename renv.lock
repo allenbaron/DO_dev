@@ -22,7 +22,7 @@
     },
     "DO.utils": {
       "Package": "DO.utils",
-      "Version": "0.2.4.9000",
+      "Version": "0.2.6",
       "Source": "GitHub",
       "Remotes": "allenbaron/rentrez",
       "RemoteType": "github",
@@ -30,8 +30,8 @@
       "RemoteRepo": "DO.utils",
       "RemoteUsername": "allenbaron",
       "RemoteRef": "main",
-      "RemoteSha": "f07c9e7e7a5af9c60b95b5769f6792b8c8301924",
-      "Hash": "e28037a5b892a883d72e66051429ddc6"
+      "RemoteSha": "7d14590b955439dad543be3dc294e3c2d74bf4de",
+      "Hash": "5ccee1cab585e17c5c1eaee3be534f26"
     },
     "DT": {
       "Package": "DT",
@@ -724,6 +724,13 @@
       "Repository": "CRAN",
       "Hash": "8b07a4b9d0a0d97d9fe12de8af6d219e"
     },
+    "janitor": {
+      "Package": "janitor",
+      "Version": "2.1.0",
+      "Source": "Repository",
+      "Repository": "CRAN",
+      "Hash": "6de84a8c67fb247e721166049c84695f"
+    },
     "jpeg": {
       "Package": "jpeg",
       "Version": "0.1-9",
@@ -789,10 +796,10 @@
     },
     "lattice": {
       "Package": "lattice",
-      "Version": "0.20-44",
+      "Version": "0.20-45",
       "Source": "Repository",
       "Repository": "CRAN",
-      "Hash": "f36bf1a849d9106dc2af72e501f9de41"
+      "Hash": "b64cdbb2b340437c4ee047a1f4c4377b"
     },
     "lazyeval": {
       "Package": "lazyeval",
@@ -831,10 +838,10 @@
     },
     "mgcv": {
       "Package": "mgcv",
-      "Version": "1.8-36",
+      "Version": "1.8-38",
       "Source": "Repository",
       "Repository": "CRAN",
-      "Hash": "93cc747b0e1ad882a4570463c3575c23"
+      "Hash": "be3c61ffbb1e3d3b3df214d192ac5444"
     },
     "mime": {
       "Package": "mime",
@@ -866,10 +873,10 @@
     },
     "nlme": {
       "Package": "nlme",
-      "Version": "3.1-152",
+      "Version": "3.1-153",
       "Source": "Repository",
       "Repository": "CRAN",
-      "Hash": "35de1ce639f20b5e10f7f46260730c65"
+      "Hash": "2d632e0d963a653a0329756ce701ecdd"
     },
     "odbc": {
       "Package": "odbc",
@@ -1183,6 +1190,13 @@
       "Source": "Repository",
       "Repository": "CRAN",
       "Hash": "00344c227c7bd0ab5d78052c5d736c44"
+    },
+    "snakecase": {
+      "Package": "snakecase",
+      "Version": "0.11.0",
+      "Source": "Repository",
+      "Repository": "CRAN",
+      "Hash": "4079070fc210c7901c0832a3aeab894f"
     },
     "sodium": {
       "Package": "sodium",
