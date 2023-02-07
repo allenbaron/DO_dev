@@ -84,7 +84,7 @@ cb_pm_merge <- cb_pm_by_id %>%
     # collapse cited by records that cite multiple DO_pubs
     DO.utils::collapse_col(cites) %>%
     # note added time
-    dplyr::mutate(added = lubridate::now(tzone = "UTC"))
+    dplyr::mutate(added_dt = lubridate::now(tzone = "UTC"))
 
 
 # Scopus cited by data ----------------------------------------------------
@@ -125,11 +125,11 @@ cb_scop_merge <- cb_scop_by_id %>%
     dplyr::select(
         first_author, title = "dc:title", journal = "prism:publicationName",
         pub_date, doi = "prism:doi", pmid = "pubmed-id", scopus_eid = eid, cites,
-        pub_type, added
+        pub_type, added_dt = added
     ) %>%
     dplyr::mutate(source = "scopus") %>%
     # collapse cited by records that cite multiple DO_pubs
-    DO.utils::collapse_col_flex(cites = "unique", added = "first")
+    DO.utils::collapse_col_flex(cites = "unique", added_dt = "first")
 
 
 # PubMed collection data --------------------------------------------------
@@ -139,29 +139,13 @@ cb_scop_merge <- cb_scop_by_id %>%
 #   important.
 
 # extract PubMed IDs & get data from Entrez API to make formatting easier
-collection_txt <- read_pubmed_txt(collection_file)
-
-collection_id <- tibble::tibble(
-    n = 1:length(collection_txt),
-    pmid = stringr::str_extract(
-        collection_txt,
-        "PMID: [0-9]{8}"
-    ),
-    pmcid = stringr::str_extract(
-        collection_txt,
-        "PMCID: PMC[0-9]+"
-    )
-) %>%
-    dplyr::mutate(
-        pmid = stringr::str_remove(pmid, "PMID: "),
-        pmcid = stringr::str_remove(pmcid, "PMCID: ")
-    )
+collection_tbl <- read_pubmed_txt(collection_file)
 
 # Get Entrez API records for collection records with PubMed IDs
 if (file.exists(collection_pm_raw_file)) {
     load(file = collection_pm_raw_file)
 } else {
-    col_pmid <- collection_id$pmid %>%
+    col_pmid <- collection_tbl$pmid %>%
         na.omit() %>%
         unique()
     do_col_pm_summary <- pubmed_summary(col_pmid)
@@ -183,7 +167,7 @@ col_pm_merge <- col_pm %>%
     dplyr::mutate(
         source = "ncbi_col-pubmed",
         # note added time
-        added = lubridate::now(tzone = "UTC")
+        added_dt = lubridate::now(tzone = "UTC")
     )
 
 
@@ -192,7 +176,7 @@ if (file.exists(collection_pmc_raw_file)) {
     load(file = collection_pmc_raw_file)
 } else {
     # get pmc summary only where no PubMed record exists
-    col_pmcid <- dplyr::filter(collection_id, is.na(pmid)) %>%
+    col_pmcid <- dplyr::filter(collection_tbl, is.na(pmid)) %>%
         .$pmcid %>%
         na.omit() %>%
         unique()
@@ -225,7 +209,7 @@ col_pmc_merge <- col_pmc %>%
     dplyr::mutate(
         source = "ncbi_col-pmc",
         # note added time
-        added = lubridate::now(tzone = "UTC")
+        added_dt = lubridate::now(tzone = "UTC")
     )
 
 
@@ -275,7 +259,7 @@ final_merge <- cb_col_merge1 %>%
         pub_date = "first",
         source = "unique",
         pub_type = "unique",
-        added = "first"
+        added_dt = "first"
     )
 
 # ...and SAVE
@@ -284,12 +268,11 @@ readr::write_csv(final_merge, merge_citedby_file)
 
 # Access data in DO-uses,  cited_by google sheet --------------------------
 
-# change sheet location and tidy more for next run in April 2022!!!!
-gs_data <- googlesheets4::read_sheet(
-    gs,
-    cb_sheet,
-    col_types = "ccccccccccccTcccDccccccccccccc" # ensure proper formats!!
-)
+# ensure proper formats!!
+gs_data <- googlesheets4::read_sheet(gs, cb_sheet, col_types = "c") %>%
+    dplyr::mutate(
+        dplyr::across(dplyr::matches("_(dt|date)$"), readr::parse_guess)
+    )
 
 
 
@@ -323,17 +306,6 @@ nrow(updated)
 
 # Append new data to GS ---------------------------------------------------
 
-# custom function to set hyperlinks
-set_hyperlink <- function(x, type) {
-    link <- DO.utils:::append_to_url(x, url = DO.utils:::get_url(type))
-    formula <- dplyr::if_else(
-        is.na(x),
-        x,
-        as.character(glue::glue('=HYPERLINK("{link}", "{x}")'))
-    )
-    googlesheets4::gs4_formula(formula)
-}
-
 # identify columns in GS missing from new data
 cols_missing <- names(gs_data)[!names(gs_data) %in% names(new_df)]
 cols_add <- rep(NA_character_, length(cols_missing))
@@ -342,11 +314,13 @@ names(cols_add) <- cols_missing
 # format new data
 new_df <- new_df %>%
     dplyr::mutate(
-       pmid = set_hyperlink(pmid, "pubmed"),
-       doi = set_hyperlink(doi, "doi"),
-       pmcid = set_hyperlink(pmcid, "pmc_article"),
+       pmid = DO.utils::build_hyperlink(pmid, "pubmed", "gs"),
+       doi = DO.utils::build_hyperlink(doi, "doi", "gs"),
+       pmcid = DO.utils::build_hyperlink(pmcid, "pmc_article", "gs"),
     ) %>%
     tibble::add_column(!!!cols_add) %>%
     dplyr::select(dplyr::one_of(names(gs_data)))
 
-googlesheets4::sheet_append(gs, new_df, cb_sheet)
+if (!interactive()) {
+    googlesheets4::sheet_append(gs, new_df, cb_sheet)
+}
