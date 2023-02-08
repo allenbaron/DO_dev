@@ -1,0 +1,153 @@
+---
+title: "Anaylsis: DO rare disease subset (DO_rare_slim)"
+author: "J. Allen Baron"
+output: 
+    html_notebook:
+        toc: true
+        toc_float: true
+        df_print: paged
+        code_folding: hide
+---
+
+
+# Purpose
+
+To determine how rare diseases are currently organized in DO and identify
+whether manual curation is needed.
+
+More specifically, the following questions will be addressed:
+
+1. Are there diseases in the rare disease subset _without_ a GARD or ORDO xref?
+    - If so, how many and what are they?
+2. Are there diseases with a GARD or ORDO xref that are not in the rare disease subset?
+    - If so, how many and what are they?
+
+
+# Data Preparation
+
+Diseases with their xrefs will be exported from doid.owl (full disease set) and DO_rare_slim.owl (rare disease subset).
+```{r setup, include = FALSE}
+library(here)
+library(DO.utils)
+library(tidyverse)
+library(googledrive)
+library(googlesheets4)
+```
+
+```{r declare_io, message = FALSE}
+# input
+do_repo <- here::here("../Ontologies/HumanDiseaseOntology")
+do_owl <- file.path(do_repo, "src/ontology/doid.owl")
+rare_owl <- file.path(do_repo, "src/ontology/subsets/DO_rare_slim.owl")
+
+# intermediate
+disease_tsv <- here::here("data/DO/all_disease-xref.tsv")
+rare_dis_tsv <- here::here("data/DO/rare_disease-xref.tsv")
+
+# output
+rare_out <- c(no_xref = "in_set-no_xref", not_in = "xref-not_in_set")
+curate_gs <- googlesheets4::gs4_create(
+    "Curate-Rare_subset",
+    sheets = unname(rare_out)
+)
+googledrive::drive_mv(curate_gs, path = "My_Work/Curation/", overwrite = FALSE)
+```
+
+```{r robot_export}
+# export xrefs from full ontology and rare disease subset for comparison
+robot_export <- function(input, output) {
+    system2(
+        'robot',
+        glue::glue(
+            'export --input {input} ',
+            '--header="ID|LABEL|oboInOwl:hasDbXref" ',
+            '--export {output}',
+            input = input,
+            output = output
+        )
+    )
+}
+
+do_status <- robot_export(do_owl, disease_tsv)
+rare_status <- robot_export(rare_owl, rare_dis_tsv)
+
+
+if (do_status == 0 && rare_status == 0) {
+    message("Diseases and xrefs exported successfully!")
+}
+```
+
+```{r load_data, message=FALSE}
+disease <- readr::read_tsv(disease_tsv) %>%
+    dplyr::rename(id = ID, label = LABEL, xref = 'oboInOwl:hasDbXref') %>%
+    dplyr::filter(
+        stringr::str_detect(id, "DOID"),
+        !stringr::str_detect(label, "obsolete")
+    )
+rare <- readr::read_tsv(rare_dis_tsv) %>%
+    dplyr::rename(id = ID, label = LABEL, xref = 'oboInOwl:hasDbXref')
+```
+
+
+# 1. Diseases in Subset _without_ GARD or ORDO xref
+
+```{r rare_no_xref}
+rare_no_xref <- dplyr::filter(rare, !stringr::str_detect(xref, "GARD|ORDO"))
+```
+
+There are `r nrow(rare_no_xref)` diseases in DO_rare_slim that do not have a GARD or ORDO xref. These should be reviewed.
+
+```{r show_rnx, echo = FALSE}
+googlesheets4::write_sheet(
+    rare_no_xref,
+    ss = curate_gs,
+    sheet = unname(rare_out['no_xref'])
+)
+rare_no_xref
+```
+
+
+# 2. Missing Diseases with GARD or ORDO xref
+
+```{r fn-extract_concat, include = FALSE}
+extract_concat <- function(x, pattern) {
+    purrr::map_chr(
+        x,
+        ~ stringr::str_extract_all(.x, pattern) %>%
+            unlist() %>%
+            DO.utils::vctr_to_string() %>%
+            DO.utils::replace_blank()
+    )
+}
+```
+
+
+```{r rare_missing}
+rare_missing <- dplyr::anti_join(disease, rare, by = "id") %>%
+    dplyr::filter(stringr::str_detect(xref, "GARD|ORDO")) %>%
+    dplyr::mutate(
+        gard = extract_concat(xref, "GARD:[0-9]+"),
+        ordo = extract_concat(xref, "ORDO:[0-9]+")
+    ) %>%
+    dplyr::select(-xref)
+```
+
+There are `r format(nrow(rare_missing), big.mark = ",")` diseases with ORDO or GARD xrefs that are not in the DO_rare_slim. These should be added.
+
+```{r show_missing, echo = FALSE}
+googlesheets4::write_sheet(
+    rare_missing,
+    ss = curate_gs,
+    sheet = unname(rare_out['not_in'])
+)
+rare_missing
+```
+
+
+# Summary
+
+- Total Diseases: `r format(nrow(disease), big.mark = ",")`
+    - In DO_rare_slim: `r format(nrow(rare), big.mark = ",")`
+    - With rare xref, not in slim: `r format(nrow(rare_missing), big.mark = ",")`
+    - Non-rare: `r format(nrow(dplyr::filter(disease, !id %in% rare_missing$id, !id %in% rare$id)), big.mark = ",")`
+    - Possible non-rare: `r format(nrow(rare_no_xref), big.mark = ",")` _(in DO_rare_slim without rare xref)_
