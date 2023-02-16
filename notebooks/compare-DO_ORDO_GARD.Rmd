@@ -17,16 +17,20 @@ To identify missing DO mappings to ORDO and GARD and to identify rare diseases t
 library(here)
 library(tidyverse)
 library(DO.utils)
-
-compare_xref <- function(x, y) {
-    
-}
+library(XML)
+library(glue)
 ```
 
 
 # Data
 
-The data are sourced from DO (doid.owl, [v2023-01-30](https://github.com/DiseaseOntology/HumanDiseaseOntology/tree/v2023-01-30); except Orphanet sources in definitions which are from doid-edit.owl on 2023-02-13), Orphanet's ORDO disease ontology (version [4.2](https://www.orphadata.com/ordo/) and GARD's sitemap (accessed and parsed on 2023-01-18).
+The data are sourced as follows:
+
+- **doid.owl** ([v2023-01-30](https://github.com/DiseaseOntology/HumanDiseaseOntology/tree/v2023-01-30) for class information, names/synonyms and xrefs.
+- **doid-edit.owl** (commit [bcec8ea8](https://github.com/DiseaseOntology/HumanDiseaseOntology/tree/bcec8ea822f8fd829ae7e4d837281d100b123538)) for definition sources.
+- Orphanet's ORDO disease ontology (ORDO, version [4.2](https://www.orphadata.com/ordo/)) for class information and names/synonyms.
+- Orphanet's [rare disease alignment](https://www.orphadata.com/alignments/) dataset (	en_product1.json.tar.gz, v1, released 2022-11-28) for xrefs.
+- GARD's sitemap (accessed and parsed on 2023-01-18) for identifiers and names.
 
 Going forward, data accessed _might_ be enhanced by accessing Orphanet's SPARQL endpoint (currently in beta testing) and GARD's neo4j knowledge graph (which was published in 2019).
 
@@ -50,7 +54,7 @@ do <- do_owl$query(
     ) %>%
     dplyr::select(-dep)
 
-do_xref <- do_owl$query(
+do_xref_all <- do_owl$query(
     "SELECT ?id ?label ?xref
     WHERE {
         ?class a owl:Class ;
@@ -60,10 +64,6 @@ do_xref <- do_owl$query(
     }"
 ) %>%
     DO.utils::tidy_sparql() %>%
-    # drop xrefs ORDO doesn't have
-    dplyr::filter(
-        !stringr::str_detect(xref, "EFO|GARD|ICD9|ICDO|KEGG|NCI|SNOMED")
-    ) %>%
     dplyr::mutate(
         xref = stringr::str_replace_all(
             xref,
@@ -72,10 +72,11 @@ do_xref <- do_owl$query(
         ns = stringr::str_remove(xref, ":.*")
     )
 
-do_xref_list <- do_xref %>%
-    dplyr::group_by(id, label) %>%
-    dplyr::summarize(xref_list = tibble::tibble(xref, ns)) %>%
-    dplyr::ungroup()
+# drop xrefs ORDO doesn't have
+do_xref <- do_xref_all %>%
+    dplyr::filter(
+        !stringr::str_detect(xref, "EFO|GARD|ICD9|ICDO|KEGG|NCI|SNOMED")
+    )
 
 do_syn <- do_owl$query(
     "SELECT ?id ?type ?text
@@ -138,10 +139,10 @@ do_def <- DO.utils:::read_doid_edit(repo_path) %>%
 ```
 
 
-```{r ordo_data, message = FALSE}
-ordo_path <- here::here("../Ontologies/ORDO/ORDO_en_4.2.owl")
-ordo_owl <- DO.utils::owl_xml(ordo_path)
+```{r ordo_owl_data, message = FALSE}
+ordo_path <- file.path(odir, "ORDO_en_4.2.owl")
 
+ordo_owl <- DO.utils::owl_xml(ordo_path)
 ordo <- ordo_owl$query(
     "PREFIX orpha: <http://www.orpha.net/ORDO/Orphanet_>
     
@@ -170,9 +171,12 @@ ordo <- ordo_owl$query(
         class_type = stringr::str_extract(branch, "subtype|group|disorder")
     )
 
-ordo_xref <- ordo_owl$query(
+
+# Works when not limiting to exact mappings (too long otherwise);
+#   PARSE .ofn converted file to identify mapping type!!!
+ordo_xref_all <- ordo_owl$query(
     "PREFIX efo: <http://www.ebi.ac.uk/efo/>
-    
+
     SELECT ?id ?label ?xref
     WHERE {
         ?class a owl:Class ;
@@ -186,8 +190,28 @@ ordo_xref <- ordo_owl$query(
         )
     }"
 ) %>%
-    DO.utils::tidy_sparql() %>%
+    DO.utils::tidy_sparql()
+
+# parse types from ORDO in functional syntax
+ordo_ofn <- here::here("../Ontologies/ORDO/ORDO_en_4.2.ofn")
+if (!file.exists(ordo_ofn)) {
+    system2("robot", glue::glue("--input {ordo_path} --output {ordo_ofn}"))
+}
+ordo_annotated_xref <- readr::read_lines(ordo_ofn) %>%
+    stringr::str_match(
+        'Ann[^A]+Ass.*ECO_0000218 "([^"]+).*hasDbXref[^:]*:(Orphanet_[^ ]+) "([^"]+)'
+    ) %>%
+    tibble::as_tibble(.name_repair = ~ c("full", "type", "id", "xref")) %>%
+    dplyr::filter(!is.na(full)) %>%
+    dplyr::select(id, xref, type) %>%
+    dplyr::mutate(id = stringr::str_replace(id, "Orphanet_", "ORDO:"))
+
+ordo_xref_types <- unique(ordo_xref$type)
+      
+ordo_xref_all <- ordo_xref %>%
+    dplyr::left_join(ordo_annotated_xref, by = c("id", "xref")) %>%
     dplyr::mutate(
+        type = stringr::str_remove(type, " .*"),
         xref = stringr::str_replace_all(
             xref,
             c("ICD-10" = "ICD10", "ICD-11" = "ICD11", "MedDRA" = "MEDDRA",
@@ -196,10 +220,8 @@ ordo_xref <- ordo_owl$query(
         ns = stringr::str_remove(xref, ":.*")
     )
 
-ordo_xref_list <- ordo_xref %>%
-    dplyr::group_by(id, label) %>%
-    dplyr::summarize(xref_list = tibble::tibble(xref, ns)) %>%
-    dplyr::ungroup()
+ordo_xref <- ordo_xref_all %>%
+    dplyr::filter(is.na(type) | type == "E")
 
 ordo_syn <- ordo_owl$query(
     "PREFIX efo: <http://www.ebi.ac.uk/efo/>
@@ -224,8 +246,163 @@ ordo_syn <- ordo_owl$query(
         names_to = "type",
         values_to = "text"
     )
+
+ordo_json <- jsonlite::read_json(ordo_xref_path)
+ordo_xref <- purrr::map(
+    ordo_json$JDBOR[[1]]$DisorderList[[1]]$Disorder,
+    tibble::as_tibble
+) %>%
+    dplyr::bind_rows()
+
+# purrr::map(
+#     %>%
+#     tidyr::hoist(ExpertLink, "link", )
 ```
 
+
+```{r ordo_data, message = FALSE}
+odir <- here::here("../Ontologies/ORDO")
+ordo_xml_path <- file.path(odir, "en_product1.xml")
+ordo_xml <- XML::xmlParse(ordo_xml_path)
+
+parse_xml_list <- function(x, xpath_accessor) {
+    if (length(xpath_accessor) < 1) {
+        rlang::abort("`xpath_accessor` must be provided.")
+    }
+    if (length(xpath_accessor) == 1) {
+        out <- purrr::map(x, ~ parse_xml_list_element(.x, xpath_accessor))
+    } else {
+        out <- purrr::map(
+            x,
+            function(.l) {
+                purrr::map(
+                    xpath_accessor,
+                    ~ parse_xml_list_element(.l, .x)
+                ) %>%
+                    tibble::as_tibble()
+            }
+        )
+    }
+    out
+}
+
+parse_xml_list_element <- function(element, xpath_accessor) {
+    res <- purrr::map_chr(
+        XML::getNodeSet(element, xpath_accessor),
+        xmlValue
+    )
+    dplyr::if_else(length(res) > 0, res, NA_character_) 
+}
+
+ordo_df <- tibble::tibble(
+    disorder_id = as.character(ordo_xml["string(//Disorder/@id)"]),
+    id = paste0(
+        "ORDO:",
+        XML::xmlValue(ordo_xml["//Disorder/OrphaCode"])
+    ),
+    label =  XML::xmlValue(ordo_xml["//Disorder/Name[@lang = 'en']"]),
+    url = XML::xmlValue(ordo_xml["//Disorder/ExpertLink"]),
+    synonym = parse_xml_list(
+        ordo_xml["//Disorder/SynonymList"], 
+        "Synonym"
+    ),
+    type = XML::xmlValue(ordo_xml["//Disorder/DisorderType/Name"]),
+    group = XML::xmlValue(ordo_xml["//Disorder/DisorderGroup/Name"]),
+    flag = parse_xml_list(
+        ordo_xml["//Disorder/DisorderFlagList"],
+        "DisorderFlag[@id != '475']/Label"
+    ),
+    xref = parse_xml_list(
+        ordo_xml["//Disorder/ExternalReferenceList"],
+        c(
+          src = "ExternalReference/Source",
+          lui = "ExternalReference/Reference",
+          type = "ExternalReference/DisorderMappingRelation/Name",
+          status = "ExternalReference/DisorderMappingValidationStatus/Name"
+        )
+    ),
+    assocation = parse_xml_list(
+        ordo_xml["//Disorder/DisorderDisorderAssociationList"],
+        c(
+            id = "DisorderDisorderAssociation/TargetDisorder/OrphaCode",
+            label = "DisorderDisorderAssociation/TargetDisorder/Name",
+            type = "DisorderDisorderAssociationType/Name"
+        )
+    ),
+    def = parse_xml_list(
+        ordo_xml["//Disorder/SummaryInformationList"],
+        "SummaryInformation/TextSectionList/TextSection[TextSectionType/Name[text() = 'Definition']]/Contents"
+    ) %>%
+        as.character() %>%
+        # remove html formatting
+        stringr::str_remove_all("<[^>]+>")
+)
+
+ordo_xref <- ordo_df %>%
+    dplyr::select(id, label, xref) %>%
+    tidyr::unnest_longer(xref) %>%
+    tidyr::unnest_wider(xref) %>%
+    dplyr::mutate(
+        src = stringr::str_remove_all(src, "[^A-Z0-9a-z]") %>%
+            stringr::str_to_upper(),
+        xref = paste(src, lui, sep = ":"),
+        type = stringr::str_remove(type, " .*")
+    )
+```
+
+
+```{r ordo_data_json, include = FALSE, message = FALSE}
+ordo_json <- jsonlite::fromJSON(ordo_xref_path)
+ordo_df_list <- purrr::map_dfr(
+    ordo_json$JDBOR[[1]]$DisorderList[[1]]$Disorder,
+    tibble::as_tibble
+)
+ordo_df <- ordo_df_list %>%
+    tidyr::hoist(
+        ExpertLink, url = "Link") %>%
+    tidyr::hoist(Name, label = "label") %>%
+    tidyr::hoist(SynonymList, synonyms = list("Synonym", "label"))
+    
+```
+
+```{r out_for_help, include = FALSE}
+do_ordo <- do_xref_all %>%
+    dplyr::filter(ns == "ORDO")
+
+do_no_match <- do_xref_all %>%
+    dplyr::filter(!id %in% do_ordo$id)
+
+do_no_match %>% 
+    dplyr::mutate(
+        xref = stringr::str_replace(xref, "SNOMEDCT_US[^:]+", "SNOMEDCT_US")
+    ) %>%
+    dplyr::select(-ns) %>%
+    readr::write_tsv(here::here("data/external/xrefs_in_DO.tsv"))
+
+ordo_no_match <- ordo_xref %>%
+    dplyr::filter(!id %in% do_ordo$xref)
+
+ordo_no_match %>%
+    dplyr::select(id, label, xref, xref_type = type) %>%
+    readr::write_tsv(here::here("data/external/xrefs_in_ORDO.tsv"))
+
+do_ordo_match <- dplyr::inner_join(
+    do_no_match,
+    dplyr::select(
+        ordo_no_match,
+        ordo_id = id, ordo_label = label, xref, ordo_type = type
+    ),
+    by = "xref"
+)
+    dplyr::filter(xref %in% ordo_no_match$xref)
+
+```
+
+
+##############################
+assign value
+E = 1
+NTBT/BTNT/ND <= 0.5
 
 ```{r gard_data, message = FALSE}
 gard_path <- here::here("data/mapping/GARD.tsv")
@@ -262,12 +439,12 @@ The comparisons will be as follows:
 
 
 
-
 # 1. DOIDs with ORDO xrefs
 
 ```{r do_direct}
 do_ordo_xref <- do_xref %>%
-    dplyr::filter(stringr::str_detect(xref, stringr::coll("ORDO"))) %>%
+    dplyr::filter(ns == "ORDO") %>%
+    dplyr::select(-ns) %>%
     dplyr::nest_join(
         dplyr::select(do_xref, -label),
         by = "id",
@@ -277,5 +454,70 @@ do_ordo_xref <- do_xref %>%
         dplyr::select(ordo_xref, -label),
         by = c("xref" = "id"),
         name = "ordo_xref_tbl"
-    )
+    ) %>%
+    dplyr::left_join(do)
 ```
+
+```{r}
+
+```
+
+
+```{r}
+do_no_match <- dplyr::filter(do, !id %in% do_ordo_xref$id)
+    
+```
+
+
+# 2. DO-ORDO xref comparison
+
+There are quite a few duplicated xrefs in DO. The most numerous duplications are from ICD10 and MESH but there are decent number from ORDO, UMLS, and MESH as well.
+
+```{r}
+do_xref %>%
+    dplyr::filter(DO.utils::all_duplicated(xref)) %>%
+    dplyr::count(ns, sort = TRUE)
+```
+
+Comparing DO to ORDO using xrefs is going to be messy because of this duplication. These really should be eliminated or annotated as broad, narrow or related to clarify how to handle them. ORDO does have these sorts of annotations so it might be possible to pull them from there, but that's outside the scope of work right now. For the time being, ORDO xrefs will be limited to those that are exact.
+
+```{r}
+xref_compare <- NULL
+```
+
+
+# Summary
+
+```{r}
+rare_xref_counts <- do_xref_all %>%
+    dplyr::group_by(id) %>%
+    dplyr::summarize(
+        rare_xref = dplyr::case_when(
+            all(c("ORDO", "GARD") %in% ns) ~ "Both",
+            "ORDO" %in% ns ~ "ORDO",
+            "GARD" %in% ns ~ "GARD",
+            TRUE ~ NA_character_
+        )
+    ) %>%
+    dplyr::filter(!is.na(rare_xref))
+```
+
+There are `r format(dplyr::n_distinct(rare_xref_counts$id), big.mark = ",")` diseases with GARD and/or Orphanet xrefs in the latest release of DO with the following breakdown:
+
+```{r}
+dplyr::count(rare_xref_counts, rare_xref)
+```
+
+The number of GARD and ORDO IDs in the DO:
+```{r}
+do_xref_all %>%
+    dplyr::filter(ns %in% c("GARD", "ORDO")) %>%
+    dplyr::group_by(ns) %>%
+    dplyr::summarize(n = dplyr::n_distinct(xref))
+```
+
+Xref sources in both DO and ORDO
+```{r}
+
+```
+
