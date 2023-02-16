@@ -1,0 +1,281 @@
+---
+title: "Comparison: DO, ORDO and GARD "
+created: "2023-02-13"
+output:
+    html_notebook:
+        toc: true
+        toc_float: true
+        df_print: paged
+        code_folding: hide
+---
+
+# Purpose
+
+To identify missing DO mappings to ORDO and GARD and to identify rare diseases that may be tracked in ORDO or GARD but are not yet in DO.
+
+```{r setup, include = FALSE}
+library(here)
+library(tidyverse)
+library(DO.utils)
+
+compare_xref <- function(x, y) {
+    
+}
+```
+
+
+# Data
+
+The data are sourced from DO (doid.owl, [v2023-01-30](https://github.com/DiseaseOntology/HumanDiseaseOntology/tree/v2023-01-30); except Orphanet sources in definitions which are from doid-edit.owl on 2023-02-13), Orphanet's ORDO disease ontology (version [4.2](https://www.orphadata.com/ordo/) and GARD's sitemap (accessed and parsed on 2023-01-18).
+
+Going forward, data accessed _might_ be enhanced by accessing Orphanet's SPARQL endpoint (currently in beta testing) and GARD's neo4j knowledge graph (which was published in 2019).
+
+```{r do_data, message = FALSE}
+repo_path <- here::here("../Ontologies/HumanDiseaseOntology")
+do_path <- file.path(repo_path, "src/ontology/doid.owl")
+do_owl <- DO.utils::owl_xml(do_path)
+
+do <- do_owl$query(
+    "SELECT ?id ?label ?dep
+    WHERE {
+        ?class a owl:Class ;
+            oboInOwl:id ?id ;
+            rdfs:label ?label .
+        OPTIONAL { ?class owl:deprecated ?dep . }
+    }"
+) %>%
+    DO.utils::tidy_sparql() %>%
+    dplyr::mutate(
+        status = dplyr::if_else(is.na(dep), NA_character_, "deprecated")
+    ) %>%
+    dplyr::select(-dep)
+
+do_xref <- do_owl$query(
+    "SELECT ?id ?label ?xref
+    WHERE {
+        ?class a owl:Class ;
+            oboInOwl:id ?id ;
+            rdfs:label ?label ;
+            oboInOwl:hasDbXref ?xref .
+    }"
+) %>%
+    DO.utils::tidy_sparql() %>%
+    # drop xrefs ORDO doesn't have
+    dplyr::filter(
+        !stringr::str_detect(xref, "EFO|GARD|ICD9|ICDO|KEGG|NCI|SNOMED")
+    ) %>%
+    dplyr::mutate(
+        xref = stringr::str_replace_all(
+            xref,
+            c( "ICD10CM" = "ICD10", "UMLS_CUI" = "UMLS")
+        ),
+        ns = stringr::str_remove(xref, ":.*")
+    )
+
+do_xref_list <- do_xref %>%
+    dplyr::group_by(id, label) %>%
+    dplyr::summarize(xref_list = tibble::tibble(xref, ns)) %>%
+    dplyr::ungroup()
+
+do_syn <- do_owl$query(
+    "SELECT ?id ?type ?text
+    WHERE {
+        {
+            ?class a owl:Class ;
+                oboInOwl:id ?id ;
+                rdfs:label ?text .
+            BIND('label' AS ?type)
+        }
+        UNION
+        {
+            VALUES ?syn_types {
+                oboInOwl:hasExactSynonym
+                oboInOwl:hasBroadSynonym
+                oboInOwl:hasNarrowSynonym
+                oboInOwl:hasRelatedSynonym
+            }
+            ?class a owl:Class ;
+                oboInOwl:id ?id ;
+                ?syn_types ?text .
+            BIND(
+                CONCAT(
+                    'synonym_',
+                    lcase(
+                        STRBEFORE(
+                            STRAFTER(str(?syn_types), '#has'),
+                            'Synonym'
+                        )
+                    )
+                ) AS ?type
+            )
+        }
+    }"
+) %>%
+    DO.utils::tidy_sparql()
+    
+
+### TOO SLOW!!! Parse doid-edit.owl instead!!! ###
+# do_def <- do_owl$query(
+#     "SELECT ?id ?label ?def_src
+#     WHERE {
+#         ?class a owl:Class ;
+#             oboInOwl:id ?id ;
+#             rdfs:label ?label ;
+#             obo:IAO_0000115 ?def .
+#         FILTER(CONTAINS(str(?class), 'DOID'))
+#         
+#         ?blank owl:annotatedSource ?class ;
+#             owl:annotatedProperty obo:IAO_0000115 ;
+#             owl:annotatedTarget ?def ;
+#             oboInOwl:hasDbXref ?def_src .
+#     } LIMIT 1"
+# ) %>%
+#     DO.utils::tidy_sparql()
+do_def <- DO.utils:::read_doid_edit(repo_path) %>%
+    DO.utils:::extract_doid_url() %>%
+    dplyr::filter(stringr::str_detect(url, stringr::coll("orpha.net"))) %>%
+    dplyr::mutate(def_src = stringr::str_match(url, "Expert=([0-9]+)")[,2])
+```
+
+
+```{r ordo_data, message = FALSE}
+ordo_path <- here::here("../Ontologies/ORDO/ORDO_en_4.2.owl")
+ordo_owl <- DO.utils::owl_xml(ordo_path)
+
+ordo <- ordo_owl$query(
+    "PREFIX orpha: <http://www.orpha.net/ORDO/Orphanet_>
+    
+    SELECT ?id ?label ?branch
+    WHERE {
+        ?class a owl:Class ;
+            rdfs:label ?label .
+        OPTIONAL { 
+            ?class rdfs:subClassOf+ ?branch_iri .
+            ?branch_iri rdfs:subClassOf ?top ;
+                rdfs:label ?branch .
+            
+            VALUES ?top { orpha:C001 orpha:C042 orpha:C046 orpha:C050 }
+        }
+        BIND(
+            CONCAT(
+                'ORDO:',
+                STRAFTER(str(?class), 'Orphanet_')
+            ) AS ?id
+        )
+    }"
+) %>%
+    DO.utils::tidy_sparql() %>%
+    dplyr::mutate(
+        status = stringr::str_extract(branch, "non rare|obsolete|deprecated"),
+        class_type = stringr::str_extract(branch, "subtype|group|disorder")
+    )
+
+ordo_xref <- ordo_owl$query(
+    "PREFIX efo: <http://www.ebi.ac.uk/efo/>
+    
+    SELECT ?id ?label ?xref
+    WHERE {
+        ?class a owl:Class ;
+            oboInOwl:hasDbXref ?xref ;
+            rdfs:label ?label .
+        BIND(
+            CONCAT(
+                'ORDO:',
+                STRAFTER(str(?class), 'Orphanet_')
+            ) AS ?id
+        )
+    }"
+) %>%
+    DO.utils::tidy_sparql() %>%
+    dplyr::mutate(
+        xref = stringr::str_replace_all(
+            xref,
+            c("ICD-10" = "ICD10", "ICD-11" = "ICD11", "MedDRA" = "MEDDRA",
+              "MeSH" = "MESH")
+        ),
+        ns = stringr::str_remove(xref, ":.*")
+    )
+
+ordo_xref_list <- ordo_xref %>%
+    dplyr::group_by(id, label) %>%
+    dplyr::summarize(xref_list = tibble::tibble(xref, ns)) %>%
+    dplyr::ungroup()
+
+ordo_syn <- ordo_owl$query(
+    "PREFIX efo: <http://www.ebi.ac.uk/efo/>
+    
+    SELECT ?id ?label ?syn
+    WHERE {
+        ?class a owl:Class ;
+            rdfs:label ?label ;
+            efo:alternative_term ?syn .
+        BIND(
+            CONCAT(
+                'ORDO:',
+                STRAFTER(str(?class), 'Orphanet_')
+            ) AS ?id
+        )
+    }"
+) %>%
+    DO.utils::tidy_sparql() %>%
+    dplyr::rename(synonym = syn) %>%
+    tidyr::pivot_longer(
+        cols = c(label, synonym),
+        names_to = "type",
+        values_to = "text"
+    )
+```
+
+
+```{r gard_data, message = FALSE}
+gard_path <- here::here("data/mapping/GARD.tsv")
+
+if (file.exists(gard_path)) {
+    gard <- readr::read_tsv(gard_path)
+} else {
+    gard_xml <- readr::read_file("https://rarediseases.info.nih.gov/sitemap.xml")
+    
+    gard_info <- stringr::str_match_all(
+        gard_xml,
+        "https://rarediseases.info.nih.gov/diseases/([0-9]+)/([^< /\"]+)"
+    )[[1]]
+    
+    gard <- tibble::tibble(
+        gard_id = paste0("GARD:", gard_info[, 2]),
+        label = stringr::str_replace_all(gard_info[, 3], "-", " ")
+    ) %>%
+        unique()
+    readr::write_tsv(gard, gard_path)
+}
+```
+
+
+# Approach
+
+Comparison between DO and GARD was accomplished previously in the compare-DO_GARD notebook in this repository. Since the GARD sitemap provides only labels and GARD identifiers, nothing new can be incorporated in this comparison. Instead the focus will be on comparing DO and ORDO in a step-wise manner starting with the strongest information and ending with the weakest.
+
+The comparisons will be as follows:
+1. DOID with xref to ORDO --> assumed correct
+2. DOID with other xrefs that match ORDO xrefs --> will be ranked based on the number and similarity of xref matches (missing or conflicting xrefs will indicate lower quality)
+3. DOID with Orphanet sources for definitions --> few exist but these will be explored as they are likely to be appropriate mappings
+3. DOID labels and synonyms will be compared with ORDO labels and synonyms, initially by exact match after standardization followed by approximate string matches.
+
+
+
+
+# 1. DOIDs with ORDO xrefs
+
+```{r do_direct}
+do_ordo_xref <- do_xref %>%
+    dplyr::filter(stringr::str_detect(xref, stringr::coll("ORDO"))) %>%
+    dplyr::nest_join(
+        dplyr::select(do_xref, -label),
+        by = "id",
+        name = "do_xref_tbl"
+    ) %>%
+     dplyr::nest_join(
+        dplyr::select(ordo_xref, -label),
+        by = c("xref" = "id"),
+        name = "ordo_xref_tbl"
+    )
+```
