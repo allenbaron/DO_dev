@@ -146,12 +146,16 @@ anatomy_df <- extract_axiom_anatomy_id(location_axioms) %>%
     dplyr::left_join(imports, by = c("anatomy_id" = "id")) %>%
     dplyr::rename(anatomy_label = label)
 
-cp <- cp %>%
+cp_anat <- cp %>%
     dplyr::left_join(anatomy_df, by = c("id" = "doid"))
 
 # write to google sheet ---------------------------------------------------
 
-readr::write_tsv(cp, file.path(repo_path, "DOreports/DO-ICDO-anatomy.tsv"))
+readr::write_tsv(
+    cp_anat,
+    file.path(repo_path, "DOreports/DO-ICDO-anatomy.tsv"),
+    na = ""
+)
 
 
 # EXTRA - Unused functions ------------------------------------------------
