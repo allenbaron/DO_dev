@@ -17,6 +17,7 @@ To identify missing DO mappings to ORDO and GARD and to identify rare diseases t
 library(here)
 library(tidyverse)
 library(DO.utils)
+library(git2r)
 library(XML)
 library(glue)
 ```
@@ -24,124 +25,455 @@ library(glue)
 
 # Data
 
-The data are sourced as follows:
+## DO
 
-- **doid.owl** ([v2023-01-30](https://github.com/DiseaseOntology/HumanDiseaseOntology/tree/v2023-01-30) for class information, names/synonyms and xrefs.
-- **doid-edit.owl** (commit [bcec8ea8](https://github.com/DiseaseOntology/HumanDiseaseOntology/tree/bcec8ea822f8fd829ae7e4d837281d100b123538)) for definition sources.
-- Orphanet's ORDO disease ontology (ORDO, version [4.2](https://www.orphadata.com/ordo/)) for class information and names/synonyms.
-- Orphanet's [rare disease alignment](https://www.orphadata.com/alignments/) dataset (	en_product1.json.tar.gz, v1, released 2022-11-28) for xrefs.
-- GARD's sitemap (accessed and parsed on 2023-01-18) for identifiers and names.
+**doid.owl** ([v2023-02-27](https://github.com/DiseaseOntology/HumanDiseaseOntology/tree/v2023-01-30) is used for class information, names/synonyms and xrefs. **doid-edit.owl** (commit [fdc26c1d](https://github.com/DiseaseOntology/HumanDiseaseOntology/tree/fdc26c1d69edad00649c74f8caeff6656a569f60)) is used for definition sources.
 
-Going forward, data accessed _might_ be enhanced by accessing Orphanet's SPARQL endpoint (currently in beta testing) and GARD's neo4j knowledge graph (which was published in 2019).
+```{r fn_wrapper, include = FALSE}
+git_exec_tmp <- function(repo_path, ref, .exec, ...) {
+    orig_head <- git2r::repository_head(repo_path)
+    on.exit(git2r::checkout(orig_head))
+    git2r::checkout(repo_path, ref)
+    
+    .exec <- rlang::as_function(.exec)
+    .exec(...)
+}
+```
 
 ```{r do_data, message = FALSE}
 repo_path <- here::here("../Ontologies/HumanDiseaseOntology")
 do_path <- file.path(repo_path, "src/ontology/doid.owl")
-do_owl <- DO.utils::owl_xml(do_path)
+do_commit <- "fdc26c1d" # include doid.owl v2023-02-27 release
 
-do <- do_owl$query(
-    "SELECT ?id ?label ?dep
-    WHERE {
-        ?class a owl:Class ;
-            oboInOwl:id ?id ;
-            rdfs:label ?label .
-        OPTIONAL { ?class owl:deprecated ?dep . }
-    }"
-) %>%
-    DO.utils::tidy_sparql() %>%
-    dplyr::mutate(
-        status = dplyr::if_else(is.na(dep), NA_character_, "deprecated")
-    ) %>%
-    dplyr::select(-dep)
+git_exec_tmp(
+    repo_path,
+    do_commit,
+    function() {
+        do_owl <- DO.utils::owl_xml(do_path)
 
-do_xref_all <- do_owl$query(
-    "SELECT ?id ?label ?xref
-    WHERE {
-        ?class a owl:Class ;
-            oboInOwl:id ?id ;
-            rdfs:label ?label ;
-            oboInOwl:hasDbXref ?xref .
-    }"
-) %>%
-    DO.utils::tidy_sparql() %>%
-    dplyr::mutate(
-        xref = stringr::str_replace_all(
-            xref,
-            c( "ICD10CM" = "ICD10", "UMLS_CUI" = "UMLS")
-        ),
-        ns = stringr::str_remove(xref, ":.*")
-    )
-
-# drop xrefs ORDO doesn't have
-do_xref <- do_xref_all %>%
-    dplyr::filter(
-        !stringr::str_detect(xref, "EFO|GARD|ICD9|ICDO|KEGG|NCI|SNOMED")
-    )
-
-do_syn <- do_owl$query(
-    "SELECT ?id ?type ?text
-    WHERE {
-        {
-            ?class a owl:Class ;
-                oboInOwl:id ?id ;
-                rdfs:label ?text .
-            BIND('label' AS ?type)
-        }
-        UNION
-        {
-            VALUES ?syn_types {
-                oboInOwl:hasExactSynonym
-                oboInOwl:hasBroadSynonym
-                oboInOwl:hasNarrowSynonym
-                oboInOwl:hasRelatedSynonym
-            }
-            ?class a owl:Class ;
-                oboInOwl:id ?id ;
-                ?syn_types ?text .
-            BIND(
-                CONCAT(
-                    'synonym_',
-                    lcase(
-                        STRBEFORE(
-                            STRAFTER(str(?syn_types), '#has'),
-                            'Synonym'
-                        )
-                    )
-                ) AS ?type
+        do <<- do_owl$query(
+            "SELECT ?id ?label ?dep
+            WHERE {
+                ?class a owl:Class ;
+                    oboInOwl:id ?id ;
+                    rdfs:label ?label .
+                OPTIONAL { ?class owl:deprecated ?dep . }
+            }"
+        ) %>%
+            DO.utils::tidy_sparql() %>%
+            dplyr::mutate(
+                status = dplyr::if_else(is.na(dep), NA_character_, "deprecated")
+            ) %>%
+            dplyr::select(-dep)
+        
+        do_xref_all <<- do_owl$query(
+            "SELECT ?id ?label ?xref
+            WHERE {
+                ?class a owl:Class ;
+                    oboInOwl:id ?id ;
+                    rdfs:label ?label ;
+                    oboInOwl:hasDbXref ?xref .
+            }"
+        ) %>%
+            DO.utils::tidy_sparql() %>%
+            dplyr::mutate(
+                xref = stringr::str_replace_all(
+                    xref,
+                    c( "ICD10CM" = "ICD10", "UMLS_CUI" = "UMLS")
+                ),
+                ns = stringr::str_remove(xref, ":.*")
             )
-        }
-    }"
-) %>%
-    DO.utils::tidy_sparql()
+        
+        # drop xrefs ORDO doesn't have
+        do_xref <<- do_xref_all %>%
+            dplyr::filter(
+                !stringr::str_detect(xref, "EFO|GARD|ICD9|ICDO|KEGG|NCI|SNOMED")
+            )
+        
+        do_syn <<- do_owl$query(
+            "SELECT ?id ?type ?text
+            WHERE {
+                {
+                    ?class a owl:Class ;
+                        oboInOwl:id ?id ;
+                        rdfs:label ?text .
+                    BIND('label' AS ?type)
+                }
+                UNION
+                {
+                    VALUES ?syn_types {
+                        oboInOwl:hasExactSynonym
+                        oboInOwl:hasBroadSynonym
+                        oboInOwl:hasNarrowSynonym
+                        oboInOwl:hasRelatedSynonym
+                    }
+                    ?class a owl:Class ;
+                        oboInOwl:id ?id ;
+                        ?syn_types ?text .
+                    BIND(
+                        CONCAT(
+                            'synonym_',
+                            lcase(
+                                STRBEFORE(
+                                    STRAFTER(str(?syn_types), '#has'),
+                                    'Synonym'
+                                )
+                            )
+                        ) AS ?type
+                    )
+                }
+            }"
+        ) %>%
+            DO.utils::tidy_sparql()
     
 
-### TOO SLOW!!! Parse doid-edit.owl instead!!! ###
-# do_def <- do_owl$query(
-#     "SELECT ?id ?label ?def_src
-#     WHERE {
-#         ?class a owl:Class ;
-#             oboInOwl:id ?id ;
-#             rdfs:label ?label ;
-#             obo:IAO_0000115 ?def .
-#         FILTER(CONTAINS(str(?class), 'DOID'))
-#         
-#         ?blank owl:annotatedSource ?class ;
-#             owl:annotatedProperty obo:IAO_0000115 ;
-#             owl:annotatedTarget ?def ;
-#             oboInOwl:hasDbXref ?def_src .
-#     } LIMIT 1"
-# ) %>%
-#     DO.utils::tidy_sparql()
-do_def <- DO.utils:::read_doid_edit(repo_path) %>%
-    DO.utils:::extract_doid_url() %>%
-    dplyr::filter(stringr::str_detect(url, stringr::coll("orpha.net"))) %>%
-    dplyr::mutate(def_src = stringr::str_match(url, "Expert=([0-9]+)")[,2])
+        ### TOO SLOW!!! Parse doid-edit.owl instead!!! ###
+        # do_def <<- do_owl$query(
+        #     "SELECT ?id ?label ?def_src
+        #     WHERE {
+        #         ?class a owl:Class ;
+        #             oboInOwl:id ?id ;
+        #             rdfs:label ?label ;
+        #             obo:IAO_0000115 ?def .
+        #         FILTER(CONTAINS(str(?class), 'DOID'))
+        #         
+        #         ?blank owl:annotatedSource ?class ;
+        #             owl:annotatedProperty obo:IAO_0000115 ;
+        #             owl:annotatedTarget ?def ;
+        #             oboInOwl:hasDbXref ?def_src .
+        #     } LIMIT 1"
+        # ) %>%
+        #     DO.utils::tidy_sparql()
+        do_def <<- DO.utils:::read_doid_edit(repo_path) %>%
+            DO.utils:::extract_doid_url() %>%
+            dplyr::filter(stringr::str_detect(url, stringr::coll("orpha.net"))) %>%
+            dplyr::mutate(def_src = stringr::str_match(url, "Expert=([0-9]+)")[,2])
+    }
+)
 ```
 
 
-```{r ordo_owl_data, message = FALSE}
-ordo_path <- file.path(odir, "ORDO_en_4.2.owl")
+## Orphanet
 
+Orphanet's [rare disease alignment](https://www.orphadata.com/alignments/) dataset is derived from en_product1.xml, v1, released 2022-11-28.
+
+Going forward, data accessed _might_ be enhanced by accessing Orphanet's SPARQL endpoint (currently in beta testing) and GARD's neo4j knowledge graph (which was published in 2019).
+
+```{r fn_xml_parse, include = FALSE}
+parse_xml_list <- function(x, xpath_accessor) {
+    if (length(xpath_accessor) < 1) {
+        rlang::abort("`xpath_accessor` must be provided.")
+    }
+    if (length(xpath_accessor) == 1) {
+        out <- purrr::map(x, ~ parse_xml_list_element(.x, xpath_accessor))
+    } else {
+        out <- purrr::map(
+            x,
+            function(.l) {
+                purrr::map(
+                    xpath_accessor,
+                    ~ parse_xml_list_element(.l, .x)
+                ) %>%
+                    tibble::as_tibble()
+            }
+        )
+    }
+    out
+}
+
+parse_xml_list_element <- function(element, xpath_accessor) {
+    res <- purrr::map_chr(
+        XML::getNodeSet(element, xpath_accessor),
+        xmlValue
+    )
+    if (length(res) > 0) {
+        res
+    } else {
+        NA_character_
+    }
+}
+```
+
+```{r ordo_data, message = FALSE}
+odir <- here::here("../Ontologies/ORDO")
+ordo_xml_path <- file.path(odir, "en_product1.xml")
+ordo_df_path <- here::here("data/mapping/ordo_data_4.2.rda")
+if (!file.exists(ordo_xml_path)) {
+    download.file(
+        "https://www.orphadata.com/data/xml/en_product1.xml",
+        ordo_xml_path
+    )
+}
+
+ordo_xml <- XML::xmlParse(ordo_xml_path)
+
+ordo_df <- tibble::tibble(
+    disorder_id = as.character(ordo_xml["string(//Disorder/@id)"]),
+    id = paste0(
+        "ORDO:",
+        XML::xmlValue(ordo_xml["//Disorder/OrphaCode"])
+    ),
+    label =  XML::xmlValue(ordo_xml["//Disorder/Name[@lang = 'en']"]),
+    url = XML::xmlValue(ordo_xml["//Disorder/ExpertLink"]),
+    synonym = parse_xml_list(
+        ordo_xml["//Disorder/SynonymList"], 
+        "Synonym"
+    ),
+    type = XML::xmlValue(ordo_xml["//Disorder/DisorderType/Name"]),
+    group = XML::xmlValue(ordo_xml["//Disorder/DisorderGroup/Name"]),
+    flag = parse_xml_list(
+        ordo_xml["//Disorder/DisorderFlagList"],
+        "DisorderFlag[@id != '475']/Label"
+    ),
+    xref = parse_xml_list(
+        ordo_xml["//Disorder/ExternalReferenceList"],
+        c(
+          src = "ExternalReference/Source",
+          lui = "ExternalReference/Reference",
+          type = "ExternalReference/DisorderMappingRelation/Name",
+          status = "ExternalReference/DisorderMappingValidationStatus/Name"
+        )
+    ),
+    assocation = parse_xml_list(
+        ordo_xml["//Disorder/DisorderDisorderAssociationList"],
+        c(
+            id = "DisorderDisorderAssociation/TargetDisorder/OrphaCode",
+            label = "DisorderDisorderAssociation/TargetDisorder/Name",
+            type = "DisorderDisorderAssociationType/Name"
+        )
+    ),
+    def = parse_xml_list(
+        ordo_xml["//Disorder/SummaryInformationList"],
+        "SummaryInformation/TextSectionList/TextSection[TextSectionType/Name[text() = 'Definition']]/Contents"
+    ) %>%
+        as.character() %>%
+        # remove html formatting
+        stringr::str_remove_all("<[^>]+>")
+) %>%
+    dplyr::mutate(flag = purrr::map_chr(flag, vctr_to_string, delim = ", "))
+if (!file.exists(ordo_df_path)) save(ordo_df, file = ordo_df_path)
+
+ordo_xref <- ordo_df %>%
+    dplyr::select(id, label, xref, flag) %>%
+    tidyr::unnest_longer(xref) %>%
+    tidyr::unnest_wider(xref) %>%
+    dplyr::mutate(
+        src = stringr::str_remove_all(src, "[^A-Z0-9a-z]") %>%
+            stringr::str_to_upper(),
+        xref = paste(src, lui, sep = ":"),
+        type = stringr::str_remove(type, " .*")
+    )
+```
+
+
+## GARD
+
+GARD's sitemap (accessed and parsed on 2023-01-18) is used for identifiers and names.
+
+```{r gard_data, message = FALSE}
+gard_path <- here::here("data/mapping/GARD.tsv")
+
+if (file.exists(gard_path)) {
+    gard <- readr::read_tsv(gard_path)
+} else {
+    gard_xml <- readr::read_file("https://rarediseases.info.nih.gov/sitemap.xml")
+    gard_info <- stringr::str_match_all(
+        gard_xml,
+        "https://rarediseases.info.nih.gov/diseases/([0-9]+)/([^< /\"]+)"
+    )[[1]]
+    
+    gard <- tibble::tibble(
+        gard_id = paste0("GARD:", gard_info[, 2]),
+        label = stringr::str_replace_all(gard_info[, 3], "-", " ")
+    ) %>%
+        unique()
+    readr::write_tsv(gard, gard_path)
+}
+```
+
+
+## Mondo
+
+Mondo is used only as a bridge to identify DO-GARD relationships via cross-references. Mondo 2023-01-04 release is used in this analysis.
+
+```{r mondo_data}
+mondo_bridge_path <- here::here("data/mapping/mondo_bridge-DO_ORDO.tsv")
+if (file.exists(mondo_bridge_path)) {
+    mondo_bridge <- readr::read_csv(mondo_bridge_path)
+} else {
+    mondo_owl <- DO.utils::owl_xml(
+        here::here("../Ontologies/mondo/mondo-20230104.owl")
+    )
+    
+    mondo_bridge <- mondo_owl$query(
+        "SELECT ?doid ?mondo_ordo_id ?mondo_label
+    WHERE {
+        ?class a owl:Class ;
+            oboInOwl:hasDbXref ?doid ;
+            oboInOwl:hasDbXref ?mondo_ordo_id ;
+            rdfs:label ?mondo_label .
+        FILTER(CONTAINS(str(?doid), 'DOID'))
+        FILTER(CONTAINS(str(?mondo_ordo_id), 'Orphanet'))
+    }"
+    ) %>%
+        tidy_sparql() %>%
+        dplyr::mutate(
+            ordo_id = stringr::str_replace_all(
+                mondo_ordo_id,
+                "Orphanet:[0]+([0-9]+)",
+                "ORDO:\\1"
+            )
+        ) %>%
+        dplyr::relocate(gard_id, .before = mondo_ordo_id)
+    
+    readr::write_tsv(mondo_bridge, mondo_bridge_path)
+}
+```
+
+
+```{r out_for_help, include = FALSE}
+do_ordo <- do_xref_all %>%
+    dplyr::filter(ns == "ORDO")
+
+do_no_match <- do_xref_all %>%
+    dplyr::filter(!id %in% do_ordo$id)
+
+do_no_match %>% 
+    dplyr::mutate(
+        xref = stringr::str_replace(xref, "SNOMEDCT_US[^:]+", "SNOMEDCT_US")
+    ) %>%
+    dplyr::select(-ns) %>%
+    readr::write_tsv(here::here("data/external/xrefs_in_DO.tsv"))
+
+ordo_no_match <- ordo_xref %>%
+    dplyr::filter(!id %in% do_ordo$xref)
+
+ordo_no_match %>%
+    dplyr::select(id, label, xref, xref_type = type) %>%
+    readr::write_tsv(here::here("data/external/xrefs_in_ORDO.tsv"))
+
+do_ordo_match <- dplyr::inner_join(
+    do_no_match,
+    dplyr::select(
+        ordo_no_match,
+        ordo_id = id, ordo_label = label, xref, ordo_type = type
+    ),
+    by = "xref"
+)
+    dplyr::filter(xref %in% ordo_no_match$xref)
+
+```
+
+
+# Approach
+
+Comparison between DO and GARD was accomplished previously in the compare-DO_GARD notebook in this repository. Since the GARD sitemap provides only labels and GARD identifiers, nothing new can be incorporated in this comparison. Instead the focus will be on comparing DO and ORDO in a step-wise manner starting with the strongest information and ending with the weakest.
+
+The comparisons will be as follows:
+1. DOID with xref to ORDO --> assumed correct
+2. DOID with other xrefs that match ORDO xrefs --> will be ranked based on the number and similarity of xref matches (missing or conflicting xrefs will indicate lower quality)
+3. DOID with Orphanet sources for definitions --> few exist but these will be explored as they are likely to be appropriate mappings
+3. DOID labels and synonyms will be compared with ORDO labels and synonyms, initially by exact match after standardization followed by approximate string matches.
+
+
+
+# 1. DOIDs with ORDO xrefs
+
+```{r do_direct}
+do_ordo_xref <- do_xref %>%
+    dplyr::filter(ns == "ORDO") %>%
+    dplyr::select(-ns) %>%
+    dplyr::nest_join(
+        dplyr::select(do_xref, -label),
+        by = "id",
+        name = "do_xref_tbl"
+    ) %>%
+     dplyr::nest_join(
+        dplyr::select(ordo_xref, -label),
+        by = c("xref" = "id"),
+        name = "ordo_xref_tbl"
+    ) %>%
+    dplyr::left_join(do, by = c("id", "label"))
+```
+
+```{r}
+
+```
+
+
+```{r}
+do_no_match <- dplyr::filter(do, !id %in% do_ordo_xref$id)
+    
+```
+
+
+# 2. DO-ORDO xref comparison
+
+There are quite a few duplicated xrefs in DO. The most numerous duplications are from ICD10 and MESH but there are decent number from ORDO, UMLS, and MESH as well.
+
+```{r}
+do_xref %>%
+    dplyr::filter(DO.utils::all_duplicated(xref)) %>%
+    dplyr::count(ns, sort = TRUE)
+```
+
+Comparing DO to ORDO using xrefs is going to be messy because of this duplication. These really should be eliminated or annotated as broad, narrow or related to clarify how to handle them. ORDO does have these sorts of annotations so it might be possible to pull them from there, but that's outside the scope of work right now. For the time being, ORDO xrefs will be limited to those that are exact.
+
+```{r}
+xref_compare <- NULL
+```
+
+
+# Summary
+
+```{r}
+rare_xref_counts <- do_xref %>%
+    dplyr::group_by(id) %>%
+    dplyr::summarize(
+        rare_xref = dplyr::case_when(
+            all(c("ORDO", "GARD") %in% ns) ~ "Both",
+            "ORDO" %in% ns ~ "ORDO",
+            "GARD" %in% ns ~ "GARD",
+            TRUE ~ NA_character_
+        )
+    ) %>%
+    dplyr::filter(!is.na(rare_xref))
+```
+
+There are `r format(dplyr::n_distinct(rare_xref_counts$id), big.mark = ",")` diseases with GARD and/or Orphanet xrefs in the latest release of DO with the following breakdown:
+
+```{r}
+dplyr::count(rare_xref_counts, rare_xref)
+```
+
+The number of GARD and ORDO IDs in the DO:
+```{r}
+do_xref_all %>%
+    dplyr::filter(ns %in% c("GARD", "ORDO")) %>%
+    dplyr::group_by(ns) %>%
+    dplyr::summarize(n = dplyr::n_distinct(xref))
+```
+
+Xref sources in both DO and ORDO
+```{r}
+
+```
+
+
+```{r eval = FALSE, include = FALSE}
+########## EXTRA ############
+# calculate xref similarity
+# assign value
+# E = 1
+# NTBT/BTNT/ND <= 0.5
+```
+
+
+```{r ordo_data_owl, eval = FALSE, include = FALSE, message = FALSE}
+######### EXTRA ###############
+# Did not use .owl file because it is missing GARD xrefs
+# - Orphanet's ORDO disease ontology (ORDO, version [4.2](https://www.orphadata.com/ordo/)) for class information and names/synonyms.
+ordo_path <- file.path(odir, "ORDO_en_4.2.owl")
 ordo_owl <- DO.utils::owl_xml(ordo_path)
 ordo <- ordo_owl$query(
     "PREFIX orpha: <http://www.orpha.net/ORDO/Orphanet_>
@@ -246,113 +578,13 @@ ordo_syn <- ordo_owl$query(
         names_to = "type",
         values_to = "text"
     )
-
-ordo_json <- jsonlite::read_json(ordo_xref_path)
-ordo_xref <- purrr::map(
-    ordo_json$JDBOR[[1]]$DisorderList[[1]]$Disorder,
-    tibble::as_tibble
-) %>%
-    dplyr::bind_rows()
-
-# purrr::map(
-#     %>%
-#     tidyr::hoist(ExpertLink, "link", )
 ```
 
-
-```{r ordo_data, message = FALSE}
-odir <- here::here("../Ontologies/ORDO")
-ordo_xml_path <- file.path(odir, "en_product1.xml")
-ordo_xml <- XML::xmlParse(ordo_xml_path)
-
-parse_xml_list <- function(x, xpath_accessor) {
-    if (length(xpath_accessor) < 1) {
-        rlang::abort("`xpath_accessor` must be provided.")
-    }
-    if (length(xpath_accessor) == 1) {
-        out <- purrr::map(x, ~ parse_xml_list_element(.x, xpath_accessor))
-    } else {
-        out <- purrr::map(
-            x,
-            function(.l) {
-                purrr::map(
-                    xpath_accessor,
-                    ~ parse_xml_list_element(.l, .x)
-                ) %>%
-                    tibble::as_tibble()
-            }
-        )
-    }
-    out
-}
-
-parse_xml_list_element <- function(element, xpath_accessor) {
-    res <- purrr::map_chr(
-        XML::getNodeSet(element, xpath_accessor),
-        xmlValue
-    )
-    dplyr::if_else(length(res) > 0, res, NA_character_) 
-}
-
-ordo_df <- tibble::tibble(
-    disorder_id = as.character(ordo_xml["string(//Disorder/@id)"]),
-    id = paste0(
-        "ORDO:",
-        XML::xmlValue(ordo_xml["//Disorder/OrphaCode"])
-    ),
-    label =  XML::xmlValue(ordo_xml["//Disorder/Name[@lang = 'en']"]),
-    url = XML::xmlValue(ordo_xml["//Disorder/ExpertLink"]),
-    synonym = parse_xml_list(
-        ordo_xml["//Disorder/SynonymList"], 
-        "Synonym"
-    ),
-    type = XML::xmlValue(ordo_xml["//Disorder/DisorderType/Name"]),
-    group = XML::xmlValue(ordo_xml["//Disorder/DisorderGroup/Name"]),
-    flag = parse_xml_list(
-        ordo_xml["//Disorder/DisorderFlagList"],
-        "DisorderFlag[@id != '475']/Label"
-    ),
-    xref = parse_xml_list(
-        ordo_xml["//Disorder/ExternalReferenceList"],
-        c(
-          src = "ExternalReference/Source",
-          lui = "ExternalReference/Reference",
-          type = "ExternalReference/DisorderMappingRelation/Name",
-          status = "ExternalReference/DisorderMappingValidationStatus/Name"
-        )
-    ),
-    assocation = parse_xml_list(
-        ordo_xml["//Disorder/DisorderDisorderAssociationList"],
-        c(
-            id = "DisorderDisorderAssociation/TargetDisorder/OrphaCode",
-            label = "DisorderDisorderAssociation/TargetDisorder/Name",
-            type = "DisorderDisorderAssociationType/Name"
-        )
-    ),
-    def = parse_xml_list(
-        ordo_xml["//Disorder/SummaryInformationList"],
-        "SummaryInformation/TextSectionList/TextSection[TextSectionType/Name[text() = 'Definition']]/Contents"
-    ) %>%
-        as.character() %>%
-        # remove html formatting
-        stringr::str_remove_all("<[^>]+>")
-)
-
-ordo_xref <- ordo_df %>%
-    dplyr::select(id, label, xref) %>%
-    tidyr::unnest_longer(xref) %>%
-    tidyr::unnest_wider(xref) %>%
-    dplyr::mutate(
-        src = stringr::str_remove_all(src, "[^A-Z0-9a-z]") %>%
-            stringr::str_to_upper(),
-        xref = paste(src, lui, sep = ":"),
-        type = stringr::str_remove(type, " .*")
-    )
-```
-
-
-```{r ordo_data_json, include = FALSE, message = FALSE}
-ordo_json <- jsonlite::fromJSON(ordo_xref_path)
+```{r ordo_data_json, include = FALSE, eval = FALSE, message = FALSE}
+######### EXTRA ###############
+# xml easier to parse
+ordo_json_path <- file.path(odir, "en_product1.json.tar.gz")
+ordo_json <- jsonlite::fromJSON(ordo_json_path)
 ordo_df_list <- purrr::map_dfr(
     ordo_json$JDBOR[[1]]$DisorderList[[1]]$Disorder,
     tibble::as_tibble
@@ -365,159 +597,463 @@ ordo_df <- ordo_df_list %>%
     
 ```
 
-```{r out_for_help, include = FALSE}
-do_ordo <- do_xref_all %>%
-    dplyr::filter(ns == "ORDO")
 
-do_no_match <- do_xref_all %>%
-    dplyr::filter(!id %in% do_ordo$id)
 
-do_no_match %>% 
-    dplyr::mutate(
-        xref = stringr::str_replace(xref, "SNOMEDCT_US[^:]+", "SNOMEDCT_US")
-    ) %>%
-    dplyr::select(-ns) %>%
-    readr::write_tsv(here::here("data/external/xrefs_in_DO.tsv"))
+# FROM GARD
+## GARD Already in DO (mappings/xrefs)
 
-ordo_no_match <- ordo_xref %>%
-    dplyr::filter(!id %in% do_ordo$xref)
+```{r already_in}
+gard_in_do <- dplyr::filter(do, !is.na(gard_id)) %>%
+    dplyr::left_join(dplyr::rename(gard, gard_label = label), by = "gard_id") %>%
+    dplyr::mutate(gard_deprec = is.na(gard_label))
+```
 
-ordo_no_match %>%
-    dplyr::select(id, label, xref, xref_type = type) %>%
-    readr::write_tsv(here::here("data/external/xrefs_in_ORDO.tsv"))
+- DO diseases with GARD xref = `r format(dplyr::n_distinct(gard_in_do$doid), big.mark = ",")`
+- GARD diseases in DO = `r format(dplyr::n_distinct(gard_in_do$gard_id), big.mark = ",")`
+- Total DO-GARD mappings = `r format(nrow(gard_in_do), big.mark = ",")`
 
-do_ordo_match <- dplyr::inner_join(
-    do_no_match,
-    dplyr::select(
-        ordo_no_match,
-        ordo_id = id, ordo_label = label, xref, ordo_type = type
-    ),
-    by = "xref"
-)
-    dplyr::filter(xref %in% ordo_no_match$xref)
 
+### Mappings in Need of Curation Review
+
+A. Deprecated GARD xrefs that are in DO.
+
+```{r do_gard_deprec}
+do_gard_deprec <- gard_in_do %>%
+    dplyr::filter(gard_deprec)
+
+do_gard_deprec
+```
+
+```{r curate-do_gard_deprec, include = FALSE, eval = FALSE}
+googlesheets4::write_sheet(do_gard_deprec, gard_gs, "DO-GARD_deprec")
 ```
 
 
-##############################
-assign value
-E = 1
-NTBT/BTNT/ND <= 0.5
+B. DO diseases with more than one GARD xref.
 
-```{r gard_data, message = FALSE}
-gard_path <- here::here("data/mapping/GARD.tsv")
+```{r do_multi_gard}
+do_multi_gard <- gard_in_do %>%
+    dplyr::filter(DO.utils::all_duplicated(doid)) %>%
+    dplyr::arrange(doid, gard_id) %>%
+    dplyr::mutate(gard_deprec = dplyr::na_if(gard_deprec, FALSE))
 
-if (file.exists(gard_path)) {
-    gard <- readr::read_tsv(gard_path)
-} else {
-    gard_xml <- readr::read_file("https://rarediseases.info.nih.gov/sitemap.xml")
-    
-    gard_info <- stringr::str_match_all(
-        gard_xml,
-        "https://rarediseases.info.nih.gov/diseases/([0-9]+)/([^< /\"]+)"
-    )[[1]]
-    
-    gard <- tibble::tibble(
-        gard_id = paste0("GARD:", gard_info[, 2]),
-        label = stringr::str_replace_all(gard_info[, 3], "-", " ")
+do_multi_gard
+```
+
+```{r curate-do_multi_gard, include = FALSE, eval = FALSE}
+googlesheets4::write_sheet(do_multi_gard, gard_gs, "DO-multi_GARD_xref")
+```
+
+
+C. GARD diseases linked to more than one DO disease.
+
+```{r gard_dup}
+gard_in_do_dup <- gard_in_do %>%
+    dplyr::filter(DO.utils::all_duplicated(gard_id)) %>%
+    dplyr::arrange(gard_id, doid) %>%
+    dplyr::mutate(gard_deprec = dplyr::na_if(gard_deprec, FALSE))
+
+gard_in_do_dup
+```
+
+```{r curate-gard_dup, include = FALSE, eval = FALSE}
+googlesheets4::write_sheet(gard_in_do_dup, gard_gs, "GARD_xref-multi_DO")
+```
+
+All three of these sets of DO-GARD xrefs **should be reviewed** and likely updated.
+
+
+```{r do_gard_ok, include = FALSE}
+do_gard_ok <- gard_in_do %>%
+    dplyr::filter(
+        !gard_id %in% do_gard_deprec$gard_id,
+        !doid %in% do_multi_gard$doid,
+        !gard_id %in% gard_in_do_dup$gard_id
     ) %>%
-        unique()
-    readr::write_tsv(gard, gard_path)
+    dplyr::mutate(gard_deprec = dplyr::na_if(gard_deprec, FALSE))
+```
+
+
+```{r save-do_gard_ok, include = FALSE, eval = FALSE}
+googlesheets4::write_sheet(do_gard_ok, gard_gs, "DO-GARD_ok")
+```
+
+Total DO-GARD mappings not needing curation review: `r format(nrow(do_gard_ok), big.mark = ",")`.
+
+
+## GARD Easily Added to DO
+
+### GARD-DO Bridged Mappings (Mondo)
+
+Using Mondo as a bridge, the following DO-GARD mappings may be correct:
+
+```{r mondo_bridge}
+mondo_do_gard <- mondo_bridge %>%
+    dplyr::left_join(dplyr::select(do, doid, do_label = label), by = "doid") %>%
+    dplyr::left_join(dplyr::rename(gard, gard_label = label), by = "gard_id") %>%
+    dplyr::select(doid, do_label, gard_id, gard_label) %>%
+    # remove deprecated GARD xrefs
+    dplyr::filter(!is.na(gard_label)) %>%
+    # remove DO-GARD mappings in DO, handled in [1]
+    dplyr::mutate(do_gard = paste0(doid, gard_id)) %>%
+    dplyr::filter(
+        !do_gard %in% 
+            dplyr::mutate(gard_in_do, do_gard =  paste0(doid, gard_id))$do_gard
+    ) %>%
+    dplyr::select(-do_gard) %>%
+    # identify where Mondo suggests alternate GARD xrefs
+    dplyr::mutate(
+        suggesting_alt_gard = dplyr::na_if(doid %in% gard_in_do$doid, FALSE)
+    ) %>%
+    dplyr::arrange(doid, gard_id)
+
+mondo_do_gard
+```
+
+```{r curate-mondo_bridge, include = FALSE, eval = FALSE}
+googlesheets4::write_sheet(mondo_do_gard, gard_gs, "DO-GARD_xref_bridge")
+```
+
+Total GARD xrefs that are likely in DO: `r nrow(mondo_do_gard)`.
+
+
+```{r cum_do_gard1, include = FALSE}
+do_potential_gard <- union(gard_in_do$doid, mondo_do_gard$doid)
+potential_gard <- union(gard_in_do$gard_id, mondo_do_gard$gard_id)
+```
+
+
+### Exact GARD-DO Term Matches
+
+String matching may identify other DO-GARD mapping candidates. String matching approaches are consist of exact matches and approximate (or fuzzy) matches.
+
+For both approaches, comparison is made after initial standardization of disease labels (or synonyms), which consists of replacing all punctuation and extra spaces with a single space and converting words to lowercase. Numbers are _not_ standardized (e.g. roman numerals are not converted to normal numbers).
+
+Exact matches specifically are also approached step-wise prioritizing matches between DO and GARD labels over GARD labels and DO synonyms.
+
+#### Exact GARD-DO Label Matches
+
+```{r label_std}
+do_std <- do %>%
+    dplyr::filter(!doid %in% do_potential_gard) %>%
+    dplyr::mutate(
+        label_std = label %>%
+            stringr::str_to_lower() %>%
+            stringr::str_replace_all(
+                "([:blank:]|[:punct:]|[:space:])+",
+                " "
+            )
+    ) %>%
+    dplyr::select(-gard_id)
+
+gard_std <- gard %>%
+    dplyr::filter(!gard_id %in% potential_gard) %>%
+    dplyr::mutate(
+        label_std = label %>%
+            stringr::str_to_lower() %>%
+            stringr::str_replace_all(
+                "([:blank:]|[:punct:]|[:space:])+",
+                " "
+            )
+    )
+```
+
+```{r label_exact_match}
+do_gard_exact_label <- do_std %>%
+    dplyr::filter(label_std %in% gard_std$label_std) %>%
+    dplyr::left_join(
+        dplyr::rename(gard_std, gard_label = label),
+        by = "label_std"
+    ) %>%
+    dplyr::mutate(match_type = "label-exact") %>%
+    dplyr::relocate(doid:label, match_type, gard_id:gard_label, label_std)
+```
+
+DO and GARD have `r nrow(do_gard_exact_label)` exact label matches.
+
+```{r show-label_exact, echo = FALSE}
+do_gard_exact_label
+```
+
+```{r cum_do_gard2, include = FALSE}
+do_potential_gard <- union(do_potential_gard, do_gard_exact_label$doid)
+potential_gard <- union(potential_gard, do_gard_exact_label$gard_id)
+
+do_std <- do_std %>%
+    dplyr::filter(!doid %in% do_potential_gard)
+gard_std <- gard_std %>%
+    dplyr::filter(!gard_id %in% potential_gard)
+```
+
+
+#### Exact GARD Label-DO Synonym Matches
+
+```{r std_syn}
+do_syn_std <- do_syn %>%
+    dplyr::mutate(
+        synonym_std = synonym %>%
+            stringr::str_to_lower() %>%
+            stringr::str_replace_all(
+                "([:blank:]|[:punct:]|[:space:])+",
+                " "
+            )
+    ) %>%
+    dplyr::filter(!duplicated(synonym_std))
+```
+
+```{r syn_exact_match}
+do_gard_exact_syn <- do_syn_std %>%
+    dplyr::filter(synonym_std %in% gard_std$label_std) %>%
+    dplyr::left_join(
+        dplyr::rename(gard_std, gard_label = label),
+        by = c("synonym_std" = "label_std")
+    ) %>%
+    dplyr::mutate() %>%
+    dplyr::group_by(doid) %>%
+    dplyr::mutate(
+        match_type = dplyr::if_else(
+            length(doid) > 1,
+            "synonym-exact-mult_match",
+            "synonym-exact"
+        )
+    ) %>%
+    dplyr::ungroup() %>%
+    dplyr::relocate(
+        gard_id:gard_label, match_type, doid:synonym, term_std = synonym_std
+    ) %>%
+    dplyr::arrange(gard_id)
+```
+
+`r nrow(do_gard_exact_syn)` GARD terms have exact DO synonym matches. Some of these GARD terms match synonyms from more than one DO term.
+
+```{r show-syn_exact, echo = FALSE}
+do_gard_exact_syn
+```
+
+```{r cum_do_gard3, include = FALSE}
+do_potential_gard <- union(do_potential_gard, do_gard_exact_syn$doid)
+potential_gard <- union(potential_gard, do_gard_exact_syn$gard_id)
+
+do_std <- do_std %>%
+    dplyr::filter(!doid %in% do_potential_gard)
+gard_std <- gard_std %>%
+    dplyr::filter(!gard_id %in% potential_gard)
+do_syn_std <- do_syn_std %>%
+    dplyr::filter(!doid %in% do_potential_gard)
+```
+
+
+#### Summary: Exact Term Matches
+
+```{r}
+do_gard_exact <- dplyr::bind_rows(
+    dplyr::rename(do_gard_exact_label, term_std = label_std),
+    do_gard_exact_syn
+) %>%
+    dplyr::mutate(
+        do_term = dplyr::if_else(is.na(label), synonym, label),
+        do_term_type = dplyr::if_else(is.na(label), "synonym", "label")
+    ) %>%
+    dplyr::select(
+        doid, do_term, do_term_type, match_type, gard_id:gard_label, term_std
+    )
+```
+
+Total GARD-DO exact matches: `r format(dplyr::n_distinct(do_gard_exact$gard_id), big.mark = ",")`.
+
+```{r curate-exact_match, include = FALSE, eval = FALSE}
+googlesheets4::write_sheet(do_gard_exact, gard_gs, "DO-GARD_exact_match")
+```
+
+
+## GARD Possibly Added to DO
+
+Approximate string matches _can_ be very inaccurate, so thee results below  will need particularly _careful_ scrutiny.
+
+For approximate string matching the 'longest common substring distance' matching algorithm is used with a maximum difference equal to the lower of the two string sets 3rd quartile of string length (rounded down).
+
+
+### Approximate GARD-DO Label Matches
+
+```{r approx_fn, include = FALSE}
+max_dist <- function(x, y) {
+    x_3q <- summary(stringr::str_length(x))[5]
+    y_3q <- summary(stringr::str_length(y))[5]
+    
+    floor(min(c(x_3q, y_3q)))
+}
+
+add_match_score <- function(match_tbl, col_nm = "score") {
+    dplyr::mutate(
+        match_tbl,
+        {{ col_nm }} := 1 - dist / 
+            pmin(
+                stringr::str_length(x),
+                stringr::str_length(table_match)
+            )
+    )
 }
 ```
 
+```{r fz_label_prep}
+label_dist <- max_dist(do_std$label_std, gard_std$label_std)
+```
 
-# Approach
+The maximum difference for comparison of the DO & GARD labels is `r label_dist`.
 
-Comparison between DO and GARD was accomplished previously in the compare-DO_GARD notebook in this repository. Since the GARD sitemap provides only labels and GARD identifiers, nothing new can be incorporated in this comparison. Instead the focus will be on comparing DO and ORDO in a step-wise manner starting with the strongest information and ending with the weakest.
+```{r fz_label_match}
+system.time(
+    gard_do_fz <- DO.utils::match_fz(
+        gard_std$label_std,
+        do_std$label_std,
+        maxDist = label_dist
+    )
+)
 
-The comparisons will be as follows:
-1. DOID with xref to ORDO --> assumed correct
-2. DOID with other xrefs that match ORDO xrefs --> will be ranked based on the number and similarity of xref matches (missing or conflicting xrefs will indicate lower quality)
-3. DOID with Orphanet sources for definitions --> few exist but these will be explored as they are likely to be appropriate mappings
-3. DOID labels and synonyms will be compared with ORDO labels and synonyms, initially by exact match after standardization followed by approximate string matches.
+gard_do_fz <- gard_do_fz %>%
+    add_match_score() %>%
+    dplyr::rename(gard_std = x, do_std = table_match) %>%
+    dplyr::arrange(dplyr::desc(score))
+```
+
+```{r show-fz_label, echo = FALSE}
+gard_do_fz
+```
 
 
+### Approximate GARD Label-DO Synonym Matches
 
-# 1. DOIDs with ORDO xrefs
+```{r fz_syn_prep}
+syn_dist <- max_dist(do_syn_std$synonym_std, gard_std$label_std)
+```
 
-```{r do_direct}
-do_ordo_xref <- do_xref %>%
-    dplyr::filter(ns == "ORDO") %>%
-    dplyr::select(-ns) %>%
-    dplyr::nest_join(
-        dplyr::select(do_xref, -label),
-        by = "id",
-        name = "do_xref_tbl"
+The maximum difference for comparison of the DO & GARD labels is `r syn_dist`.
+
+```{r fz_syn_match}
+system.time(
+    gard_do_fz_syn <- DO.utils::match_fz(
+        gard_std$label_std,
+        do_syn_std$synonym_std,
+        maxDist = syn_dist
+    )
+)
+
+gard_do_fz_syn <- gard_do_fz_syn %>%
+    add_match_score() %>%
+    dplyr::rename(gard_std = x, do_syn_std = table_match) %>%
+    dplyr::arrange(dplyr::desc(score))
+```
+
+```{r show-fz_syn, echo = FALSE}
+gard_do_fz_syn
+```
+
+### Summary: Approximate Term Matches
+
+```{r fz_all}
+# prep for merge - add DO info for each dataset
+gard_do_fz <- gard_do_fz %>%
+    dplyr::left_join(
+        dplyr::select(do_std, doid, do_std = label_std),
+        by = "do_std"
     ) %>%
-     dplyr::nest_join(
-        dplyr::select(ordo_xref, -label),
-        by = c("xref" = "id"),
-        name = "ordo_xref_tbl"
+    dplyr::mutate(do_term_type = "label")
+
+gard_do_fz_syn <- gard_do_fz_syn %>%
+    dplyr::rename(do_std = do_syn_std) %>%
+    dplyr::left_join(
+        dplyr::select(do_syn_std, doid, do_std = synonym_std),
+        by = "do_std"
     ) %>%
-    dplyr::left_join(do)
-```
+    dplyr::mutate(do_term_type = "synonym")
 
-```{r}
-
-```
-
-
-```{r}
-do_no_match <- dplyr::filter(do, !id %in% do_ordo_xref$id)
-    
-```
-
-
-# 2. DO-ORDO xref comparison
-
-There are quite a few duplicated xrefs in DO. The most numerous duplications are from ICD10 and MESH but there are decent number from ORDO, UMLS, and MESH as well.
-
-```{r}
-do_xref %>%
-    dplyr::filter(DO.utils::all_duplicated(xref)) %>%
-    dplyr::count(ns, sort = TRUE)
-```
-
-Comparing DO to ORDO using xrefs is going to be messy because of this duplication. These really should be eliminated or annotated as broad, narrow or related to clarify how to handle them. ORDO does have these sorts of annotations so it might be possible to pull them from there, but that's outside the scope of work right now. For the time being, ORDO xrefs will be limited to those that are exact.
-
-```{r}
-xref_compare <- NULL
-```
-
-
-# Summary
-
-```{r}
-rare_xref_counts <- do_xref_all %>%
-    dplyr::group_by(id) %>%
-    dplyr::summarize(
-        rare_xref = dplyr::case_when(
-            all(c("ORDO", "GARD") %in% ns) ~ "Both",
-            "ORDO" %in% ns ~ "ORDO",
-            "GARD" %in% ns ~ "GARD",
-            TRUE ~ NA_character_
+# merge
+fz_all <- dplyr::bind_rows(
+    gard_do_fz,
+    gard_do_fz_syn
+) %>%
+    # add GARD info
+    dplyr::left_join(
+        dplyr::select(gard_std, gard_id, gard_std = label_std),
+        by = "gard_std"
+    ) %>%
+    # drop term type from non-matches & drop duplicates
+    dplyr::mutate(
+        do_term_type = dplyr::if_else(
+            is.na(doid),
+            NA_character_,
+            do_term_type
         )
     ) %>%
-    dplyr::filter(!is.na(rare_xref))
+    unique() %>%
+    # sort by GARD matching group with best scoring groups first and within
+    #   group
+    dplyr::group_by(gard_id) %>%
+    dplyr::mutate(
+        best_score = ifelse(
+            all(is.na(score)),
+            NA,
+            max(score, na.rm = TRUE)
+        )
+    ) %>%
+    dplyr::ungroup() %>%
+    dplyr::arrange(
+        dplyr::desc(best_score),
+        gard_id,
+        dplyr::desc(score),
+        do_term_type
+    ) %>%
+    dplyr::mutate(
+        gard_group = cumsum(
+            gard_id != tidyr::replace_na(dplyr::lag(gard_id), "")
+        )
+    ) %>%
+    dplyr::relocate(
+        gard_group, gard_id, gard_std, score, dist, doid, do_std, do_term_type
+    ) %>%
+    dplyr::rename(chr_diff = dist)
 ```
 
-There are `r format(dplyr::n_distinct(rare_xref_counts$id), big.mark = ",")` diseases with GARD and/or Orphanet xrefs in the latest release of DO with the following breakdown:
+Drop matches below a score of 0.6. Quick manual evaluation suggests this cutoff retains most real and related hits, while dropping the majority of totally unrelated results. A sizable number of poor hits are retained with the goal of being more inclusive.
 
-```{r}
-dplyr::count(rare_xref_counts, rare_xref)
+```{r fz_quality}
+# discard poor matches (being generous here in thos
+fz_gt60 <- dplyr::filter(fz_all, score >= 0.6)
 ```
 
-The number of GARD and ORDO IDs in the DO:
-```{r}
-do_xref_all %>%
-    dplyr::filter(ns %in% c("GARD", "ORDO")) %>%
-    dplyr::group_by(ns) %>%
-    dplyr::summarize(n = dplyr::n_distinct(xref))
+This dataset includes approximate matches from DO for `r dplyr::n_distinct(fz_gt60$gard_id)` GARD diseases.
+
+```{r curate-fz_match, include = FALSE, eval = FALSE}
+googlesheets4::write_sheet(fz_gt60, gard_gs, "GARD-DO_fz_match")
 ```
 
-Xref sources in both DO and ORDO
-```{r}
 
+# Summary: Overall
+
+```{r GARD_no_DO, include = FALSE}
+gard_no_do <- gard %>%
+    dplyr::filter(!gard_id %in% c(gard_in_do$gard_id, do_gard_exact$gard_id, fz_gt60$gard_id))
 ```
 
+```{r save-GARD_no_DO, include = FALSE, eval = FALSE}
+googlesheets4::write_sheet(gard_no_do, gard_gs, "GARD_no_match")
+```
+
+
+Disease Set         | count
+:--|:--
+All GARD diseases   | `r format(dplyr::n_distinct(gard$gard_id), big.mark = ",")`
+   |  
+_GARD diseases in DO (need review)_* | `r dplyr::n_distinct(gard_in_do$gard_id) - dplyr::n_distinct(do_gard_ok$gard_id)`
+_GARD diseases in DO (okay)_ | `r format(dplyr::n_distinct(do_gard_ok$gard_id), big.mark = ",")`
+**TOTAL** GARD diseases in DO | `r format(dplyr::n_distinct(gard_in_do$gard_id), big.mark = ",")`
+   |  
+GARD diseases with strong matches in DO | `r dplyr::n_distinct(do_gard_exact$gard_id)`
+**TOTAL** in DO + strong matches | `r format(dplyr::n_distinct(c(gard_in_do$gard_id, do_gard_exact$gard_id)), big.mark = ",")`
+   |  
+GARD diseases with approximate matches in DO | `r dplyr::n_distinct(fz_gt60$gard_id)`
+**TOTAL** in DO + any matches | `r format(dplyr::n_distinct(c(gard_in_do$gard_id, do_gard_exact$gard_id, fz_gt60$gard_id)), big.mark = ",")`
+   |  
+Remaining GARD diseases | `r format(dplyr::n_distinct(gard_no_do$gard_id), big.mark = ",")`
+
+*Some GARD diseases have been deprecated, resulting in slight adding discrepancies.
