@@ -22,16 +22,16 @@
     },
     "DO.utils": {
       "Package": "DO.utils",
-      "Version": "0.2.6",
+      "Version": "0.2.6.9000",
       "Source": "GitHub",
       "Remotes": "allenbaron/rentrez",
       "RemoteType": "github",
       "RemoteHost": "api.github.com",
       "RemoteRepo": "DO.utils",
       "RemoteUsername": "allenbaron",
-      "RemoteRef": "main",
-      "RemoteSha": "7d14590b955439dad543be3dc294e3c2d74bf4de",
-      "Hash": "5ccee1cab585e17c5c1eaee3be534f26"
+      "RemoteRef": "HEAD",
+      "RemoteSha": "55a2e089b5495420b8d835e25235ef3831685ab5",
+      "Hash": "d52cd9900c9cc94908419b4338606a84"
     },
     "DT": {
       "Package": "DT",
@@ -103,10 +103,10 @@
     },
     "Rcpp": {
       "Package": "Rcpp",
-      "Version": "1.0.8",
+      "Version": "1.0.10",
       "Source": "Repository",
       "Repository": "CRAN",
-      "Hash": "22b546dd7e337f6c0c58a39983a496bc"
+      "Hash": "e749cae40fa9ef469b6050959517453c"
     },
     "RcppArmadillo": {
       "Package": "RcppArmadillo",
@@ -124,10 +124,10 @@
     },
     "RcppTOML": {
       "Package": "RcppTOML",
-      "Version": "0.1.7",
+      "Version": "0.2.2",
       "Source": "Repository",
       "Repository": "CRAN",
-      "Hash": "f8a578aa91321ecec1292f1e2ffadeda"
+      "Hash": "c232938949fcd8126034419cc529333a"
     },
     "SPARQL": {
       "Package": "SPARQL",
@@ -278,10 +278,10 @@
     },
     "cli": {
       "Package": "cli",
-      "Version": "3.2.0",
+      "Version": "3.6.0",
       "Source": "Repository",
       "Repository": "CRAN",
-      "Hash": "1bdb126893e9ce6aae50ad1d6fc32faf"
+      "Hash": "3177a5a16c243adc199ba33117bd9657"
     },
     "clipr": {
       "Package": "clipr",
@@ -754,10 +754,10 @@
     },
     "jsonlite": {
       "Package": "jsonlite",
-      "Version": "1.8.0",
+      "Version": "1.8.4",
       "Source": "Repository",
       "Repository": "CRAN",
-      "Hash": "d07e729b27b372429d42d24d503613a0"
+      "Hash": "a4269a09a9b865579b2635c77e572374"
     },
     "keyring": {
       "Package": "keyring",
@@ -810,10 +810,10 @@
     },
     "lifecycle": {
       "Package": "lifecycle",
-      "Version": "1.0.1",
+      "Version": "1.0.3",
       "Source": "Repository",
       "Repository": "CRAN",
-      "Hash": "a6b6d352e3ed897373ab19d8395c98d0"
+      "Hash": "001cecbeac1cff9301bdc3775ee46a86"
     },
     "lubridate": {
       "Package": "lubridate",
@@ -950,10 +950,10 @@
     },
     "png": {
       "Package": "png",
-      "Version": "0.1-7",
+      "Version": "0.1-8",
       "Source": "Repository",
       "Repository": "CRAN",
-      "Hash": "03b7076c234cb3331288919983326c55"
+      "Hash": "bd54ba8a0a5faded999a7aab6e46b374"
     },
     "polyclip": {
       "Package": "polyclip",
@@ -1027,10 +1027,10 @@
     },
     "rdflib": {
       "Package": "rdflib",
-      "Version": "0.2.3",
+      "Version": "0.2.5",
       "Source": "Repository",
       "Repository": "CRAN",
-      "Hash": "b735f1751ed591d1cac05947369dcd82"
+      "Hash": "9b2a0bbd7d9df12211cadb02d8055456"
     },
     "readr": {
       "Package": "readr",
@@ -1095,17 +1095,17 @@
     },
     "reticulate": {
       "Package": "reticulate",
-      "Version": "1.24",
+      "Version": "1.28",
       "Source": "Repository",
       "Repository": "CRAN",
-      "Hash": "ffdf27627a3c1537478073c43b6e7980"
+      "Hash": "86c441bf33e1d608db773cb94b848458"
     },
     "rlang": {
       "Package": "rlang",
-      "Version": "1.0.1",
+      "Version": "1.1.0",
       "Source": "Repository",
       "Repository": "CRAN",
-      "Hash": "3bf0219f19d9f5b3c682acbb3546a151"
+      "Hash": "dc079ccd156cde8647360f473c1fa718"
     },
     "rmarkdown": {
       "Package": "rmarkdown",
@@ -1123,10 +1123,10 @@
     },
     "rprojroot": {
       "Package": "rprojroot",
-      "Version": "2.0.2",
+      "Version": "2.0.3",
       "Source": "Repository",
       "Repository": "CRAN",
-      "Hash": "249d8cd1e74a8f6a26194a91b47f21d1"
+      "Hash": "1de7ab598047a87bba48434ba35d497d"
     },
     "rscopus": {
       "Package": "rscopus",
@@ -1221,17 +1221,17 @@
     },
     "stringi": {
       "Package": "stringi",
-      "Version": "1.7.6",
+      "Version": "1.7.12",
       "Source": "Repository",
       "Repository": "CRAN",
-      "Hash": "bba431031d30789535745a9627ac9271"
+      "Hash": "ca8bd84263c77310739d2cf64d84d7c9"
     },
     "stringr": {
       "Package": "stringr",
-      "Version": "1.4.0",
+      "Version": "1.5.0",
       "Source": "Repository",
       "Repository": "CRAN",
-      "Hash": "0759e6b6c0957edb1311028a49a35e76"
+      "Hash": "671a4d384ae9d32fc47a14e98bfa3dc8"
     },
     "svglite": {
       "Package": "svglite",
@@ -1403,10 +1403,10 @@
     },
     "withr": {
       "Package": "withr",
-      "Version": "2.4.3",
+      "Version": "2.5.0",
       "Source": "Repository",
       "Repository": "CRAN",
-      "Hash": "a376b424c4817cda4920bbbeb3364e85"
+      "Hash": "c0e49a9760983e81e55cdd9be92e7182"
     },
     "wk": {
       "Package": "wk",
