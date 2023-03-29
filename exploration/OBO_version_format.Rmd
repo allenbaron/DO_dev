@@ -51,7 +51,7 @@ system2(
     "find",
     args = c(
         onto_dir,
-        '-type f -name "*.obo" -print0 | xargs -0 grep -E "^(data-version|ontology:)"'
+        '-type f -name "*.obo" -print0 | xargs -0 grep -E "^(data-version|ontology|date):"'
     ),
     stdout = z_file
 )
@@ -59,13 +59,11 @@ system2(
 
 
 ```{r load_data, warning = FALSE, message = FALSE}
-z <- read_delim(
-    z_file,
-    delim = ":",
-    col_names = c("abs_path", "key", "value"),
-    trim_ws = TRUE
-) %>%
+z <- tibble::tibble(line = read_lines(z_file)) %>%
     dplyr::mutate(
+        abs_path = stringr::str_remove(line, ":.*"),
+        key = stringr::str_extract(line, ":(.+): ", group = 1),
+        value = stringr::str_remove(line, ".*: "),
         repo = stringr::str_extract(abs_path, "^.*Ontologies/([^/]+)", group = 1),
         path = stringr::str_extract(
             abs_path,
@@ -185,10 +183,32 @@ z_full %>%
 The secondary files probably have the .owl version because they don't specify the `--version-iri` parameter in `robot annotate`. This might make sense if the .owl-to-.obo conversion can round trip, which requires keeping the owl-axioms line, but we generally remove that line for DO files. I think it makes the most sense to continue using .obo for the version in these secondary files.
 
 
+# Analysis of Date
+
+Is the date field commonly included in the .obo file? (excludes DO)
+
+```{r date}
+z_date <- z_full %>%
+    dplyr::filter(repo != "HumanDiseaseOntology") %>%
+    dplyr::mutate(date = !is.na(date))
+
+dplyr::count(z_date, date)
+```
+
+Most don't include the date field. Looking at the breakdown...
+
+```{r}
+z_full %>%
+    dplyr::filter(repo != "HumanDiseaseOntology") %>%
+    dplyr::select(repo, file, date)
+```
+
+
 # Recommendation
 
 - **Ontology name**: Never include the .obo extension, even for secondary files.
 - **Version**: Leave off .obo for main file, but include it for secondary files.
+- **Date**: According to the [OBO 1.2 spec](https://owlcollab.github.io/oboformat/doc/GO.format.obo-1_2.html#S.2.1), the date field is optional. All of DO's main files include the date field, so I think it makes sense to include them across the board.
 
 
 # Full Dataset
