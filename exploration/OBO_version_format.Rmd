@@ -1,0 +1,197 @@
+---
+title: "Ontology & Version for .obo files"
+output:
+    html_notebook:
+        code_folding: hide
+        toc: true
+---
+
+```{r setup, include = FALSE}
+library(here)
+library(tidyverse)
+library(DO.utils)
+```
+
+
+```{r download_onts, message = FALSE}
+# choose to download more?
+if (interactive()) {
+    dl <- readline("Download more ontologies as examples? yes/no.  ")
+} else {
+    dl <- "no"
+}
+
+if (dl == "yes") {
+    onts <- c("fbbt", "ma", "wbbt", "pr", "foodon", "iao", "eco"#,
+              #"ido", # doesn't exist as obo
+              #"chebi" #too big
+    )
+    ont_obo <- paste0(onts, ".obo")
+
+    dest <- here::here("../Ontologies/other_ontologies", ont_obo)
+    already_exist <- purrr::map_lgl(dest, file.exists)
+
+    ont_iri <- paste0("http://purl.obolibrary.org/obo/", ont_obo[!already_exist])
+    dest <- dest[!already_exist]
+
+    if (length(dest) == 0) {
+        message("All ontologies have already been downloaded. Skipping...")
+    } else {
+        DO.utils::download_file(ont_iri, dest, "warn-list_failed")
+    }
+}
+```
+
+
+```{r find_obo}
+z_file <- here::here("exploration/data/obo_version.txt")
+onto_dir <- here::here("../Ontologies")
+
+system2(
+    "find",
+    args = c(
+        onto_dir,
+        '-type f -name "*.obo" -print0 | xargs -0 grep -E "^(data-version|ontology:)"'
+    ),
+    stdout = z_file
+)
+```
+
+
+```{r load_data, warning = FALSE, message = FALSE}
+z <- read_delim(
+    z_file,
+    delim = ":",
+    col_names = c("abs_path", "key", "value"),
+    trim_ws = TRUE
+) %>%
+    dplyr::mutate(
+        repo = stringr::str_extract(abs_path, "^.*Ontologies/([^/]+)", group = 1),
+        path = stringr::str_extract(
+            abs_path,
+            "^.*Ontologies/[^/]+/(.+)/",
+            group = 1
+        ),
+        file = stringr::str_remove_all(abs_path, ".*/|\\.obo"),
+        abs_path = NULL,
+        key = stringr::str_remove(key, "data-")
+    ) %>%
+    tidyr::pivot_wider(
+        id_cols = repo:file,
+        names_from = key,
+        values_from = value
+    ) %>%
+    dplyr::filter(
+        is.na(path) | !stringr::str_detect(path, "deprecate|gyori|scratch|release"),
+        !stringr::str_detect(repo, "svn")
+    ) %>%
+    dplyr::relocate(ontology, .before = version) %>%
+    dplyr::arrange(repo, path, file) %>%
+    dplyr::mutate(
+        ont_ext = stringr::str_extract(ontology, "\\.[^.]+$"),
+        version_ext = stringr::str_extract(version, "\\.[^.]+$")
+    )
+
+z_import <- dplyr::filter(
+    z,
+    stringr::str_detect(path, "import"),
+    !stringr::str_detect(path, "build")
+)
+
+z_full <- dplyr::filter(
+    z,
+    is.na(path) | stringr::str_detect(path, "build") | !stringr::str_detect(path, "import")
+)
+```
+
+
+# Analysis of Ontology Name
+
+Should the ontology name end with an extension in the .obo file? (excludes DO)
+
+```{r ontology_iri}
+z_full %>%
+    #exclude do
+    dplyr::filter(repo != "HumanDiseaseOntology") %>%
+    count(repo, ont_ext)
+```
+
+Most do not have an extension. Just checking those that do (including DO this time):
+
+```{r}
+z_full %>%
+    dplyr::filter(!is.na(ont_ext)) %>%
+    dplyr::select(repo:file, ont_ext)
+```
+
+Most DO files do but not the main file. There's no obvious pattern from other ontologies that do. Their main output does for some ontologies but in most cases does not:
+
+```{r}
+z_full %>%
+    dplyr::filter(is.na(path), !stringr::str_detect(file, "[-_]")) %>%
+    dplyr::select(repo:file, ont_ext)
+```
+
+And, aside from DO, almost no secondary files have ontology with the .obo ending.
+
+```{r}
+z_full %>%
+    dplyr::filter(stringr::str_detect(file, "[-_]")) %>%
+    dplyr::select(repo:file, ont_ext)
+```
+
+NO, probably it should not have an extension.
+
+
+# Analysis of Version
+
+Should the version end with an extension in the .obo file? (excludes DO)
+
+```{r version_iri}
+z_full %>%
+    dplyr::filter(repo != "HumanDiseaseOntology") %>%
+    dplyr::count(repo, version_ext) %>%
+    dplyr::count(version_ext, wt = n)
+```
+
+Most don't have an extension. Among those that do, .owl seems most common.
+
+Checking those that do have an extension (including DO this time):
+
+```{r}
+z_full %>%
+    dplyr::filter(!is.na(version_ext)) %>%
+    dplyr::select(repo:file, version_ext)
+```
+
+Most DO files do but for other ontologies it appears that the secondary files most commonly have one. 
+
+Their main output, almost across the board, does NOT:
+
+```{r}
+z_full %>%
+    dplyr::filter(is.na(path), !stringr::str_detect(file, "[-_]")) %>%
+    dplyr::select(repo:file, version_ext)
+```
+
+Apart from DO, it seems the majority of secondary files list a version ending with .owl.
+
+```{r}
+z_full %>%
+    dplyr::filter(stringr::str_detect(file, "[-_]")) %>%
+    dplyr::select(repo:file, version_ext)
+```
+
+The secondary files probably have the .owl version because they don't specify the `--version-iri` parameter in `robot annotate`. This might make sense if the .owl-to-.obo conversion can round trip, which requires keeping the owl-axioms line, but we generally remove that line for DO files. I think it makes the most sense to continue using .obo for the version in these secondary files.
+
+
+# Recommendation
+
+- **Ontology name**: Never include the .obo extension, even for secondary files.
+- **Version**: Leave off .obo for main file, but include it for secondary files.
+
+
+# Full Dataset
+```{r}
+z_full
+```
