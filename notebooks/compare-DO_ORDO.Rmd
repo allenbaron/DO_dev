@@ -46,17 +46,13 @@ do_path <- file.path(repo_path, "src/ontology/doid.owl")
 do_commit <- "fdc26c1d" # includes doid.owl v2023-02-27 release
 
 do_owl <- NULL
-do_def <- NULL
+de <- NULL
 git_exec_tmp(
     repo_path,
     do_commit,
     function() {
         do_owl <<- DO.utils::owl_xml(do_path)
-
-        do_def <<- DO.utils:::read_doid_edit(repo_path) %>%
-            DO.utils:::extract_doid_url() %>%
-            dplyr::filter(stringr::str_detect(url, stringr::coll("orpha.net"))) %>%
-            dplyr::mutate(def_src = stringr::str_match(url, "Expert=([0-9]+)")[,2])
+        de <<- DO.utils:::read_doid_edit(repo_path)
     }
 )
 
@@ -111,6 +107,11 @@ do_syn <-  do_owl$query("
 #     dplyr::filter(
 #         !stringr::str_detect(xref, "EFO|GARD|ICD9|ICDO|KEGG|NCI|SNOMED")
 #     )
+
+do_def <- de %>%
+    DO.utils:::extract_doid_url(de) %>%
+    dplyr::filter(stringr::str_detect(url, stringr::coll("orpha.net"))) %>%
+    dplyr::mutate(def_src = stringr::str_match(url, "Expert=([0-9]+)")[,2])
 ```
 
 
@@ -313,6 +314,55 @@ simplify_ordo_xref <- function(xref_col, sort = TRUE, ...) {
         }
     )
 }
+
+set_gs_hyperlinks <- function(df) {
+    if ("doid" %in% names(df)) {
+        df <- dplyr::mutate(
+            df,
+            doid = DO.utils::build_hyperlink(
+                x = doid,
+                url = "https://disease-ontology.org/?id=",
+                as = "gs",
+                txt = doid
+            )
+        )
+    }
+    if ("ordo_id" %in% names(df)) {
+        if ("url" %in% names(df)) {
+            df <- dplyr::mutate(
+                df,
+                ordo_id = DO.utils::format_hyperlink(
+                    url = url,
+                    as = "gs",
+                    txt = ordo_id
+                ),
+                url = NULL
+            )
+        } else if (!all(is.na(df$ordo_label))) {
+            df <- dplyr::mutate(
+                df, 
+                ordo_id = DO.utils::build_hyperlink(
+                    x = stringr::str_remove(ordo_id, ".*:"),
+                    url = "http://www.orpha.net/consor/cgi-bin/OC_Exp.php?lng=en&Expert=",
+                    as = "gs",
+                    txt = ordo_id
+                )
+            )
+        }
+    }
+    if ("association_id" %in% names(df)) {
+        df <- dplyr::mutate(
+            df,
+            association_id = DO.utils::build_hyperlink(
+                x = stringr::str_remove(association_id, ".*:"),
+                url = "http://www.orpha.net/consor/cgi-bin/OC_Exp.php?lng=en&Expert=",
+                as = "gs",
+                txt = association_id
+            )
+        )
+    }
+    df
+}
 ```
 
 ```{r already_in}
@@ -354,37 +404,23 @@ do_ordo_err
 ```
 
 ```{r curate-do_ordo_err, include = FALSE, eval = FALSE}
-googlesheets4::write_sheet(do_ordo_err, ordo_gs, "DO-ORDO_not_exist")
+set_gs_hyperlinks(do_ordo_err) %>%
+    googlesheets4::write_sheet(ordo_gs, "DO-ORDO_not_exist")
 ```
 
 
 B. Deprecated ORDO xrefs that are in DO.
 
-```{r do_ordo_deprec}
-do_ordo_deprec <- ordo_in_do %>%
+```{r do_ordo_inactive}
+do_ordo_inactive <- ordo_in_do %>%
     dplyr::filter(stringr::str_detect(flag, "Inactive"))
 
-do_ordo_deprec
+do_ordo_inactive
 ```
 
 ```{r curate-do_ordo_deprec, include = FALSE, eval = FALSE}
-do_ordo_deprec %>%
-    dplyr::mutate(
-        ordo_id = DO.utils::format_hyperlink(url = url, as = "gs", txt = ordo_id),
-        association_id = DO.utils::build_hyperlink(
-            x = stringr::str_remove(association_id, ".*:"),
-            url = "http://www.orpha.net/consor/cgi-bin/OC_Exp.php?lng=en&Expert=",
-            as = "gs",
-            txt = association_id
-        ),
-        url = NULL
-    ) %>%
-    select(association_id)
-```
-
-
-```{r curate-do_ordo_deprec, include = FALSE, eval = FALSE}
-googlesheets4::write_sheet(, ordo_gs, "DO-ORDO_deprec")
+set_gs_hyperlinks(do_ordo_inactive) %>%
+    googlesheets4::write_sheet(ordo_gs, "DO-ORDO_inactive")
 ```
 
 
@@ -399,7 +435,8 @@ do_multi_ordo
 ```
 
 ```{r curate-do_multi_ordo, include = FALSE, eval = FALSE}
-googlesheets4::write_sheet(do_multi_ordo, ordo_gs, "DO-multi_ORDO_xref")
+set_gs_hyperlinks(do_multi_ordo) %>%
+    googlesheets4::write_sheet(ordo_gs, "DO-multi_ORDO_xref")
 ```
 
 

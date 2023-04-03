@@ -18,13 +18,14 @@ To determine how many [GARD](https://rarediseases.info.nih.gov) diseases are in 
 ```{r setup, include = FALSE}
 library(tidyverse)
 library(DO.utils)
+library(janitor)
 library(here)
 library(git2r)
 library(lubridate)
 library(googlesheets4)
 
 # curation google sheet
-gard_gs <- "1r-L2zoE2hIb6N9wopSARug4WV3PHDs5wFlmnqtCHRNI"
+gard_gs <- "183ZmU9Y2JwyUkw1AgaH-hDrDSYOXH5BiAj_IPwOcKgk"
 ```
 
 
@@ -33,28 +34,55 @@ gard_gs <- "1r-L2zoE2hIb6N9wopSARug4WV3PHDs5wFlmnqtCHRNI"
 ## GARD
 
 All GARD diseases are extracted from the GARD sitemap. Data include GARD numeric identifiers and names (with some slight formatting differences relative to presented names).
-```{r gard_data}
-gard_xml <- readr::read_file("https://rarediseases.info.nih.gov/sitemap.xml")
+```{r gard_csv_data, message = FALSE}
+gard_csv <- here::here("data/mapping/GARD Disease List Website_Feb2023.csv")
+gard_sourced <- readr::read_csv(gard_csv) %>%
+    janitor::clean_names() %>%
+    dplyr::mutate(
+        label_std = source_name %>%
+            stringr::str_to_lower() %>%
+            stringr::str_remove_all(
+                "([:blank:]|[:punct:]|[:space:])+"
+            )
+    )
+```
 
-gard_info <- stringr::str_match_all(
-    gard_xml,
-    "https://rarediseases.info.nih.gov/diseases/([0-9]+)/([^< /\"]+)"
+
+```{r gard_sitemap_data, message = FALSE}
+gard_sitemap_tsv <- here::here("data/mapping/GARD.tsv")
+if (file.exists(gard_sitemap_tsv)) {
+    gard <- readr::read_tsv(gard_sitemap_tsv)
+} else {
+    gard_xml <- readr::read_file("https://rarediseases.info.nih.gov/sitemap.xml")
+    
+    gard_info <- stringr::str_match_all(
+        gard_xml,
+        "https://rarediseases.info.nih.gov/diseases/([0-9]+)/([^< /\"]+)"
     )[[1]]
+    
+    gard <- tibble::tibble(
+        gard_id = paste0("GARD:", gard_info[, 2]),
+        label = stringr::str_replace_all(gard_info[, 3], "-", " ")
+    ) %>%
+        unique()
 
-gard <- tibble::tibble(
-    gard_id = paste0("GARD:", gard_info[, 2]),
-    label = stringr::str_replace_all(gard_info[, 3], "-", " ")
-) %>%
-    unique()
+    readr::write_tsv(gard, gard_sitemap_tsv)
+}
 ```
 
-```{r save_gard, include = FALSE, eval = FALSE}
-# save GARD data, can only be run interactively
-readr::write_tsv(gard, here::here("data/mapping/GARD.tsv"))
+GARD sitemap data include `r format(nrow(gard), big.mark = ",")` diseases, which matches the number of diseases listed on GARD's [browser](https://rarediseases.info.nih.gov/diseases) on the date this analysis started (2023-01-18).
+
+The data in the downloaded csv has `r format(nrow(gard_sourced), big.mark = ",")` along with synonyms and Orphanet/OMIM xrefs. This dataset appears to be entirely derived from Orphanet and OMIM without original GARD data, which agrees with the approach Eric at NCATS indicated GARD is adopting (i.e. no original data in GARD).
+
+The GARD labels used on the website do not all match those in the .csv file, so it makes sense to create a new section for comparison and a corresponding new curation document.
+
+```{r}
+dplyr::anti_join(
+    dplyr::mutate(gard, label = stringr::str_remove_all(label, " ")),
+    gard_sourced,
+    by = c("label" = "label_std")
+)
 ```
-
-GARD data include `r format(nrow(gard), big.mark = ",")` diseases, which matches the number of diseases listed on GARD's [browser](https://rarediseases.info.nih.gov/diseases) on the date this analysis started (2023-01-18).
-
 
 ## Human Disease Ontology
 
