@@ -125,7 +125,7 @@ cb_scop_merge <- cb_scop_by_id %>%
     dplyr::select(
         first_author, title = "dc:title", journal = "prism:publicationName",
         pub_date, doi = "prism:doi", pmid = "pubmed-id", scopus_eid = eid, cites,
-        pub_type, added_dt = added
+        pub_type, added_dt
     ) %>%
     dplyr::mutate(source = "scopus") %>%
     # collapse cited by records that cite multiple DO_pubs
