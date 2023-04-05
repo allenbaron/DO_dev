@@ -81,14 +81,18 @@ source(here::here("scripts/DO_term_def_counts.R"))
 
 # Generate Plots ----------------------------------------------------------
 
-DO.utils::plot_citedby(out_dir = plot_outdir)
-DO.utils::plot_term_def_counts(out_dir = plot_outdir)
-DO.utils::plot_branch_counts(repo, out_dir = plot_outdir)
-DO.utils::plot_xref_counts(repo, out_dir = plot_outdir)
-DO.utils::plot_def_src(repo_path, out_dir = plot_outdir)
+g_cb <- DO.utils::plot_citedby(out_dir = plot_outdir)
+g_term <- DO.utils::plot_term_def_counts(out_dir = plot_outdir)
+g_branch <- DO.utils::plot_branch_counts(repo, out_dir = plot_outdir)
+g_xref <- DO.utils::plot_xref_counts(repo, out_dir = plot_outdir)
+g_src <- DO.utils::plot_def_src(repo_path, out_dir = plot_outdir)
 
 
 # Generate html page updates ----------------------------------------------
 
-DO.utils::make_use_case_html()
-DO.utils::update_website_count_tables(repo, latest_release, svn_path)
+use_cases <- DO.utils::make_use_case_html()
+web_counts <- DO.utils::update_website_count_tables(
+    repo,
+    latest_release,
+    svn_path
+)
