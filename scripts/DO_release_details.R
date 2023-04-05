@@ -20,15 +20,19 @@ details_file <- file.path(release_dir, "DO_release_details.csv")
 
 
 # load previous release details
-release_df <- readr::read_csv(
-    details_file,
-    col_types = readr::cols(
-        created_at = "T", published_at = "T",
-        author_site_admin = "l", draft = "l", prerelease = "l",
-        .default = "c"
+if (file.exists(details_file)) {
+    release_df <- readr::read_csv(
+        details_file,
+        col_types = readr::cols(
+            created_at = "T", published_at = "T",
+            author_site_admin = "l", draft = "l", prerelease = "l",
+            .default = "c"
+        )
     )
-)
-# was necessary to clean up original records but should no longer be
+} else {
+    release_df <- NULL
+}
+    # was necessary to clean up original records but should no longer be
 # ) %>%
 #     mutate(across(where(is.character), clean_up))
 
@@ -56,9 +60,13 @@ release_tidy <- release_raw %>%
     ) %>%
     dplyr::select(tag_name, name, author_login, created_at, body, everything())
 
-release_updated <- release_df %>%
-    dplyr::bind_rows(release_tidy) %>%
-    unique()
+if (is.null(release_df)) {
+    release_updated <- release_tidy
+} else {
+    release_updated <- release_df %>%
+        dplyr::bind_rows(release_tidy) %>%
+        unique()
+}
 
 finish <- readline(
     prompt = paste(
@@ -70,5 +78,6 @@ finish <- readline(
 
 # write
 if (finish == "yes") {
-    readr::write_csv(release_updated, details_file, )
+    dir.create(dirname(details_file), recursive = TRUE, showWarnings = FALSE)
+    readr::write_csv(release_updated, details_file)
 }

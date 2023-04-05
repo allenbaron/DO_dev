@@ -20,14 +20,21 @@ release_stat_dir = os.path.join(do_dev, "data/DO_release")
 release_file = os.path.join(release_stat_dir, 'DO_term_def_counts.csv')
 
 # load repo & identify new tags
-rel_df = pd.read_csv(release_file)
+if os.path.isfile(release_file):
+    rel_df = pd.read_csv(release_file)
+else:
+    rel_df = None
+
 do_repo = pyDOID.DOrepo(do_dir)
 
 tags = do_repo.tags
 tags_sorted = sorted(do_repo.tags, key=lambda t: t.commit.committed_datetime)
 tag_names = [t.name for t in tags]
 
-new_tag_names = list(set(tag_names).difference(rel_df['tag_name'].to_list()))
+if isinstance(rel_df, pd.DataFrame):
+    new_tag_names = list(set(tag_names).difference(rel_df['tag_name'].to_list()))
+else:
+    new_tag_names = list(tag_names)
 
 # define sparql queries
 q = """
