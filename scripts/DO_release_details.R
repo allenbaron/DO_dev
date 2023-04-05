@@ -68,12 +68,17 @@ if (is.null(release_df)) {
         unique()
 }
 
-finish <- readline(
-    prompt = paste(
-        nrow(release_updated) - nrow(release_df),
-        "new releases identified. Save? (yes/no)"
+if (nrow(release_updated) != nrow(release_df)) {
+    finish <- readline(
+        prompt = paste(
+            nrow(release_updated) - nrow(release_df),
+            "new releases identified. Save? (yes/no)"
+        )
     )
-)
+} else {
+    message("No new releases to obtain metadata for. Skipping...")
+    finish <- "no"
+}
 
 
 # write

@@ -48,22 +48,27 @@ FILTER NOT EXISTS {?s owl:deprecated ?any}
 }
 """
 
+if new_tag_names:
+    res_dict = do_repo.tag_iterate(
+        do_repo.doid.query,
+        which=new_tag_names,
+        query=q,
+        reload=True
+    )
 
-res_dict = do_repo.tag_iterate(
-    do_repo.doid.query,
-    which=new_tag_names,
-    query=q,
-    reload=True
-)
+    df = pd.concat(res_dict)
+    df = df.droplevel(1)
+    df.index.name = "tag_name"
+    df = df.reset_index()
+    print(df, flush = True)
+    
+    df_app = pd.concat([rel_df, df], ignore_index=True)
+    df_app.to_csv(release_file, index = False)
+else:
+    print(
+        'No new releases to extract term & definition counts from. Skipping...',
+        flush = True
+    )
+    df = rel_df
 
-res_dict
-df = pd.concat(res_dict)
-df = df.droplevel(1)
-df.index.name = "tag_name"
-df = df.reset_index()
-print(df)
-
-df_app = pd.concat([rel_df, df], ignore_index=True)
-df_app.to_csv(release_file, index = False)
-
-print(datetime.now() - start)
+print(datetime.now() - start, flush = True)
