@@ -191,3 +191,55 @@ omim_w_time %>%
 ```
 
 It doesn't look like there's much change. It must be that synonyms with commas are generally NOT added but added as needed.
+
+
+# Disease Classification
+
+How are diseases classified relative to other medical terminologies?
+
+
+## OMIM
+
+**Questions:**
+
+1. How does DO respond when OMIM splits a disease with a specific gene (subtype) with differences in inheritance (sub-subtype)?
+
+The examples here go beyond differences in inheritance. Some of these may need to be revised, particularly where two diseases have the same definition.
+
+```{r}
+do_def <- r$doid$query(
+    "SELECT ?id ?label ?def ?parent ?omim
+    WHERE {
+        ?class oboInOwl:id ?id ;
+            rdfs:label ?label ;
+            obo:IAO_0000115 ?def ;
+            rdfs:subClassOf ?superclass .
+        ?superclass rdfs:label ?parent .
+        FILTER NOT EXISTS { ?class owl:deprecated ?any . }
+        OPTIONAL {
+            ?class oboInOwl:hasDbXref ?omim .
+            FILTER(CONTAINS(str(?omim), 'OMIM'))
+        }
+    }"
+) %>%
+    DO.utils::tidy_sparql() %>%
+    DO.utils::collapse_col(c(parent, omim), na.rm = TRUE)
+```
+
+```{r}
+omim_sub2 <- do_def %>%
+    dplyr::mutate(
+        gene = stringr::str_match(def, "([A-Z0-9]{3,}) gene[ .]")[,2],
+        label_base = stringr::str_remove(label, " [0-9]+[A-Z]+$")
+    ) %>%
+    dplyr::filter(stringr::str_detect(label, "[0-9]+[A-Z]+$")) %>%
+    dplyr::group_by(label_base) %>%
+    dplyr::filter(
+        DO.utils::all_duplicated(gene),
+        !is.na(gene)
+    ) %>%
+    dplyr::ungroup() %>%
+    dplyr::arrange(label_base, gene)
+```
+
+In no case for groups of diseases where the labels differ only by an alphanumeric identifier and they are caused by mutations in the same gene has a parent grouping disease been created. This suggests strongly avoiding the creation of such low-level grouping disease terms.
