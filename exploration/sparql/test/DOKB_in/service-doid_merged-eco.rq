@@ -1,0 +1,17 @@
+# TEST DO SPARQL endpoint & doid-merged graph from another server
+# 
+# Returns ECO classes
+# NOTE: Works consistently at UniProt, 2023-05-17.
+
+PREFIX owl: <http://www.w3.org/2002/07/owl#>
+PREFIX obo: <http://purl.obolibrary.org/obo/>
+
+SELECT ?class
+WHERE {
+    SERVICE <https://sparql.disease-ontology.org/> {
+        GRAPH <http://purl.obolibrary.org/obo/doid/doid-merged.owl> {
+            ?class a owl:Class ;
+                rdfs:subClassOf* obo:ECO_0000000 .
+        }
+    }
+}

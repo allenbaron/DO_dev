@@ -1,0 +1,18 @@
+# TEST DO SPARQL endpoint & doid-merged graph from another server
+# 
+# Returns count of import classes
+# NOTE: Does NOT work consistently at UniProt, 2023-05-17.
+
+PREFIX owl: <http://www.w3.org/2002/07/owl#>
+
+SELECT ?namespace (COUNT(?class) AS ?classes)
+WHERE {
+    SERVICE <https://sparql.disease-ontology.org/> {
+        GRAPH <http://purl.obolibrary.org/obo/doid/doid-merged.owl> {
+                ?class a owl:Class .
+                BIND(STRBEFORE(STRAFTER(STR(?class), "obo/"), "_") AS ?namespace)
+            }
+    }
+}
+GROUP BY ?namespace
+ORDER BY ?namespace

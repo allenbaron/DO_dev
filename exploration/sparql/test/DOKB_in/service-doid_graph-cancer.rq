@@ -1,0 +1,19 @@
+# TEST DO SPARQL endpoint & default graph from another server
+# 
+# Returns id + label of all cancers
+# NOTE: Works consistently at UniProt, 2023-05-17.
+
+PREFIX rdfs: <http://www.w3.org/2000/01/rdf-schema#>
+PREFIX owl: <http://www.w3.org/2002/07/owl#>
+PREFIX obo: <http://purl.obolibrary.org/obo/>
+PREFIX oboInOwl: <http://www.geneontology.org/formats/oboInOwl#>
+
+SELECT distinct ?id ?disease
+WHERE {
+    SERVICE <https://sparql.disease-ontology.org/> {
+        ?class a owl:Class ;
+            oboInOwl:id ?id ;
+            rdfs:label ?disease ;
+            rdfs:subClassOf* obo:DOID_162 .
+	}
+}

@@ -1,0 +1,18 @@
+# TEST DO SPARQL endpoint & default graph from another server
+# 
+# Returns id + label of all diseases
+# NOTE: Does NOT work consistently at UniProt, 2023-05-17.
+
+PREFIX rdfs: <http://www.w3.org/2000/01/rdf-schema#>
+PREFIX owl: <http://www.w3.org/2002/07/owl#>
+PREFIX oboInOwl: <http://www.geneontology.org/formats/oboInOwl#>
+
+SELECT ?id ?label
+WHERE {
+    SERVICE <https://sparql.disease-ontology.org> {
+        ?class a owl:Class ;
+            oboInOwl:id ?id ;
+            rdfs:label ?label .
+        FILTER NOT EXISTS { ?class owl:deprecated ?any . }
+    }
+}
