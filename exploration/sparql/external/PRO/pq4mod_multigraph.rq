@@ -1,0 +1,36 @@
+########### 
+# PQ4-mod. Retrieve proteoforms associated with disease progression, modified
+# to get labels and IDs from standard PR ontology (OBO Foundry member).
+########### 
+
+PREFIX rdf: <http://www.w3.org/1999/02/22-rdf-syntax-ns#>
+PREFIX rdfs: <http://www.w3.org/2000/01/rdf-schema#>
+PREFIX owl: <http://www.w3.org/2002/07/owl#>
+PREFIX xsd: <http://www.w3.org/2001/XMLSchema#>
+PREFIX dc: <http://purl.org/dc/elements/1.1/>
+PREFIX dcterms: <http://purl.org/dc/terms/>
+PREFIX obo: <http://purl.obolibrary.org/obo/>
+PREFIX oboInOwl: <http://www.geneontology.org/formats/oboInOwl#>
+PREFIX paf: <http://pir.georgetown.edu/pro/paf#>
+
+SELECT distinct ?pr_id ?pr_label ?doid
+FROM <http://purl.obolibrary.org/obo/pr>
+FROM <http://pir.georgetown.edu/pro/paf>
+WHERE {
+
+  GRAPH <http://pir.georgetown.edu/pro/paf> {
+    ?anon_class a rdf:Statement ;
+      rdf:subject ?pr_iri ;
+      rdf:predicate ?anon_pred ;
+      rdf:object ?obj .
+
+    ?anon_pred paf:relation "associated_with_disease_progression" .
+    ?obj paf:ontologyID ?doid .
+  }
+
+  GRAPH <http://purl.obolibrary.org/obo/pr> {
+    ?pr_iri rdfs:label ?pr_label ;
+      oboInOwl:id ?pr_id .
+  }
+
+}
