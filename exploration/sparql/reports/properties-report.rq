@@ -1,11 +1,11 @@
-# Return a count of each import by ORIGINAL namespace
+# Return a count of object and annotation properties by namespace
 
 PREFIX rdfs: <http://www.w3.org/2000/01/rdf-schema#>
 PREFIX owl: <http://www.w3.org/2002/07/owl#>
 PREFIX obo: <http://purl.obolibrary.org/obo/>
 PREFIX oboInOwl: <http://www.geneontology.org/formats/oboInOwl#>
 
-SELECT ?type ?import (COUNT(?prop) AS ?count)
+SELECT ?ns ?type (COUNT(?prop) AS ?count)
 WHERE {
 	VALUES ?prop_type { owl:AnnotationProperty owl:ObjectProperty }
 	?prop a ?prop_type .
@@ -14,9 +14,9 @@ WHERE {
 			REGEX(STR(?prop), "[#_]"),
 			REPLACE(STR(?prop), "([^_#]+)[_#].*", "$1"),
 			REPLACE(STR(?prop), "(.*)/.*", "$1")
-		) AS ?import
+		) AS ?ns
 	)
-	# BIND(REPLACE(STR(?prop), CONCAT(STR(?import), "[#_/]"), "") AS ?prop2)
+
 	BIND(CONCAT("owl:", STRAFTER(STR(?prop_type), "#")) AS ?type)
 }
-GROUP BY ?type ?import
+GROUP BY ?type ?ns
