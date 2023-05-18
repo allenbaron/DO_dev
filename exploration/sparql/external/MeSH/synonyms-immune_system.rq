@@ -1,0 +1,33 @@
+# Returns all labels from MeSH terms (e.g. synonyms to DO) from MeSH
+# concepts that are descendants of Immune System Diseases (C20)
+
+PREFIX rdfs: <http://www.w3.org/2000/01/rdf-schema#>
+PREFIX skos: <http://www.w3.org/2004/02/skos/core#>
+PREFIX mesh: <http://id.nlm.nih.gov/mesh/>
+PREFIX meshv: <http://id.nlm.nih.gov/mesh/vocab#>
+
+SELECT ?mesh ?synonym (GROUP_CONCAT(DISTINCT ?syn_type; separator="|") AS ?syn_types) 
+FROM <http://id.nlm.nih.gov/mesh>
+WHERE {
+  ?mesh meshv:broaderDescriptor* mesh:D007154 ;
+      meshv:preferredConcept ?pref_concept .
+  OPTIONAL {
+    ?pref_concept ( meshv:preferredTerm | meshv:term ) ?term .
+    ?term ( meshv:prefLabel | meshv:altLabel ) ?synonym_lang .
+
+    ?pref_concept ?term_type ?term .
+    ?term ?label_type ?synonym_lang .
+
+    FILTER( LANG(?synonym_lang) IN( "", "en" ) )
+  }
+
+  BIND( str(?synonym_lang) AS ?synonym )
+  BIND(
+    CONCAT(
+      REPLACE( str(?term_type), ".*#", "meshv:" ),
+      " >> ",
+      REPLACE( str(?label_type), ".*#", "meshv:" )
+    ) AS ?syn_type
+  )
+}
+GROUP BY ?mesh ?synonym

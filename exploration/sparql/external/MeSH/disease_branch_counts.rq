@@ -1,0 +1,17 @@
+# Count the number of terms in each "disease branch" (C.. & F03)
+# NOTE: Includes some branches that would not be considered diseases by DO (e.g. injuries)
+
+PREFIX rdfs: <http://www.w3.org/2000/01/rdf-schema#>
+PREFIX mesh: <http://id.nlm.nih.gov/mesh/>
+PREFIX meshv: <http://id.nlm.nih.gov/mesh/vocab#>
+
+SELECT ?branch ?label ?tree_number (COUNT(DISTINCT ?mesh) AS ?term_count)
+FROM <http://id.nlm.nih.gov/mesh>
+WHERE {
+  ?mesh meshv:broaderDescriptor* ?branch .
+  ?branch meshv:treeNumber ?tree_number ;
+    rdfs:label ?label .
+  FILTER(REGEX(str(?tree_number), "^http://id.nlm.nih.gov/mesh/(C[0-9]+|F03)$"))
+}
+GROUP BY ?branch ?label ?tree_number
+ORDER BY DESC(?term_count)
