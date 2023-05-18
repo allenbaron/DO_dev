@@ -1,0 +1,16 @@
+# Return topicalDescriptors with linked concepts > terms (+ pref label)
+
+PREFIX mesh: <http://id.nlm.nih.gov/mesh/>
+PREFIX meshv: <http://id.nlm.nih.gov/mesh/vocab#>
+
+SELECT DISTINCT ?mesh ?mesh_concept ?mesh_term ?term_plabel
+FROM <http://id.nlm.nih.gov/mesh>
+WHERE {
+    SERVICE <http://id.nlm.nih.gov/mesh/sparql> {
+        ?mesh meshv:treeNumber ?tree_number ;
+            meshv:concept ?mesh_concept .
+        ?mesh_concept meshv:term ?mesh_term .
+        ?mesh_term meshv:prefLabel ?term_plabel .
+    }
+}
+LIMIT 50
