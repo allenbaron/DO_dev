@@ -1,0 +1,31 @@
+# Extracts all MeSH disease concepts with labels & relationships
+# NOTE: X indicates this should work but has NOT been tested (execution
+#   took too long to complete; possibly over 10,000 triple limit, 2023-05-18)
+
+PREFIX rdfs: <http://www.w3.org/2000/01/rdf-schema#>
+PREFIX skos: <http://www.w3.org/2004/02/skos/core#>
+PREFIX mesh: <http://id.nlm.nih.gov/mesh/>
+PREFIX meshv: <http://id.nlm.nih.gov/mesh/vocab#>
+
+CONSTRUCT {
+  ?mesh_iri rdfs:subClassOf ?mesh_parent ;
+    rdfs:label ?mesh_label ;
+    skos:ConceptScheme <http://id.nlm.nih.gov/mesh> .
+
+  ?mesh_branch rdfs:label ?branch_label ;
+    rdfs:subClassOf mesh:Diseases ;
+    skos:ConceptScheme <http://id.nlm.nih.gov/mesh> .
+  
+  mesh:Diseases rdfs:label "Diseases" ;
+    skos:ConceptScheme <http://id.nlm.nih.gov/mesh> .
+}
+FROM <http://id.nlm.nih.gov/mesh>
+WHERE {
+  ?mesh_iri meshv:broaderDescriptor* ?mesh_branch ;
+    meshv:broaderDescriptor ?mesh_parent ;
+    rdfs:label ?mesh_label .
+
+  ?mesh_branch meshv:treeNumber ?disease_tree ;
+    rdfs:label ?branch_label .
+  FILTER(REGEX(str(?disease_tree), "^http://id.nlm.nih.gov/mesh/(C[0-9]+|F03)$"))
+}
