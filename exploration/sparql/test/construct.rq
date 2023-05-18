@@ -1,0 +1,16 @@
+PREFIX rdfs: <http://www.w3.org/2000/01/rdf-schema#>
+PREFIX owl: <http://www.w3.org/2002/07/owl#>
+PREFIX obo: <http://purl.obolibrary.org/obo/>
+PREFIX oboInOwl: <http://www.geneontology.org/formats/oboInOwl#>
+
+CONSTRUCT {
+    ?class rdfs:subClassOf ?parent ;
+        rdfs:label ?label .
+}
+WHERE {
+    ?class a owl:Class ;
+        rdfs:subClassOf ?parent ;
+        rdfs:label ?label .
+    FILTER(!isBlank(?parent))
+    FILTER(!isBlank(?class))
+}
