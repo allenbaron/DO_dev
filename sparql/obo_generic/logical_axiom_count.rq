@@ -1,0 +1,17 @@
+# Return active classes with count of logical definitions
+
+PREFIX owl: <http://www.w3.org/2002/07/owl#>
+PREFIX rdfs: <http://www.w3.org/2000/01/rdf-schema#>
+
+SELECT ?curie ?axiom_type (COUNT(?anon) as ?count)
+WHERE {
+	?class a owl:Class ;
+		( owl:equivalentClass | rdfs:subClassOf ) ?anon ;
+		?axiom_type ?anon .
+
+	FILTER( isBLANK(?anon) )
+	FILTER NOT EXISTS { ?class owl:deprecated ?deprecated . }
+
+	BIND(REPLACE(str(?class), ".*/([^_]+)_([0-9]+)", "$1:$2") AS ?curie)
+}
+GROUP BY ?curie ?axiom_type

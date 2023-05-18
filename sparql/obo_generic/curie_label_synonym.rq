@@ -1,0 +1,26 @@
+# Return active classes with synonyms + metadata
+
+PREFIX rdfs: <http://www.w3.org/2000/01/rdf-schema#>
+PREFIX owl: <http://www.w3.org/2002/07/owl#>
+PREFIX oboInOwl: <http://www.geneontology.org/formats/oboInOwl#>
+
+SELECT ?curie ?label ?syn_type ?synonym
+WHERE {
+    VALUES ?pred {
+        oboInOwl:hasSynonym
+        oboInOwl:hasExactSynonym
+        oboInOwl:hasNarrowSynonym
+        oboInOwl:hasBroadSynonym
+        oboInOwl:hasRelatedSynonym
+    }
+
+    ?class a owl:Class ;
+        ?pred ?synonym .
+
+    FILTER NOT EXISTS { ?class owl:deprecated ?deprecated . }
+
+    OPTIONAL { ?class rdfs:label ?label . }
+    BIND(REPLACE(str(?class), ".*/([^_]+)_([0-9]+)", "$1:$2") AS ?curie)
+    BIND(STRAFTER(STR(?pred), "oboInOwl#") AS ?syn_type)
+}
+ORDER BY ?id ?syn_type ?synonym

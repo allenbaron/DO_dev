@@ -1,0 +1,24 @@
+# List all object and annotation properties
+
+PREFIX rdfs: <http://www.w3.org/2000/01/rdf-schema#>
+PREFIX owl: <http://www.w3.org/2002/07/owl#>
+PREFIX obo: <http://purl.obolibrary.org/obo/>
+PREFIX oboInOwl: <http://www.geneontology.org/formats/oboInOwl#>
+
+SELECT DISTINCT ?type ?ns ?prop ?label
+WHERE {
+	VALUES ?prop_type { owl:AnnotationProperty owl:ObjectProperty }
+
+	?prop a ?prop_type .
+	OPTIONAL { ?prop rdfs:label ?label . }
+
+	BIND(
+		IF(
+			REGEX(STR(?prop), "[#_]"),
+			REPLACE(STR(?prop), "([^_#]+)[_#].*", "$1"),
+			REPLACE(STR(?prop), "(.*)/.*", "$1")
+		) AS ?ns
+	)
+	# BIND(REPLACE(STR(?prop), CONCAT(STR(?ns), "[#_/]"), "") AS ?prop2)
+	BIND(CONCAT("owl:", STRAFTER(STR(?prop_type), "#")) AS ?type)
+}
