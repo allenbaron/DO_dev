@@ -1,7 +1,7 @@
 ---
 title: "Evaluation of Definition Structure"
 author: "J. Allen Baron"
-date: "Created: 2022-04-06<br style='line-height: 1.5;'>Updated: 2022-06-28"
+date: "Created: 2022-04-06<br style='line-height: 1.5;'>Updated: 2023-05-15"
 output: 
     html_notebook:
         toc: true
@@ -27,6 +27,7 @@ library(tidyverse)
 library(DO.utils)
 library(tidytext)
 library(wordcloud2)
+library(kableExtra)
 
 # custom functions
 percent <- function(x) {
@@ -43,6 +44,25 @@ add_percent <- function(.df, .col, .group = NULL) {
         df_out <- dplyr::ungroup(df_out)
     }
     df_out
+}
+
+length_order <- function(data, cols, ...) {
+    .cols <- tidyselect::eval_select(rlang::enquo(cols), data)
+    if (length(.cols) > 1) {
+        index <- do.call(
+            "order",
+            c(
+                purrr::map(
+                    dplyr::select(data, dplyr::all_of(.cols)),
+                    stringr::str_length
+                ),
+                ...
+            )
+        )
+    } else {
+        index <- order(stringr::str_length(dplyr::pull(data, .cols)), ...)
+    }
+    data[index, ]
 }
 ```
 
@@ -394,7 +414,7 @@ def <- def %>%
     dplyr::mutate(
         has_paren = stringr::str_detect(def, "\\(\\w+"),
         paren_content = stringr::str_extract_all(def, "\\(.+?\\)") %>%
-            purrr::map_chr(cast_to_string)
+            purrr::map_chr(DO.utils::collapse_to_string)
     )
 
 dplyr::count(def, has_paren) %>%
@@ -664,11 +684,298 @@ gene_id
 It seems ~ `r sum(gene_id$pct[c(1, 4:9)])` of all genetic has_material_basis_in statements have only the gene symbol (and not any type of name). While that's not a definitive majority, it is probably the predominant pattern, as the remaining ~ 50% is more variable.
 
 
+### Inheritance
+
+Sometimes diseases caused by the same gene are differentiated by OMIM based on inheritance (and possibly phenotype). Generally, OMIM uses "heterozygous" vs "homozygous" in definitions to describe variants and that basically corresponds to dominant vs recessive inheritance but they aren't the same. Prompted by these concerns, an exploration of inheritance terminology in definitions follows.
+
+**Question: How is inheritance described in definitions?**
+
+NOTE: Deprecated terms are excluded from analysis.
+
+First, we'll need to identify which inheritance terms/phrases exist.
+
+```{r}
+def_inherit <- def %>%
+    dplyr::select(id:parent_label) %>%
+    dplyr::filter(!obs) %>%
+    dplyr::mutate(
+        term = stringr::str_extract_all(
+            def,
+            DO.utils::collapse_to_string(
+                "(",
+                "autosom[^ ]*( [^ [:punct:]]*)|",
+                "[^ ]*link[^ ]*|",
+                "[^ ]*genic[^ [:punct:]]*|", # many "genic" words --> limit
+                "de novo",
+                ")+", # keep adjacent matching terms together
+                delim = ""
+            )
+        ),
+        term = purrr::map_chr(
+            term,
+            ~ stringr::str_trim(.x) %>%
+                DO.utils::collapse_to_string(unique = TRUE, na.rm = TRUE)
+        )
+    ) %>%
+    dplyr::filter(!is.na(term))
+
+dplyr::count(def_inherit, term) %>%
+    dplyr::arrange(term)
+```
+
+Some typos... expected. There are few updates needed.
+
+1. It looks like it's common to have a combination of 5 words together related to autosomal inheritance in various arrangement: autosomal, recessive, dominant, inheritance, and gene plus derivatives.
+    - I wonder what the more complete 'autosomal gene(s|tic)' phrases are?
+2. Need to limit the 'link' search to include just '[XY]-' before (or nothing) and only the word boundary/-ed/-age after.
+3. Need to limit the 'genic' search to just the mono-/di-/poly-/inter- set.
+
+Refining that search a bit based on those observations, returns:
+
+```{r}
+def_inherit <- def %>%
+    dplyr::select(id:parent_label) %>%
+    dplyr::filter(!obs) %>%
+    dplyr::mutate(
+        term = stringr::str_extract_all(
+            def,
+            DO.utils::collapse_to_string(
+                "(",
+                "(\\b(autosom|recess|domi|gene|inher)[a-z]*\\b ?)+|",
+                "[XY].?link(ed|age)?\\b|",
+                "(inter|mono|di|poly)genic\\b|", # many "genic" words --> limit
+                "de novo\\b",
+                ")+", # keep adjacent matching terms together
+                delim = ""
+            )
+        ),
+        term = purrr::map_chr(
+            term,
+            ~ stringr::str_trim(.x) %>%
+                DO.utils::collapse_to_string(unique = TRUE, na.rm = TRUE)
+        )
+    ) %>%
+    dplyr::filter(!is.na(term))
+
+dplyr::count(def_inherit, term) %>%
+    dplyr::arrange(term)
+```
+
+That captured the autosomal phrases better except for the expansion of 'gene'-derived terms. I think the word gene itself is used widely and not relevant to this examination. Allowing derivatives generally also added irrelevant terms, so 'gene' and its derivatives should probably be limited further and only included when following an autosomal phrase.
+
+Also, it seems that X/Y-linked should be added the variable set of autosomal words to capture broader phrases. I'll move it there and retain the 'link(ed|age)' as its own search to capture other 'link' terms, requiring that no letters come before to avoid overgeneralizing.
+
+```{r}
+def_inherit <- def %>%
+    dplyr::select(id:parent_label) %>%
+    dplyr::filter(!obs) %>%
+    dplyr::mutate(
+        term = stringr::str_extract_all(
+            def,
+            DO.utils::collapse_to_string(
+                "(",
+                "(\\b(autosom|recess|domi|inher|[XY].?link(ed|age)?)[a-z]*\\b ?(gene[a-z]*)?)+|",
+                "[^\\-]\\blink(ed|age)?\\b|",
+                "(inter|mono|di|poly)genic\\b|", # many "genic" words --> limit
+                "de novo\\b",
+                ")+", # keep adjacent matching terms together
+                delim = ""
+            )
+        ),
+        term = purrr::map_chr(
+            term,
+            ~ stringr::str_trim(.x) %>%
+                DO.utils::collapse_to_string(unique = TRUE, na.rm = TRUE)
+        )
+    ) %>%
+    dplyr::filter(!is.na(term))
+
+dplyr::count(def_inherit, term) %>%
+    dplyr::arrange(term)
+```
+
+Need to remove standalone 'linked' that's used too broadly and limit 'recess' to avoid 'recession'.
+
+```{r}
+def_inherit <- def %>%
+    dplyr::select(id:parent_label) %>%
+    dplyr::filter(!obs) %>%
+    dplyr::mutate(
+        term = stringr::str_extract_all(
+            def,
+            DO.utils::collapse_to_string(
+                "(",
+                "(\\b(autosom|recessiv|(semi-)?domi|inher|[XY].?link(ed|age)?)[a-z]*\\b ?(gene[a-z]*)?)+|",
+                "[^\\-]\\blinkage\\b|",
+                "(inter|mono|di|poly)genic\\b|", # many "genic" words --> limit
+                "de novo\\b",
+                ")+", # keep adjacent matching terms together
+                delim = ""
+            )
+        ),
+        term = purrr::map_chr(
+            term,
+            ~ stringr::str_trim(.x) %>%
+                DO.utils::collapse_to_string(unique = TRUE, na.rm = TRUE)
+        )
+    ) %>%
+    dplyr::filter(!is.na(term))
+
+dplyr::count(def_inherit, term) %>%
+    dplyr::arrange(term)
+```
+
+That should do it.
+
+Now to see the broader phrasing in which these inheritance terms are used. I'm going to exclude as much as I can those inheritance phrases that are at the beginning of the definition because they are part of the parent disease's label, since these will not contribute to the understand of inheritance patterns in definitions.
+
+```{r}
+def_inherit <- def %>%
+    dplyr::select(id:parent_label) %>%
+    DO.utils::collapse_col(parent_label) %>%
+    dplyr::filter(!obs) %>%
+    dplyr::mutate(
+        term = stringr::str_extract_all(
+            def,
+            DO.utils::collapse_to_string(
+                "(",
+                "(\\b(autosom|recessiv|(semi-)?domi|inher|[XY].?link(ed|age)?)[a-z]*\\b ?(gene[a-z]*)?)+|",
+                "[^\\-]\\blinkage\\b|",
+                "(inter|mono|di|poly)genic\\b|", # many "genic" words --> limit
+                "de novo\\b",
+                ")+", # keep adjacent matching terms together
+                delim = ""
+            )
+        ),
+        term = purrr::map(
+            term,
+            ~ stringr::str_trim(.x) %>%
+                unique() %>%
+                sort_length()
+        ),
+        term_n = purrr::map_int(term, length)
+    ) %>%
+    dplyr::filter(term_n > 0) %>%
+    tidyr::unnest(term) %>%
+    dplyr::mutate(
+        phrase = purrr::map2(
+            def,
+            term,
+            ~ tibble::tibble(
+                before = stringr::str_extract_all(
+                    .x,
+                    paste0("([^ ]+[ [:punct:]]*){0,3}", .y)
+                ),
+                after = stringr::str_extract_all(
+                    .x,
+                    paste0(.y, "([ [:punct:]]*[^ ]+){0,3}")
+                )
+            )
+        )
+    ) %>%
+    tidyr::unnest(phrase) %>%
+    tidyr::unnest(c(before, after)) %>%
+    # remove line where inheritance "term" is near beginning
+    dplyr::filter(
+        purrr::map2_lgl(
+            def,
+            before,
+            ~ !stringr::str_detect(.x, paste0("^", stringr::str_escape(.y)))
+        )
+    )
+```
+
+The breakdown of text before each inheritance "term" is: 
+```{r}
+def_inherit %>%
+    dplyr::count(term, before, sort = TRUE)
+```
+
+Hmmm... looks like a lot of "has_material_basis_in" and "characterized by" but the exact counts of those are split due to other text variations. Focusing on those two "terms", the counts become:
+```{r}
+def_inherit <- def_inherit %>%
+    dplyr::mutate(b_common = stringr::str_extract(before, "has_material_basis_in|characterized by"))
+
+def_inherit %>%
+    dplyr::count(term, b_common, sort = TRUE) %>%
+    dplyr::group_by(b_common) %>%
+    dplyr::summarize(
+        term = DO.utils::unique_to_string(term, delim = "|", sort = TRUE),
+        n = sum(n)
+    ) %>%
+    dplyr::ungroup() %>%
+    dplyr::arrange(dplyr::desc(n)) %>%
+    add_percent(.col = n)
+```
+
+More than half come after "has_material_basis_in" but a sizable amount also follow "characterized by".
+
+What about the text **after** the inheritance phrase?
+
+The breakdown of text after each inheritance "term" is: 
+```{r}
+def_inherit %>%
+    dplyr::count(term, after, sort = TRUE)
+```
+
+Looking at this it appears most common to include inheritance after has_material_basis_in but prior to description of the mutation type (homozygous/heterozygous/etc.).
+
+We can assign patterns to different people by organizing by assigned range(s) of IDs (Lynn: 50000,50999 & 80000,85999; etc.).
+```{r}
+def_inherit <- def_inherit %>%
+    dplyr::mutate(
+        num_id = as.numeric(stringr::str_remove(id, ".+:")),
+        creator = dplyr::case_when(
+            num_id < 50000 ~ "pre-2015",
+            dplyr::between(num_id, 50000, 50999) | dplyr::between(num_id, 80000, 85999) ~ "Lynn",
+            num_id >= 110000 ~ "MODs",
+            TRUE ~ "others"
+        )
+    )
+
+dplyr::count(def_inherit, creator)
+```
+
+And then look at trends in has_material_basis vs "characterized by" by author or group:
+```{r}
+def_inherit <- def_inherit %>%
+    dplyr::group_by(creator) %>%
+    dplyr::mutate(pseudotime = dplyr::row_number(num_id))
+
+ggplot(def_inherit) +
+    geom_freqpoly(aes(x = pseudotime, color = b_common), binwidth = 10) +
+    facet_wrap(~ creator, scales = "free_x")
+```
+
+Hmmm... it seems pre-2015 additions and those made by Lynn are generally preferred to be made after 'has_material_basis_in' while the MODs and others are variable over time (possibly curator-linked).
+
+Lynn's most 5 recent additions by inheritance term include the following definitions:
+```{r}
+def_inherit %>%
+    dplyr::filter(creator == "Lynn") %>%
+    dplyr::mutate(
+        group_term = dplyr::case_when(
+            stringr::str_detect(term, "autosom|dom|rec") ~ "autosomal",
+            stringr::str_detect(term, "[XY]-") ~ "sex-linked",
+            stringr::str_detect(term, "inher") ~ "inheritance",
+            TRUE ~ term
+        )
+    ) %>%
+    dplyr::group_by(group_term) %>%
+    dplyr::slice_max(pseudotime, n = 5) %>%
+    dplyr::arrange(group_term, pseudotime) %>%
+    dplyr::select(id, group_term, def) %>%
+    kbl() %>%
+    kable_paper() %>%
+    column_spec(3, width = "30em")
+```
+
+
 # Review and Fix?
 
 ## First Word
 
-I was surprised that some of the words in the first position of definitions was anything other than "a" or "an". I save that list here to review for later, as these are likely mistakes.
+I was surprised that some of the words in the first position of definitions was anything other than "a" or "an". I previously saved a list here to review for later, but these have all been corrected prior to this update.
 
 ```{r}
 def %>%
@@ -685,4 +992,3 @@ def %>%
     dplyr::arrange(id) %>%
     dplyr::select(-pos)
 ```
-
