@@ -22,7 +22,7 @@
     },
     "DO.utils": {
       "Package": "DO.utils",
-      "Version": "0.2.7",
+      "Version": "0.2.7.9000",
       "Source": "GitHub",
       "Remotes": "allenbaron/rentrez",
       "RemoteType": "github",
@@ -30,8 +30,8 @@
       "RemoteRepo": "DO.utils",
       "RemoteUsername": "DiseaseOntology",
       "RemoteRef": "HEAD",
-      "RemoteSha": "f3feb14951724552476eacabb61615385fc604ff",
-      "Hash": "6ab87d8acc5750c70be85d3a682820e6"
+      "RemoteSha": "2f4f2e2eae74bc85c0fb9af151969a909d8972e4",
+      "Hash": "2027c4885b638e7c179e7e2640518360"
     },
     "DT": {
       "Package": "DT",
