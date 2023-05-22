@@ -6,6 +6,13 @@ library(DO.utils)
 library(spelling)
 
 
+# File paths --------------------------------------------------------------
+
+de_path <- here::here(
+    "../Ontologies/HumanDiseaseOntology/src/ontology/doid-edit.owl"
+)
+
+
 # Custom functions --------------------------------------------------------
 
 # convert numeric df index to ID-{str_type}
@@ -35,11 +42,17 @@ dict <- dicts %>%
 
 # doid.owl data -----------------------------------------------------------
 
-doid_owl <- DO.utils::owl_xml(
-    here::here("../Ontologies/HumanDiseaseOntology/src/ontology/doid.owl")
+# convert & load doid-edit.owl --> better for spelling corrections
+de_owl_path <- tempfile(fileext = ".owl")
+DO.utils::robot(
+    "convert",
+    i = de_path,
+    o = de_owl_path
 )
 
-do_str <- doid_owl$query(
+de_owl <- DO.utils::owl_xml(de_owl_path)
+
+do_str <- de_owl$query(
     "PREFIX xsd: <http://www.w3.org/2001/XMLSchema#>
     PREFIX skos: <http://www.w3.org/2004/02/skos/core#>
     PREFIX oboInOwl: <http://www.geneontology.org/formats/oboInOwl#>
