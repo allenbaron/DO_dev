@@ -9,11 +9,9 @@ omim_csv <- here::here("DEL_omim.csv")
 de_path <- here::here(
     "../Ontologies/HumanDiseaseOntology/src/ontology/doid-edit.owl"
 )
-gs_output <- "1ElBCr6AKHyerKvC_s8fkLvzWBvGcW5XqqEi9TC9_JfI"
-gs_sheet <- paste0(
-    "new_",
-    format(Sys.Date(), "%Y%m%d")
-)
+gs_output <- "https://docs.google.com/spreadsheets/d/1u8ULuuQDsxUHmKT6qNexTsprRp5JL1diHHsLuS_qzvs/edit#gid=1371246675"
+timestamp <- format(Sys.Date(), "%Y%m%d") # appended to end of sheet names
+
 
 # custom function
 iff_all <- function(x, options) {
@@ -96,11 +94,32 @@ new_omim <- dplyr::anti_join(omim, do_omim2, by = "omim") %>%
             url = "https://www.omim.org/MIM:",
             as = "gs",
             txt = omim
-        )
-    )
+        ),
+        sort = str_remove(phenotype, "^\\?")
+    ) %>%
+    dplyr::arrange(sort) %>%
+    dplyr::select(-sort)
 
-googlesheets4::write_sheet(
-    data = new_omim,
-    ss = gs_output,
-    sheet = gs_sheet
-)
+inDO <- dplyr::inner_join(do_omim2, omim, by = "omim")
+
+# save
+if (nrow(new_omim) > 0) {
+    googlesheets4::write_sheet(
+        data = new_omim,
+        ss = gs_output,
+        sheet = paste0("new_", timestamp)
+    )
+} else{
+    message("No OMIM from this PS are new.")
+}
+
+
+if (nrow(inDO) > 0) {
+    googlesheets4::write_sheet(
+        data = inDO,
+        ss = gs_output,
+        sheet = paste0("inDO_", timestamp)
+    )
+} else {
+    message("All OMIM in this PS are new!!")
+}
