@@ -1,0 +1,33 @@
+# Returns disease data useful for harmonizing DO and other resources (mapping)
+
+PREFIX rdfs: <http://www.w3.org/2000/01/rdf-schema#>
+PREFIX owl: <http://www.w3.org/2002/07/owl#>
+PREFIX oboInOwl: <http://www.geneontology.org/formats/oboInOwl#>
+PREFIX skos: <http://www.w3.org/2004/02/skos/core#>
+
+SELECT ?id ?label ?dep ?xref_type ?xref ?syn_type ?syn
+WHERE {
+    ?class oboInOwl:id ?id ;
+        rdfs:label ?label .
+    OPTIONAL { ?class owl:deprecated ?dep . }
+    OPTIONAL {
+        VALUES ?xref_type {
+            oboInOwl:hasDbXref
+            skos:exactMatch
+            skos:closeMatch
+            skos:broadMatch
+            skos:narrowMatch
+            skos:relatedMatch
+        }
+        ?class ?xref_type ?xref .
+    }
+    OPTIONAL { 
+        VALUES ?syn_type {
+            oboInOwl:hasExactSynonym
+            oboInOwl:hasNarrowSynonym
+            oboInOwl:hasBroadSynonym
+            oboInOwl:hasRelatedSynonym
+        }
+        ?class ?syn_type ?syn .
+    }
+}
