@@ -27,15 +27,15 @@
     },
     "DO.utils": {
       "Package": "DO.utils",
-      "Version": "0.2.9",
+      "Version": "0.2.9.9000",
       "Source": "GitHub",
-      "Remotes": "allenbaron/rentrez",
       "RemoteType": "github",
-      "RemoteHost": "api.github.com",
-      "RemoteRepo": "DO.utils",
       "RemoteUsername": "DiseaseOntology",
+      "RemoteRepo": "DO.utils",
       "RemoteRef": "HEAD",
-      "RemoteSha": "65039b4f082a2e09dc917862e8a429a3f0e95170",
+      "RemoteSha": "fe104da0c99bb29f584ccd598d4aa1e036c07a92",
+      "RemoteHost": "api.github.com",
+      "Remotes": "allenbaron/rentrez",
       "Requirements": [
         "R",
         "assertthat",
@@ -64,7 +64,7 @@
         "tidyselect",
         "utils"
       ],
-      "Hash": "c2a6a6fd5162ce57b7b971cc9a990fea"
+      "Hash": "facf83f7c741968d66becac739b16845"
     },
     "DT": {
       "Package": "DT",
