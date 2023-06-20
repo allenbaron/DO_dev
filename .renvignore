@@ -15,3 +15,6 @@ sparql/
 
 # file types
 *.docx
+
+# specific files
+explore_bibliometrix.R
