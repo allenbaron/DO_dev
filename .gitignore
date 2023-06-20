@@ -6,6 +6,7 @@
 
 # upper-level dirs
 /pyenv/
+/exploration/
 
 # any-level dirs
 data/
