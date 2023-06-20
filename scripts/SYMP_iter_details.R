@@ -208,7 +208,7 @@ g_symp <- ggplot2::ggplot(symp_plot_df) +
         date_labels = "%Y"
     ) +
     DO.utils::theme_DO(base_size = 13)
-                                                                                                     date_breaks = "1 year", date_labels = "%Y") + theme_DO(base_size = 13)
+
 ggplot2::ggsave(
     filename = "graphics/website/SYMP_term_def_count.png",
     plot = g_symp,
