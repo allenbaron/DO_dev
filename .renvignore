@@ -1,0 +1,17 @@
+# R files
+.Rproj.user
+.Rhistory
+.RData
+.Ruserdata
+
+# upper-level dirs
+/pyenv/
+
+# any-level dirs
+data/
+graphics/
+scratch/
+sparql/
+
+# file types
+*.docx
