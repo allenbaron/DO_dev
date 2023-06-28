@@ -6,11 +6,11 @@ SELECT ?keyword_iri ?keyword
 	(GROUP_CONCAT(?parent_keyword_iri; separator="|") AS ?parents)
 	(GROUP_CONCAT(?grouping_keyword; separator="|") AS ?groups)
 	(GROUP_CONCAT(?keyword_source; separator="|") AS ?sources)
-WEHRE {
-	?keyword_iri a up:Concept ;
-		skos:prefLabel ?keyword ;
-		rdfs:subClassOf ?parent_keyword_iri ;
-		up:category ?grouping_keyword ;
-		up:database ?keyword_source .
+WHERE {
+	?keyword_iri a up:Concept .
+	OPTIONAL { ?keyword_iri skos:prefLabel ?keyword . }
+	OPTIONAL { ?keyword_iri rdfs:subClassOf ?parent_keyword_iri . }
+	OPTIONAL { ?keyword_iri up:category ?grouping_keyword . }
+	OPTIONAL { ?keyword_iri up:database ?keyword_source . }
 }
 GROUP BY ?keyword_iri ?keyword
