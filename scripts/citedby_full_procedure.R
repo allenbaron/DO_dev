@@ -5,7 +5,7 @@ library(tidyverse)
 library(keyring)
 library(rentrez)
 library(lubridate)
-library(DO.utils) # requires >= v0.1.7.900
+library(DO.utils) # requires >= v0.2.10
 library(googlesheets4)
 
 ###### MANUAL STEP REQUIRED!!! ######
@@ -316,7 +316,7 @@ new_df <- new_df %>%
     dplyr::mutate(
        pmid = DO.utils::build_hyperlink(pmid, "pubmed", "gs"),
        doi = DO.utils::build_hyperlink(doi, "doi", "gs"),
-       pmcid = DO.utils::build_hyperlink(pmcid, "pmc_article", "gs"),
+       pmcid = DO.utils::build_hyperlink(pmcid, "pmc", "gs"),
     ) %>%
     tibble::add_column(!!!cols_add) %>%
     dplyr::select(dplyr::one_of(names(gs_data)))
