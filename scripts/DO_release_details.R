@@ -12,7 +12,8 @@ library(lubridate)
 clean_up <- function(x) {
      stringr::str_replace_all(x, c("[\r\n]" = " ")) %>%
         DO.utils::replace_blank() %>%
-        stringr::str_squish()
+        stringr::str_squish() %>%
+        dplyr::na_if(y = "NULL")
 }
 
 release_dir <- here::here("data/DO_release")
@@ -24,7 +25,7 @@ if (file.exists(details_file)) {
     release_df <- readr::read_csv(
         details_file,
         col_types = readr::cols(
-            created_at = "T", published_at = "T",
+            created_at = "T", author_id = "i", id = "i", published_at = "T",
             author_site_admin = "l", draft = "l", prerelease = "l",
             .default = "c"
         )
@@ -51,14 +52,14 @@ release_tidy <- release_raw %>%
     dplyr::select(-tmp) %>%
     tidyr::unnest_wider(author, names_sep = "_") %>%
     dplyr::mutate(
-        dplyr::across(.cols = dplyr::everything(), clean_up),
+        dplyr::across(.cols = dplyr::where(is.character), clean_up),
         dplyr::across(.cols = dplyr::ends_with("_at"), lubridate::ymd_hms),
         dplyr::across(
             .cols = c(author_site_admin, draft, prerelease),
             as.logical
         )
     ) %>%
-    dplyr::select(tag_name, name, author_login, created_at, body, everything())
+    dplyr::select(names(release_df))
 
 if (is.null(release_df)) {
     release_updated <- release_tidy
@@ -68,12 +69,10 @@ if (is.null(release_df)) {
         unique()
 }
 
-if (nrow(release_updated) != nrow(release_df)) {
+n_new <- nrow(release_updated) - nrow(release_df)
+if (n_new > 0) {
     finish <- readline(
-        prompt = paste(
-            nrow(release_updated) - nrow(release_df),
-            "new releases identified. Save? (yes/no)"
-        )
+        prompt = paste(n_new, "new releases identified. Save? (yes/no)")
     )
 } else {
     message("No new releases to obtain metadata for. Skipping...")
