@@ -9,7 +9,7 @@ library(DO.utils) # >= 0.2.7
 # MANUALLY Update Data!!! -------------------------------------------------
 
 # 1. For updated cited by counts (data/citedby/DO_citedby.csv), execute
-#   source(scripts/citedby_full_procedure.R)source(scripts/citedby_full_procedure.R)
+#   source(scripts/citedby_full_procedure.R)
 # 2. For update Use Cases HTML, curate new resources from cited by info in
 #   DO_uses (Google Sheet) "cited_by" sheet to "DO_website_user_list" sheet.
 #   NOTE: Resources are only included if they have a checkbox (doesn't matter
