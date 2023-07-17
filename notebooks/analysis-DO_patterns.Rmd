@@ -243,3 +243,178 @@ omim_sub2 <- do_def %>%
 ```
 
 In no case for groups of diseases where the labels differ only by an alphanumeric identifier and they are caused by mutations in the same gene has a parent grouping disease been created. This suggests strongly avoiding the creation of such low-level grouping disease terms.
+
+
+# Disease Naming
+
+## OMIM
+
+### Roman Numerals
+
+**Are OMIM diseases with roman numeral types converted to integer numbers in disease names or retained as is?**
+
+```{r}
+# DO diseases with "type" in the name and OMIM xrefs
+omim_DOtype <- xref %>%
+    dplyr::filter(
+        stringr::str_detect(xref, 'OMIM'),
+        stringr::str_detect(
+            label,
+            stringr::regex(" [a-z]{0,1}[ixv0-9]+[a-z]{0,2}$", ignore_case = TRUE)
+        )
+    ) %>%
+    dplyr::rename(omim = xref) %>%
+    dplyr::mutate(
+        roman_n = stringr::str_detect(
+            label,
+            stringr::regex(" [a-z]{0,1}[ixv]+[a-z]{0,2}$", ignore_case = TRUE)
+        )
+    )
+```
+
+Looking just as DO names with numerals it is clear that integers are preferred over roman numerals.
+```{r}
+dplyr::count(omim_DOtype, roman_n) %>%
+    dplyr::mutate(pct = round(n / sum(n) * 100, 1))
+```
+```{r roman_range, include = FALSE}
+# ID ranges for each, trying to compare if there's a difference between newer
+# and older terms); too difficult to use
+omim_DOtype %>%
+    dplyr::group_by(roman_n) %>%
+    dplyr::summarize(
+        range = to_range(
+            id,
+            int_fn = ~ as.integer(stringr::str_remove(.x, "DOID:")),
+            end_rm = "DOID:", 
+        )
+    ) %>%
+    dplyr::mutate(roman_n = dplyr::if_else(roman_n, "roman", "integer")) %>%
+    tidyr::pivot_wider(names_from = roman_n, values_from = range) %>%
+    unlist()
+```
+
+```{r}
+dplyr::filter(omim_DOtype, roman_n)
+```
+
+
+```{r, message = FALSE}
+####### data from 'OMIM updates from MGI' sheet #######
+raw_omim <- googlesheets4::read_sheet(
+    ss = "1SUiFOMGeO3QJfnevpXAPFN90UmAaeoIHF7u0X5lvgc4",
+    sheet = "OMIM Term changes"
+)
+
+# tidy-ish data
+tbl_pos <- which(raw_omim$...1 == "OMIM ID")
+omim_tidy <- raw_omim %>%
+    dplyr::filter(
+        dplyr::row_number() > tbl_pos,
+        !dplyr::if_all(.cols = dplyr::everything(), .fns = is.na)
+    )
+blank_col <- paste0(
+    rep("...", length(names(omim_tidy)) - 4),
+    1:(length(names(omim_tidy)) - 4)
+)
+names(omim_tidy) <- c("omim", "old", "new", "DOID", blank_col)
+omim_tidy <- omim_tidy %>%
+    dplyr::select(-tidyselect::starts_with("..."))
+
+# newer statements needing parsing
+omim_stmt <- raw_omim$...1[1:(tbl_pos - 1)] %>%
+    na.omit()
+omim_rename <- omim_stmt[stringr::str_detect(omim_stmt, "was.*(now|changed to)")] %>%
+    stringr::str_match(
+        stringr::regex(
+            "(?<omim>OMIM[: ]P?S?[0-9]+)(?: *was) (?<old>.+) *(?:(?:this )?(?:(?:is)? now|changed to) *(?<new>.+))(?: *not| *xref| *made| *map| *name| *this| *\\(| *-|$)",
+            ignore_case = TRUE
+        )
+    ) %>%
+    tibble::as_tibble(.name_repair = "universal") %>%
+    dplyr::mutate(
+        old = stringr::str_remove(old, " *is *$"),
+        new = stringr::str_remove(
+            new,
+            " (not|xref|made|map|name|this|\\(|-).*"
+        )
+    )
+omim_dep <- omim_stmt[stringr::str_detect(omim_stmt, "OBSOLETE|obsolete")] %>%
+    stringr::str_match("(?<omim>OMIM[: ]P?S?[0-9]+) (?:was )?(?<old>.+) (?:made|- )") %>%
+    tibble::as_tibble(.name_repair = "universal") %>%
+    dplyr::filter(!dplyr::if_all(.cols = dplyr::everything(), .fns = is.na)) %>%
+    tibble::add_column(deprecated = TRUE)
+omim_nm <- omim_stmt[!stringr::str_detect(omim_stmt, "was.*(now|changed to)|OBSOLETE|obsolete")] %>%
+    stringr::str_match("(?<omim>OMIM[: ]P?S?[0-9]+) (?<old>[A-Z][^\\(]+)") %>%
+    tibble::as_tibble(.name_repair = "universal") %>%
+    dplyr::mutate(old = stringr::str_trim(old)) %>%
+    dplyr::filter(!dplyr::if_all(.cols = dplyr::everything(), .fns = is.na))
+
+omim_tidy2 <- dplyr::bind_rows(omim_nm, omim_dep, omim_rename) %>%
+    dplyr::select(-tidyselect::starts_with("..."))
+
+omim_tidy <- dplyr::bind_rows(omim_tidy, omim_tidy2) %>%
+    dplyr::mutate(
+        # drop acronyms, etc.
+        old = stringr::str_remove(old, ";.*"),
+        new = stringr::str_remove(new, ";.*"),
+        # identify OMIM with numerals
+        has_integer = stringr::str_detect(
+            old,
+            stringr::regex(" [a-z]{0,1}[0-9]+[a-z]{0,2}$", ignore_case = TRUE)
+        ) |
+            stringr::str_detect(
+            new,
+            stringr::regex(" [a-z]{0,1}[0-9]+[a-z]{0,2}$", ignore_case = TRUE)
+        ),
+        old_roman = stringr::str_detect(
+            old,
+            stringr::regex(" [a-z]{0,1}[ixv]+[a-z]{0,2}$", ignore_case = TRUE)
+        ),
+        new_roman = stringr::str_detect(
+            new,
+            stringr::regex(" [a-z]{0,1}[ixv]+[a-z]{0,2}$", ignore_case = TRUE)
+        )
+    )
+```
+
+
+Filtering out the OMIM names I have that do not contain a numeral, it would seem I only have a very small dataset of OMIM names with integer or roman numerals to work with.
+```{r}
+omim_tidy %>%
+    dplyr::filter(has_integer | old_roman | new_roman) %>%
+    dplyr::count(old_roman, new_roman)
+```
+
+On intial inspection it seems that OMIM strongly prefers integers to roman numerals (expected), and it appears they convert roman numerals to integers to a much greater extent than the opposite. The sample size is small so I'm hesitant to make any real conclusions.
+
+Just looking at OMIM names with roman numerals it's clear that the observations above, while true, are not the entire story because more complex renames occur and OMIM names themselves may be reordered with commas.
+```{r}
+omim_tidy %>%
+    dplyr::filter(old_roman | new_roman)
+```
+
+This is the comparison of OMIM names to DO names.
+```{r}
+omim_nm_compare <- dplyr::left_join(omim_DOtype, omim_tidy, by = "omim") %>%
+    dplyr::select(-DOID, -deprecated) %>%
+    dplyr::rename(DO_roman = roman_n, omim_integer = has_integer) %>%
+    dplyr::filter(omim_integer | old_roman | new_roman)
+```
+
+Most diseases in DO and OMIM do not have roman numerals, period. That makes the roman numeral dataset too small to really draw any conclusions from.
+```{r}
+omim_nm_compare %>%
+    dplyr::count(DO_roman, old_roman, new_roman) %>%
+    dplyr::mutate(pct = round(n / sum(n) * 100, 1))
+```
+
+Here's the full set of diseases with roman numeral anywhere (OMIM or DO), for viewing purposes.
+```{r}
+omim_nm_compare %>%
+    dplyr::filter(DO_roman | old_roman | new_roman)
+```
+
+#### Conclusion
+
+Since it is not possible to determine empirically how to handle OMIM phenotypes with roman numerals I will retain them as is for the time being (2023-07-17).
