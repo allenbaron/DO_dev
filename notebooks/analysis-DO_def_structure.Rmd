@@ -1,7 +1,7 @@
 ---
 title: "Evaluation of Definition Structure"
 author: "J. Allen Baron"
-date: "Created: 2022-04-06<br style='line-height: 1.5;'>Updated: 2023-05-15"
+date: "Created: 2022-04-06<br style='line-height: 2;'>Updated: 2023-07-18"
 output: 
     html_notebook:
         toc: true
@@ -969,6 +969,192 @@ def_inherit %>%
     kable_paper() %>%
     column_spec(3, width = "30em")
 ```
+
+
+### Genetic Phrasing
+
+After exploring `has material basis in` statements, it's clear that most have inheritance, specific genes and chromosomal location listed. There are some diseases that don't have clear genes but most will have genetic (i.e. chromosomal) information.
+
+**What patterns are there for definitions with chromosomal locations?**
+
+_EXCLUDING OBSOLETE_
+
+```{r}
+chrom <- def %>%
+    dplyr::filter(
+        !obs,
+        stringr::str_detect(def, "chromos")
+    ) %>%
+    dplyr::select(id, label, def) %>%
+    dplyr::distinct() %>%
+    tidytext::unnest_tokens(
+        output = "word",
+        input = def,
+        token = "words",
+        drop = FALSE
+    ) %>%
+    dplyr::group_by(id) %>%
+    dplyr::mutate(pos = dplyr::row_number()) %>%
+    dplyr::ungroup() %>%
+    dplyr::anti_join(tidytext::stop_words, by = "word")
+    
+```
+
+```{r}
+# want to find the most common words --> small IDF
+chrom_anal <- chrom %>%
+    dplyr::count(id, def, word, sort = TRUE) %>%
+    tidytext::bind_tf_idf(term = word, document = id, n = n) %>%
+    dplyr::group_by(word, idf) %>%
+    dplyr::summarize(
+        id_n = dplyr::n_distinct(id),
+        id_pct = round(id_n / dplyr::n_distinct(chrom$id) * 100, 1)
+    ) %>%
+    dplyr::ungroup() %>%
+    dplyr::arrange(idf)
+
+chrom_anal
+```
+
+The values other than 'chromosome' include 2 that are typos and need to be fixed with the remainder being expected (and fewer in number than I'd anticipated).
+
+```{r}
+dplyr::filter(chrom_anal, str_detect(word, "chromos"), word != "chromosome")
+```
+
+'gene' is right up at the top along with other expected inheritance words. One interest I have is in understanding what words are used when 'gene' is not included.
+
+```{r}
+no_gene <- chrom %>%
+    dplyr::group_by(id) %>%
+    dplyr::filter(all(word != "gene")) %>%
+    dplyr::ungroup() %>%
+    dplyr::count(id, def, word, sort = TRUE) %>%
+    tidytext::bind_tf_idf(term = word, document = id, n = n)
+
+no_gene_idf <- no_gene %>%
+    dplyr::group_by(word, idf) %>%
+    dplyr::summarize(
+        id_n = dplyr::n_distinct(id),
+        id_pct = round(id_n / dplyr::n_distinct(no_gene$id) * 100, 1)
+    ) %>%
+    dplyr::ungroup() %>%
+    dplyr::arrange(idf)
+
+no_gene_idf
+```
+'region' > 'mutation' > 'variation' seem to be the most common genetic mutation/location words used when 'gene' is not. Other less frequent (< 10%) possibilities include 'deletion' > 'locus' > 'duplication' ~ 'genes' ~ 'variable' > 'mb' (assuming megabase) ~ 'mapped' ~ 'linkage' ~ 'snps' (i.e. SNPs)
+
+With regard to 'variation' vs 'variant', etc. it appears that DO has a clear and definite preference for variation, not using 'variant' at all.
+```{r}
+dplyr::filter(no_gene_idf, stringr::str_detect(word, "^var"))
+```
+
+I know from prior exploration that 'gene' is most frequently used in the phrase 'the <SYMBOL> gene'.
+
+**What about the phrases for 'region', 'mutation' and 'variation'?**
+
+```{r}
+no_gene_phrase <- chrom %>%
+    dplyr::filter(word %in% c('region', 'mutation', 'variation')) %>%
+    dplyr::mutate(
+        phrase = purrr::map2(
+            def,
+            word, 
+            ~ stringr::str_extract_all(
+                .x,
+                paste0("(?:\\w+ ){0,2}", .y, "(?: \\w+){0,2}")
+            )
+        )
+    ) %>%
+    tidyr::unnest(phrase) %>%
+    tidyr::unnest(phrase) %>%
+    dplyr::select(id, no_gene = word, phrase) %>%
+    dplyr::distinct() %>%
+    tidytext::unnest_tokens(
+        output = "word",
+        input = phrase,
+        token = "words",
+        to_lower = FALSE,
+        drop = FALSE
+    ) %>%
+    dplyr::group_by(no_gene, id, phrase) %>%
+    dplyr::mutate(pos = dplyr::row_number()) %>%
+    dplyr::ungroup() %>%
+    dplyr::filter(pos != 3)
+
+ng_phrase_split <- no_gene_phrase %>%
+    tidyr::nest(.by = no_gene) %>%
+    tidyr::pivot_wider(names_from = no_gene, values_from = data) %>%
+    unlist(recursive = FALSE)
+
+ng_phrase_n <- ng_phrase_split %>%
+    purrr::map(
+        ~ dplyr::group_by(.x, pos, word) %>%
+            dplyr::summarize(
+                id_n = dplyr::n_distinct(id),
+                id_pct = round(id_n / dplyr::n_distinct(.x$id) * 100, 1),
+                .groups = "drop"
+            ) %>%
+            dplyr::arrange(pos, dplyr::desc(id_n))
+    )
+```
+
+
+The most common words at each position surrounding one of these 3 terms can be seen below.
+```{r}
+ng_phrase_summary <- ng_phrase_n %>%
+    purrr::map(
+        ~ dplyr::group_by(.x, pos) %>%
+            dplyr::mutate(
+                max = max(id_pct),
+                relevant = cumsum(id_pct) < 80,
+                order = dplyr::row_number(-id_pct),
+                sig_vs_prior = dplyr::if_else(
+                    id_pct >= dplyr::lag(id_pct / 2, default = NA),
+                    ">",
+                    ">>"
+                )
+            ) %>%
+            dplyr::ungroup() %>%
+            dplyr::filter(relevant & order <= 5 | id_pct == max) %>%
+            dplyr::select(-relevant)
+    )
+
+ng_phrase_summary %>%
+    purrr::map(~ dplyr::select(.x, pos:id_pct))
+```
+
+
+Simplifying these back into phrases makes the patterns more apparent.
+```{r}
+purrr::map2(
+    ng_phrase_summary,
+    names(ng_phrase_summary),
+    ~ dplyr::group_by(.x, pos) %>%
+        dplyr::summarize(
+            pos_var = DO.utils::sandwich_text(
+                stringr::str_trim(
+                    paste(
+                        dplyr::if_else(!is.na(sig_vs_prior), sig_vs_prior, ""),
+                        word,
+                        collapse = " "
+                    )
+                ),
+                c("(", ")")
+            )
+        ) %>%
+        { DO.utils::collapse_to_string(
+            dplyr::filter(., pos < 3)$pos_var,
+            .y,
+            dplyr::filter(., pos > 3)$pos_var,
+            delim = " "
+        ) }
+) %>%
+    unlist() %>%
+    unname()
+```
+
 
 
 # Review and Fix?
