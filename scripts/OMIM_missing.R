@@ -5,14 +5,14 @@ library(DO.utils)
 library(tidyverse)
 
 # paths -- UPDATE AS NECESSARY (always for Google Sheet, gs_output)
-omim_csv <- here::here("DEL_omim.csv")
+omim_tsv <- here::here("DEL_omim.tsv")
 de_path <- here::here(
     "../Ontologies/HumanDiseaseOntology/src/ontology/doid-edit.owl"
 )
 gs_output <- "1eVPhphVZE5cQG4i2bTBjRlnKwAepuPP_9o8Xu53YtUU"
 timestamp <- format(Sys.Date(), "%Y%m%d") # appended to end of sheet names
 
-omim_res <- DO.utils::onto_missing(de_path, omim_csv)
+omim_res <- DO.utils::onto_missing(de_path, omim_tsv)
 
 # check for obsolete DO terms with OMIM xrefs
 inDO_dep <- omim_res$in_onto %>% dplyr::filter(dep)
