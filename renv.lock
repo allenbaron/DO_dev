@@ -27,13 +27,13 @@
     },
     "DO.utils": {
       "Package": "DO.utils",
-      "Version": "0.2.10",
+      "Version": "0.2.10.9000",
       "Source": "GitHub",
       "RemoteType": "github",
       "RemoteUsername": "DiseaseOntology",
       "RemoteRepo": "DO.utils",
       "RemoteRef": "HEAD",
-      "RemoteSha": "cb23f99e71e61a52013bc874e46640dcfeadb1b9",
+      "RemoteSha": "64d8b7c272228f10a9277b380b6864125fd2377f",
       "RemoteHost": "api.github.com",
       "Remotes": "allenbaron/rentrez",
       "Requirements": [
@@ -64,7 +64,7 @@
         "tidyselect",
         "utils"
       ],
-      "Hash": "25e557cdb9bf077df72f122737db2b0c"
+      "Hash": "b70c1b219ea8153c014850107da493b0"
     },
     "DT": {
       "Package": "DT",
@@ -1030,17 +1030,19 @@
     },
     "gh": {
       "Package": "gh",
-      "Version": "1.3.0",
+      "Version": "1.4.0",
       "Source": "Repository",
       "Repository": "CRAN",
       "Requirements": [
+        "R",
         "cli",
         "gitcreds",
-        "httr",
+        "httr2",
         "ini",
-        "jsonlite"
+        "jsonlite",
+        "rlang"
       ],
-      "Hash": "38c2580abbda249bd6afeec00d14f531"
+      "Hash": "03533b1c875028233598f848fda44c4c"
     },
     "git2r": {
       "Package": "git2r",
@@ -1309,6 +1311,25 @@
         "openssl"
       ],
       "Hash": "7e5e3cbd2a7bc07880c94e22348fb661"
+    },
+    "httr2": {
+      "Package": "httr2",
+      "Version": "0.2.3",
+      "Source": "Repository",
+      "Repository": "CRAN",
+      "Requirements": [
+        "R",
+        "R6",
+        "cli",
+        "curl",
+        "glue",
+        "magrittr",
+        "openssl",
+        "rappdirs",
+        "rlang",
+        "withr"
+      ],
+      "Hash": "193bb297368afbbb42dc85784a46b36e"
     },
     "hues": {
       "Package": "hues",
