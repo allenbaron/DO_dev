@@ -54,13 +54,17 @@ mappings_keep <- mappings %>%
             "semapv:ManualMappingCuration",
             NA_character_
         ),
+        .review = DO.utils::all_duplicated(paste0(subject_id, object_id)),
         other = paste0(
             "needs_review: ",
-            DO.utils::all_duplicated(paste0(subject_id, object_id)),
+            .review,
+            ",\nreview_reason: ",
+            dplyr::if_else(.review, "'duplicated (xref/skos)'", "''"),
             ",\nreview_date: '',\n",
             "subject_obsoleted_version: '',\n",
             "object_obsoleted_version: ''"
-        )
+        ),
+        .review = NULL
     ) %>%
     # add curation columns and re-arrange
     DO.utils::append_empty_col(
