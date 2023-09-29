@@ -9,7 +9,7 @@ do_repo_path <- here::here("../Ontologies/HumanDiseaseOntology")
 do_repo <- DO.utils::DOrepo(do_repo_path)
 
 # tag corresponding to last release of each year
-yr_tags <- c("v2019-12-12", "v2020-12-22", "v2021-12-15")
+yr_tags <- c("v2019-12-12", "v2020-12-22", "v2021-12-15", "v2022-12-15")
 
 # capture tags for iteration & counting
 tags <- do_repo$tags
@@ -78,7 +78,6 @@ tq_iterate <- function(repo, tags, queries) {
         dplyr::bind_rows()
 }
 
-
 # iterate over tags & execute queries
 data_count <- tq_iterate(do_repo, release, q) %>%
     dplyr::mutate(
@@ -105,3 +104,69 @@ q_def <- "
     }"
 
 def_count <- tq_iterate(do_repo, "v2023-08-08", q_def)
+
+
+
+# Calculate file sizes ----------------------------------------------------
+
+t_relsize_iterate <- function(repo, tags) {
+    git_head <- repo$capture_head()
+    on.exit(repo$git$checkout(git_head))
+
+    if (class(tags) == "character") {
+        tags_chr <- tags
+        tags <- list()
+        reticulate::iterate(
+            repo$tags,
+            function(t) {
+                if (t$name %in% tags_chr) {
+                    tags <<- append(tags, t)
+                }
+            }
+        )
+    }
+
+    purrr::map(
+        tags,
+        function(.t) {
+            repo$git$checkout(.t)
+            rel_path <- file.path(repo$path, "src/ontology")
+            ignore_files <- list.files(
+                file.path(
+                    rel_path,
+                    c("doid-idranges.owl", "imports/build", "releases")
+                ),
+                recursive = TRUE,
+                full.names = TRUE
+            )
+            report_files <- list.files(
+                file.path(repo$path, "DOreports"),
+                recursive = TRUE,
+                full.names = TRUE
+            )
+            ont_files <- list.files(
+                rel_path,
+                pattern = ".*\\.(json|owl|obo)",
+                recursive = TRUE,
+                full.names = TRUE
+            )
+            rel_files <- ont_files[!ont_files %in% ignore_files]
+            file.info(report_files, rel_files) %>%
+                dplyr::mutate(
+                    tag = .t$name,
+                    yr = stringr::str_extract(.t$name, "[0-9]{4}")
+                )
+        }
+    )
+}
+
+tag_relfiles <- t_relsize_iterate(do_repo, tags = yr_tags) %>%
+    dplyr::bind_rows() %>%
+    tibble::as_tibble()
+
+relsize <- dplyr::summarize(
+    tag_relfiles,
+    size = sum(size) / 1e6,
+    .by = yr
+) %>%
+    dplyr::mutate(size = paste0(round(size, 2), " MB"))

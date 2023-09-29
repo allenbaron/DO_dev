@@ -32,7 +32,7 @@ daily_counts <- purrr::map(
     )
 
 
-# monthly average for 2019-2021: sessions, unique IPs, pageviews
+# monthly average for 2019-2022: sessions, unique IPs, pageviews
 monthly_counts <- daily_counts %>%
     dplyr::mutate(
         month = lubridate::month(day_index),
@@ -48,22 +48,33 @@ monthly_counts <- daily_counts %>%
     )
 
 gbc_mon_avg <- monthly_counts %>%
-    dplyr::filter(dplyr::between(yr, 2019, 2021)) %>%
+    dplyr::filter(dplyr::between(yr, 2019, 2022)) %>%
     dplyr::summarize(
         dplyr::across(users:avg_session_duration, mean),
         .by = yr
     )
 
-
-gbc_users_per_month <- read_ga(
-    file.path(gd_anal_dir, "GBC/UA_Users-month_20190101-20211231.csv")
-) %>%
+gbc_um_file <- file.path(
+    gd_anal_dir,
+    "monthly_counts/UA_Users-month_20160901-20230630.csv"
+)
+gbc_users_per_month <- read_ga(gbc_users_month_file) %>%
     dplyr::mutate(
-        month_index = as.integer(month_index) + 1,
-        month = month_index %% 12,
+        month_idx = as.integer(month_index) + 9,
+        month = month_idx %% 12,
         month = as.integer(dplyr::if_else(month == 0, 12, month)),
-        year = as.integer(2019 + (month_index - 1) %/% 12)
+        year = as.integer(2016 + (month_idx - 1) %/% 12),
+        month_idx = NULL
     )
+
+gbc_um_tidy_file <- stringr::str_replace(
+    gbc_um_file,
+    "\\.csv",
+    "_tidy.csv"
+)
+if (!file.exists(gbc_um_tidy_file)) {
+    readr::write_csv(gbc_users_per_month, gbc_um_tidy_file)
+}
 
 gbc_user_mon <- gbc_users_per_month %>%
     dplyr::summarize(users = mean(users), .by = year)
