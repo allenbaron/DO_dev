@@ -1,0 +1,72 @@
+file	purpose	target_file	doid_limited	related_to	returns	notes
+annotated.rq	Return a list of all non-obsolete class IDs and labels				?subj ?pred ?obj	
+blank_class.rq	Return a list of all blank classes				?subj ?pred ?obj	
+blank.rq	Return a list of all non-obsolete class IDs and labels				?subj ?pred ?obj	
+class-id_label_wDEP.rq	Return a list of all non-obsolete class IDs and labels				?class ?id ?label ?obs	
+class-id_label.rq	Return a list of all non-obsolete class IDs and labels				?class ?id ?label	
+construct_gard.rq					CONSTRUCT { ?class ?p ?o . }	
+current_reports/all-xref-report.rq	Return a count of xrefs on non-obsolete classes (all xrefs)	doid.owl	TRUE		?prefix (COUNT(?xref) AS ?count)	
+current_reports/doid-report.rq	Return a count of non-obsolete classes & definitions		??		(COUNT(?class) AS ?classes) (COUNT(?def) AS ?definitions)	
+current_reports/import-report.rq	Return a count of each import by root (auto-identified)	doid-merged.owl	TRUE		?import_root ?namespace (COUNT(DISTINCT ?class) as ?count)	"Class counts are unique within an import branch but will be counted multiple times if in more than one import (example: when created, this query counted duplicate CHEBI terms in DISDRIV & chebi because they were imported by each)."
+current_reports/logical-definitions-report.rq	Return a count of logical definitions		??		(COUNT(?parent) as ?subClassOf) (COUNT(?eq) as ?equivalent)	
+current_reports/properties-report.rq	Return a count of each import by ORIGINAL namespace				?type ?import (COUNT(?prop) AS ?count)	
+DO-cancer_slim-id_label.rq	Return a list of all non-obsolete class IDs and labels				?id ?label	
+DO-cell_prolif-id_label_exsyn.rq	Return a list of all non-obsolete class IDs and labels		??		?id ?type ?label	
+DO-cell_prolif-id_label.rq	Return a list of all non-obsolete class IDs and labels		??		?id ?label	
+DO-class_axiom-count.rq	return count of all class axioms (split by type) for all DO term		??	DO-eqC_axiom.rq	?id ?label ?type ( COUNT(?axiom) AS ?n_axiom )	
+DO-def_count-list.rq	Return a count of classes with definitions		??		?s ?definition ?deprecated	
+DO-def_count-OFFICIAL.rq	Return a count of classes with definitions		??		(COUNT(?s) AS ?classes)	
+DO-eqC_axiom-count.rq	return count of equivalent classes for each DO term			DO-eqC_axiom.rq	?id ?label ( COUNT(?eq_class) AS ?axiom_n ) ( COUNT( DISTINCT(?eq_class) ) AS ?axiom_ndistinct )	
+DO-eqC_axiom-problem.rq	Identify potential problems in DO equivalentClass axioms			DO-eqC_axiom.rq	?id ?label ?eq_class ?severity ?details	
+DO-eqC_axiom-tidy.rq	"return DO classes that have an equivalent statement, with human readable axioms"			DO-eqC_axiom.rq	?id ?label (group_concat(?intOf_member) as ?eq_axiom)	
+DO-eqC_axiom.rq	return DO classes that have an equivalent statement			EQ_in_DO.rq	?id ?label ?eq_class ?intersect_target ?parentish_label ?onProperty ?onProp_label ?some ?some_label ?some_type # only multi-restriction axioms will have these ?intersect_target2 ?onProperty2 ?onProp_label2 ?some2 ?some_label2 ?some_type2	
+DO-id_label_parent.rq	"Return a list of all non-obsolete class IDs, labels, & parents"	doid.owl	TRUE		?id ?label ?parent_id ?parent_label	
+DO-id_label_parents_branches.rq	"Return a list of all non-obsolete class IDs, labels, parents, & branches"	doid.owl	TRUE		"DISTINCT ?id ?label (GROUP_CONCAT(?parent_label; SEPARATOR=""""""""|"""""""") AS ?parents) (GROUP_CONCAT(?branch_label; SEPARATOR=""""""""|"""""""") AS ?branch)"	
+DO-id_label-branch_cp.rq	Return a list of all non-obsolete class IDs and labels in the disease of cellular proliferation branch	doid.owl	TRUE		DISTINCT ?id ?label	
+DO-id_label-w_dep.rq	All classes	doid.owl	TRUE		?id ?label ?deprecated	
+DO-id_label.rq	All classes	doid.owl	TRUE		?id ?label	
+DO-no_def-common_ancestor.rq	DO-no_def-simple including the highest parent that also lacks a definition	doid.owl	TRUE	DO-no_def-simple	?id ?label ?ancestor_id ?ancestor_label	
+DO-no_def-OFFICIAL.rq	OFFICIAL missing definitions query in DO's Github repo as of 2021-11-01 (src/sparql/extra/DO_no_defs.rq)				?id ?label ?parent FROM <doid>	"CONS:
+1. Does not explicitly filter out obsolete terms (though they are filtered out by requirement for parent and parent label).
+2. Creates duplicate entries for terms with more than 1 parent."
+DO-no_def-simple.rq	Simpler missing definitions query than the OFFICIAL one (2021-11-01)	doid.owl	TRUE		?id ?label	"PROS (relative to OFFICIAL):
+1. Explicitly filters out obsolete terms.
+2. Does not include parent(s) of terms; only IDs & labels."
+DO-rare-id_label_rareid.rq	"Return a list of all rare diseases in DO with class IDs, labels, and rare identifier"				?id ?label ?rare_id	
+DO-skos-w_obs.rq	Return a count of xrefs on non-obsolete classes (all xrefs)	doid.owl	TRUE		?id ?label ?obsolete ?skos_type ?skos_ref	
+DO-subClass_axiom-count.rq	Return detailed subClassOf Axioms		??		?id ?label ( COUNT(?parent) AS ?axiom_n ) ( COUNT( DISTINCT(?parent) ) AS ?axiom_ndistinct )	
+DO-subClass_axiom-tidy.rq	Return detailed subClassOf Axioms		??		"?id ?label ( CONCAT( ?group, GROUP_CONCAT(?member) ) AS ?subClassOf )"	
+DO-subClass_axiom.rq	Return detailed subClassOf Axioms		??		?id ?label ?parent ?type ?group_type ?group_member ?member_type ?mr_prop ?mr_target ?mc_group_type ?pr_onProp ?pr_some ?pr_some_group ?pr_some_member ?pr_onClass ?pr_onClass_group ?pr_onClass_member	
+DO-subClass_test.rq	Return a count of logical definitions		??		?id ?label ?subClassOf ?prop ?val ?someSubj ?someSubj ?incomingChildProp ?child ?childProp ?childPropVal # ?onProperty ?onProp_label ?some ?some_label ?some_type #?value ?obj	
+DO-synonym_dup.rq	Return a list of all non-obsolete synonyms with metadata	doid.owl	TRUE		?id ?label ?syn_type ?synonym	
+DO-synonym-w_dep.rq	Return a list of all non-obsolete synonyms with metadata	doid.owl	TRUE		?id ?label ?deprecated ?syn_type ?synonym	
+DO-xref-SNOMED.rq			??		?id ?label ?snomed_id	
+DO-xref-w_obs.rq	"Return a count of all xrefs, marking obsolete classes (all xrefs)"		TRUE		?id ?label ?obsolete ?xref	
+DO-xref.rq	Return a list of all non-obsolete xrefs		TRUE		?id ?label ?xref	
+EQ_apparent_relationships.rq	"Find EQ axioms in HP (as example) that create """"apparent relationships"""" in Protege's asserted view."				?class ?label ?EQ_parent_class	
+EQ_in_DO.rq	Return DO classes that have an equivalent statement					
+establish_infectious_disease_subset.ru	Add children of 'disease by infectious agent' to DO_infectious_disease_slim		??		INSERT { ?class oboInOwl:inSubset doid:DO_infectious_disease_slim . }	
+glue-class_details.rq	Return a list of all non-obsolete class IDs and labels				?class ?id ?label ?deprecated ?def ?xref	
+hasDbXref.rq	Return a list of all non-obsolete class IDs and labels				?subj ?pred ?obj	
+id_label_synonym.rq	Return a list of all non-obsolete synonyms with metadata				?id ?label ?syn_type ?synonym	
+import-by_root_specified-report.rq	Return a count of each import by root (manually specified)	doid-merged.owl			?import_root ?namespace (COUNT(?class) AS ?count)	"- Class counts are NOT unique (e.g. CHEBI duplicates in DISDRIV & chebi| are both counted).
+- Exact count duplicates may appear for roots with >1 rdfs:label
+- Equivalent to import-by_root_auto-report.rq, except for ORDER
+- ~ 13s execution"
+import-by_root-report.rq	Return a count of each import by root (auto-identified)	doid-merged.owl	TRUE		?import_root ?namespace (COUNT(DISTINCT ?class) as ?count)	"- Class counts are unique within an import branch but NOT a full namespace (e.g. CHEBI duplicates in DISDRIV & chebi are counted in each.
+- Exact count duplicates may appear for roots with >1 rdfs:label"
+import-chebi_root_overlap-report.rq	Return terms imported in both DISDRIV & CHEBI				?class ?label	
+import-corrected-report.rq	"Return a count of each import -- fix to original, limited import-report"				DISTINCT (COUNT(?chebiClass) as ?chebi) (COUNT(?clClass) as ?cl) (COUNT(?hpClass) as ?hp) (COUNT(?soClass) as ?so) (COUNT(?ncbiClass) as ?ncbi) (COUNT(?sympClass) as ?symp) (COUNT(?transClass) as ?trans) (COUNT(?foodonClass) as ?foodon) (COUNT(?uberonClass) as ?uberon)	
+import-disdriv_special-report.rq	"Return a count of each import by ORIGINAL namespace, unless in DISDRIV"	doid-merged.owl	TRUE		?import ?namespace (COUNT(DISTINCT(?class)) as ?count)	"- DISDRIV is handled separately --> classes in DISDRIV and another import  are de-duplicated (counted ONLY in DISDRIV).
+- Builds on import-report.rq by splitting out DISDRIV
+- ~ 6s execution"
+import-report.rq	Return a count of each import by ORIGINAL namespace	doid-merged.owl	TRUE		?import (COUNT(DISTINCT(?class)) as ?count)	"- Ignores import roots --> classes are not duplicated in counts
+- ~ 2s execution"
+logical_definitions.rq	Return a count of logical definitions		??		(COUNT(?parent) as ?subClassOf) (COUNT(?eq) as ?equivalent)	
+properties_prefix-report.rq	Return a count of all properties by ORIGINAL namespace				?namespace ?prop_type (COUNT(?prop) AS ?count) ?namespace_full	
+properties-report.rq	Return a count of each import by ORIGINAL namespace				?type ?import (COUNT(?prop) AS ?count)	
+properties.rq	Return a count of each import by ORIGINAL namespace				DISTINCT ?type ?ns ?prop ?label	
+pubmed_def_src_url.rq					?id ?pubmed_src	
+remove_dup_labels.ru					DELETE { ?s rdfs:label ?label2 }	
+website_release/website-imports.rq	Return a count of each import by root (auto-identified)	doid-merged.owl	TRUE		?import_root (COUNT(DISTINCT ?class) as ?count)	"Class counts are unique within an import branch but will be counted multiple times if in more than one import (example: when created, this query|counted duplicate CHEBI terms in DISDRIV & chebi because they were imported by each)."
+current_reports/branch-count.rq	Return a count of all classes in each disease branch	"doid-non-classified.owl, doid.owl"	TRUE		?branch (COUNT(?class) AS ?count)	DNC = asserted in branch only; DOID = asserted + inferred in branch

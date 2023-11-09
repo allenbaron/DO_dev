@@ -1,0 +1,17 @@
+# Return a list of all non-obsolete class IDs and labels
+
+PREFIX rdfs: <http://www.w3.org/2000/01/rdf-schema#>
+PREFIX owl: <http://www.w3.org/2002/07/owl#>
+PREFIX oboInOwl: <http://www.geneontology.org/formats/oboInOwl#>
+
+SELECT ?class ?id ?label ?deprecated ?def ?xref
+WHERE {
+    ?class a owl:Class .
+    FILTER(!isBlank(?class) && CONTAINS(str(?class), "!<<ns_prefix>>!")
+
+	OPTIONAL { ?class oboInOwl:id ?id . }
+    OPTIONAL { ?class rdfs:label ?label . }
+    OPTIONAL { ?class owl:deprecated ?deprecated . }
+    OPTIONAL { ?class obo:IAO_0000115 ?def . }
+    OPTIONAL { ?class oboInOwl:hasDbXref ?xref . }
+}

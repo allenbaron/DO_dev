@@ -1,0 +1,13 @@
+# Find EQ axioms in HP (as example) that create "apparent relationships" in
+#   Protege's asserted view.
+
+SELECT ?class ?label ?EQ_parent_class
+WHERE {
+    ?class a owl:Class ;
+        rdfs:label ?label ;
+        owl:equivalentClass ?anon .
+    ?anon owl:intersectionOf ?intersect_anon .
+    ?intersect_anon rdf:first ?EQ_parent_class .
+
+    FILTER(CONTAINS(str(?EQ_parent_class), 'HP_')) # change here for other ontologies
+}

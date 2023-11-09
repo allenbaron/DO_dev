@@ -1,0 +1,24 @@
+########################################
+# This is a simpler missing definitions query than the OFFICIAL one.
+#
+# PROS (relative to OFFICIAL):
+#	1. Explicitly filters out obsolete terms.
+#	2. Does not include parent(s) of terms; only IDs & labels.
+########################################
+
+# Query non-deprecated DOIDs without definitions
+PREFIX rdfs: <http://www.w3.org/2000/01/rdf-schema#>
+PREFIX owl: <http://www.w3.org/2002/07/owl#>
+PREFIX obo: <http://purl.obolibrary.org/obo/>
+PREFIX oboInOwl: <http://www.geneontology.org/formats/oboInOwl#>
+
+SELECT ?id ?label
+WHERE {
+    ?class a owl:Class ;
+        oboInOwl:id ?id ;
+        rdfs:label ?label .
+    FILTER CONTAINS(STR(?class), "DOID")
+    # include only those missing definitions & not deprecated
+    FILTER NOT EXISTS { ?class obo:IAO_0000115 ?def . }
+    FILTER NOT EXISTS { ?class owl:deprecated ?any . }
+}

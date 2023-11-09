@@ -1,0 +1,32 @@
+PREFIX rdfs: <http://www.w3.org/2000/01/rdf-schema#>
+PREFIX owl: <http://www.w3.org/2002/07/owl#>
+PREFIX obo: <http://purl.obolibrary.org/obo/>
+PREFIX oboInOwl: <http://www.geneontology.org/formats/oboInOwl#>
+PREFIX Orphanet: <http://www.orpha.net/ORDO/Orphanet_>
+
+SELECT ?id ?label ?xref ?xref_type
+WHERE {
+    ?class a owl:Class ;
+        rdfs:subClassOf* Orphanet:C001 ;
+        rdfs:label ?label ;
+        oboInOwl:hasDbXref ?xref .
+    BIND(
+        REPLACE(
+            STRAFTER( str(?class), "http://www.orpha.net/ORDO/" ), "_", ":"
+        ) AS ?id
+    )
+    OPTIONAL {
+        ?anon owl:annotatedSource ?class .
+        ?anon owl:annotatedProperty oboInOwl:hasDbXref .
+        ?anon owl:annotatedTarget ?xref .
+
+        ?anon obo:ECO_0000218 ?xref_type_long .
+        BIND(
+            REPLACE(
+                ?xref_type_long,
+                "^[^BDENTW]*([BN]T[BN]T|E|ND|W).*(\n?.*)*",
+                "$1"
+            ) AS ?xref_type
+        )
+    }
+}

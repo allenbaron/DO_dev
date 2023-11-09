@@ -1,0 +1,25 @@
+# derived from DO-no_def-simple, includes the highest parent that also lacks a
+#   definition
+
+# Query non-deprecated DOIDs without definitions
+PREFIX rdfs: <http://www.w3.org/2000/01/rdf-schema#>
+PREFIX owl: <http://www.w3.org/2002/07/owl#>
+PREFIX obo: <http://purl.obolibrary.org/obo/>
+PREFIX oboInOwl: <http://www.geneontology.org/formats/oboInOwl#>
+
+SELECT ?id ?label ?ancestor_id ?ancestor_label
+WHERE {
+    ?class a owl:Class ;
+        oboInOwl:id ?id ;
+        rdfs:label ?label ;
+        rdfs:subClassOf* ?ancestor .
+    ?ancestor oboInOwl:id ?ancestor_id ;
+        rdfs:label ?ancestor_label .
+
+    FILTER CONTAINS(STR(?class), "DOID")
+    FILTER(!ISBLANK(?ancestor))
+    FILTER NOT EXISTS { ?class owl:deprecated ?any . }
+    FILTER NOT EXISTS { ?class obo:IAO_0000115 ?def . }
+    FILTER NOT EXISTS { ?ancestor obo:IAO_0000115 ?ancestor_def . }
+
+}

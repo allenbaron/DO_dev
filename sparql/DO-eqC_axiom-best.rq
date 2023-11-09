@@ -1,0 +1,84 @@
+# return DO classes that have an equivalent statement, with human readable axioms
+# by J. Allen Baron, 2023-05-11
+# derived from DO-eqC_axiom-tidy.rq; added as example for SPARQL sandbox
+
+PREFIX rdf: <http://www.w3.org/1999/02/22-rdf-syntax-ns#>
+PREFIX rdfs: <http://www.w3.org/2000/01/rdf-schema#>
+PREFIX oboInOwl: <http://www.geneontology.org/formats/oboInOwl#>
+PREFIX owl: <http://www.w3.org/2002/07/owl#>
+
+SELECT ?id ?label (GROUP_CONCAT( REPLACE( ?axiom_member, "_", ":" ) ) as ?eq_axiom)
+FROM <http://purl.obolibrary.org/obo/doid/doid-merged.owl>
+WHERE {
+    # Identify all diseases and equivalentClass axioms
+    ?class oboInOwl:id ?id ;
+        rdfs:label ?label ;
+        owl:equivalentClass ?eq_class .
+
+    # Get all elements of EQ axioms with type
+    ?eq_class owl:intersectionOf / ( rdf:first | (rdf:rest/rdf:first)+ ) ?axiom_element .
+    ?axiom_element a ?type .
+    
+    # Identify upper-level diseases in EQclass axioms
+    OPTIONAL {
+        FILTER( ?type = owl:Class )
+        ?axiom_element rdfs:label ?disease_label
+        
+        # Format: '<label> (<id>)'
+        BIND(
+            CONCAT( ?disease_label, " (", REPLACE( STR(?axiom_element), ".*/", "" ), ")" ) AS ?axiom_member
+        )
+    }
+
+    # Identify non-disease elements in restriction of EQ class axioms
+    OPTIONAL {
+        FILTER( ?type = owl:Restriction )
+        ?axiom_element owl:onProperty ?relation ;
+            owl:someValuesFrom ?some .
+        
+        # Identify relation properties
+        OPTIONAL {
+            ?relation rdfs:label ?rel_label .
+            # Format: '<label> (<id>)'
+            BIND( 
+                CONCAT( ?rel_label, " (", REPLACE( STR(?relation), ".*/", "" ), ")" ) AS ?relation_label
+            )
+        }
+        
+
+        # Identify import classes from simple axioms
+        # NOTE: not all import classes have IDs --> combine labels with IDs created from IRIs
+        OPTIONAL {
+            FILTER( !isBlank(?some) )
+            ?some rdfs:label ?some_label .
+            # Format: '<label> (<id>)'
+            BIND(
+                CONCAT( ?some_label, " (", REPLACE( STR(?some), ".*/", "" ), ")" ) AS ?restriction_class
+            )
+        }
+        
+        # Identify grouping type (union/intersection) for multi-class elements
+        OPTIONAL {
+            FILTER( isBlank(?some) )
+            ?some ?set_type ?BLANK_set . 
+            VALUES ?set_type { owl:unionOf owl:intersectionOf }
+            # format: 'unionOf|intersectionOf'
+            BIND(
+                CONCAT( "...", REPLACE( STR(?set_type), ".*owl#", "" ), " imported classes ..." ) AS ?restriction_class
+            )
+        }
+        
+        # Create full restriction label
+        BIND(
+            CONCAT( "AND ", ?relation_label, " SOME ", ?restriction_class ) AS ?axiom_member
+        )
+    }
+
+    # Identify axioms with multiple restrictions by tag (not processed with SPARQL)
+    OPTIONAL {
+        FILTER( ?type = owl:Class && isBlank(?axiom_element) )
+        BIND ( "...complex multi-restriction axiom..." AS ?axiom_member )
+    }
+
+}
+GROUP BY ?id ?label

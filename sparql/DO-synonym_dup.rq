@@ -1,0 +1,20 @@
+# Return a list of all non-obsolete synonyms with metadata
+
+PREFIX rdfs: <http://www.w3.org/2000/01/rdf-schema#>
+PREFIX owl: <http://www.w3.org/2002/07/owl#>
+PREFIX oboInOwl: <http://www.geneontology.org/formats/oboInOwl#>
+
+SELECT ?id ?label ?syn_type ?synonym
+WHERE {
+    ?class a owl:Class ;
+        ?pred ?synonym .
+
+    FILTER(CONTAINS(STR(?class), "DOID"))
+    FILTER(REGEX(STR(?pred), "[Ss]ynonym"))
+    FILTER NOT EXISTS { ?class owl:deprecated ?obsolete . }
+
+	OPTIONAL { ?class oboInOwl:id ?id . }
+    OPTIONAL { ?class rdfs:label ?label . }
+
+    BIND(STRAFTER(STR(?pred), "oboInOwl#") AS ?syn_type)
+}

@@ -1,0 +1,22 @@
+# Return a count of logical definitions
+
+PREFIX owl: <http://www.w3.org/2002/07/owl#>
+PREFIX rdfs: <http://www.w3.org/2000/01/rdf-schema#>
+
+SELECT ?id ?label ?subClassOf ?prop ?val ?someSubj ?someSubj ?incomingChildProp 
+		?child ?childProp ?childPropVal
+		# ?onProperty ?onProp_label ?some ?some_label ?some_type
+		#?value ?obj
+WHERE {
+	?class oboInOwl:id ?id ;
+        rdfs:label ?label ;
+        rdfs:subClassOf ?subClassOf .
+	FILTER( isBlank(?subClassOf) )
+	FILTER( STRSTARTS( STR(?class), "http://purl.obolibrary.org/obo/DOID_" ) )
+	
+    ?subClassOf ?prop ?val ;
+		(owl:onClass|owl:onProperty|owl:someValuesFrom|rdf:type)+ ?child . 
+	?child ?childProp ?childPropVal.
+    ?someSubj ?incomingChildProp ?child. 
+}
+LIMIT 100

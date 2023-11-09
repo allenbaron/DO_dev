@@ -1,0 +1,24 @@
+PREFIX rdfs: <http://www.w3.org/2000/01/rdf-schema#>
+PREFIX owl: <http://www.w3.org/2002/07/owl#>
+PREFIX obo: <http://purl.obolibrary.org/obo/>
+PREFIX oboInOwl: <http://www.geneontology.org/formats/oboInOwl#>
+PREFIX doid: <http://purl.obolibrary.org/obo/doid#>
+
+SELECT ?id ?label ?def (COUNT(?sc_axiom) AS ?subClassOf_axioms)
+    (COUNT(?eq) AS ?eqClass_axioms)
+WHERE {
+    ?class oboInOwl:id ?id ;
+        rdfs:label ?label .
+    
+    FILTER NOT EXISTS { ?class owl:deprecated ?any }
+
+    OPTIONAL { ?class obo:IAO_0000115 ?def . }
+    
+    OPTIONAL {
+        ?class rdfs:subClassOf ?sc_axiom .
+        FILTER( isBlank(?sc_axiom) )
+    }
+
+    OPTIONAL { ?class owl:equivalentClass ?eq . }
+}
+GROUP BY ?id ?label ?def
