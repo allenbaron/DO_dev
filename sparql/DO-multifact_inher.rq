@@ -1,0 +1,12 @@
+# Return all diseases with multifactorial inheritance
+# MUST QUERY DOID-MERGED.OWL file!!!
+
+SELECT ?id ?label ?inher
+WHERE {
+	?class oboInOwl:id ?id ;
+		rdfs:label ?label ;
+		rdfs:subClassOf ?anon .
+	?anon owl:onProperty obo:IDO_0000664 ;
+		owl:someValuesFrom ?inher .
+	?inher rdfs:subClassOf* obo:GENO_0000929 .
+}
