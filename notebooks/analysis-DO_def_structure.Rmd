@@ -400,9 +400,10 @@ count(def, newer, has_caused) %>%
     add_percent(n)
 ```
 
-These statements are not common. They're use has declined in non-obsolete, newer terms. I'll ask for clarification to determine whether they should be avoided.
+These statements are not common. They're use has declined in non-obsolete, newer terms.
 
 **ANSWER**
+On 2022-04-04 Lynn stated "caused by" should generally be avoided.
 
 
 ## Parentheses & Terminology
@@ -850,8 +851,7 @@ def_inherit <- def %>%
         term = purrr::map(
             term,
             ~ stringr::str_trim(.x) %>%
-                unique() %>%
-                sort_length()
+                unique()
         ),
         term_n = purrr::map_int(term, length)
     ) %>%
@@ -1156,6 +1156,64 @@ purrr::map2(
 ```
 
 
+## Cellular Proliferation: Phrases or Words
+
+```{r}
+cp <- repo$doid$query(
+"SELECT ?id
+WHERE {
+    ?class rdfs:subClassOf* obo:DOID_14566 ;
+        oboInOwl:id ?id .
+}"
+) %>%
+    DO.utils::tidy_sparql()
+
+cp_def <- def %>%
+    dplyr::filter(id %in% cp$id)
+```
+
+1. What is the occurrence of 'characterized by' and 'has_material_basis_in' for cellular proliferation diseases?
+
+```{r}
+cp_def %>%
+    dplyr::mutate(
+        char_by = stringr::str_detect(def, "characterized by"),
+        mat_basis = stringr::str_detect(def, "has.material.basis.in")
+    ) %>%
+    dplyr::count(char_by, mat_basis) %>%
+    add_percent(n)
+```
+
+These are fairly common but by no means the majority.
+
+2. What is the frequency of cancer-related terminology: arises, develops, located, etc.? 
+
+I'll look at the occurrence of the 3 words following the parent term and then some specific phrases.
+```{r}
+cp3 <- cp_def %>%
+    dplyr::mutate(
+        no_parent = purrr::map2_chr(
+            def,
+            parent_label,
+            ~ stringr::str_remove(.x, paste0("An? ?", .y, " *"))
+        ),
+        ngram = stringr::str_extract(no_parent, "^([[:alnum:]_-]+\\s){1,3}")
+    )
+```
+
+```{r}
+cp_def %>%
+    dplyr::mutate(
+        word = stringr::str_extract_all(
+            def,
+            "(derive|arise|develop|located)[^ ]*"
+        )
+    ) %>%
+    tidyr::unnest(word) %>%
+    dplyr::count(word, sort = TRUE)
+```
+
+As expected, `located_in` is the most common but `derives_from` is also very common. Everything else should probably be avoided.
 
 # Review and Fix?
 
