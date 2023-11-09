@@ -76,24 +76,37 @@ mappings_keep <- mappings %>%
         order = TRUE
     )
 
-# save to Google Sheet with links for quicker review
-mappings_gs <- mappings_keep %>%
-    dplyr::mutate(
-        subject_id = DO.utils::build_hyperlink(
-            x = stringr::str_remove(subject_id, ".*:"),
-            url = "DOID",
-            txt = subject_id,
-            as = "gs"
-        ),
-        object_id = DO.utils::build_hyperlink(
-            x = stringr::str_remove(object_id, ".*:"),
-            url = stringr::str_remove(object_id, "(_[0-9]{4}_[0-9]{2}_[0-9]{2})?:.*"),
-            txt = object_id,
-            as = "gs"
+# append data if sheet exists
+sheet_exists <- gs_sheet %in% googlesheets4::sheet_names(gs)
+if (!sheet_exists) {
+ # convert to Google Sheet links for quicker review
+   mappings_gs <- mappings_keep %>%
+        dplyr::mutate(
+            subject_id = DO.utils::build_hyperlink(
+                x = stringr::str_remove(subject_id, ".*:"),
+                url = "DOID",
+                txt = subject_id,
+                as = "gs"
+            ),
+            object_id = DO.utils::build_hyperlink(
+                x = stringr::str_remove(object_id, ".*:"),
+                url = stringr::str_remove(object_id, "(_[0-9]{4}_[0-9]{2}_[0-9]{2})?:.*"),
+                txt = object_id,
+                as = "gs"
+            )
         )
+    googlesheets4::write_sheet(mappings_gs, ss = gs, sheet = gs_sheet)
+} else {
+    existing_data <- googlesheets4::read_sheet(gs, gs_sheet)
+    xref_change <- dplyr::anti_join(
+        existing_data,
+        mappings_keep,
+        by = c("subject_id", "predicate_id", "predicate_modifier", "object_id")
     )
 
-googlesheets4::write_sheet(mappings_gs, ss = gs, sheet = gs_sheet)
+
+
+
 
 
 # capture redundant removed mappings
