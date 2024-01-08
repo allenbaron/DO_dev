@@ -9,72 +9,37 @@ omim_tsv <- here::here("DEL_omim.tsv")
 de_path <- here::here(
     "../Ontologies/HumanDiseaseOntology/src/ontology/doid-edit.owl"
 )
-gs_output <- "1eVPhphVZE5cQG4i2bTBjRlnKwAepuPP_9o8Xu53YtUU"
-timestamp <- format(Sys.Date(), "%Y%m%d") # appended to end of sheet names
 
-omim_res <- DO.utils::onto_missing(de_path, omim_tsv)
+omim_res <- DO.utils::inventory_omim(de_path, omim_tsv)
 
-# check for obsolete DO terms with OMIM xrefs
-inDO_dep <- omim_res$in_onto %>% dplyr::filter(dep)
-
-if (nrow(inDO_dep) > 0) {
-    rlang::abort(
-        c(
-            paste0(
-                "Obsolete diseases with OMIM xrefs: ",
-                dplyr::n_distinct(inDO_dep$id)
-            ),
-            "Pause to examine and possibly fix with dep_fix!!!"
-        )
-    )
-    dep_fix <- dplyr::filter(do_omim, omim %in% inDO_dep$omim)
-    scan()
+# drop genes when using search results
+if ("omim_search" %in% class(omim_res)) {
+    omim_res <- dplyr::filter(omim_res, mim_type != "gene")
 }
 
-# save
-if (nrow(omim_res$missing) > 0) {
-    missing <- omim_res$missing %>%
-        dplyr::mutate(
-            omim = DO.utils::build_hyperlink(
-                x = stringr::str_remove(omim, ".*:"),
-                url = "OMIM",
-                as = "gs",
-                txt = omim,
-                preserve = "txt"
-            )
-        )
-    googlesheets4::write_sheet(
-        data = missing,
-        ss = gs_output,
-        sheet = paste0("missing-", timestamp)
+# review results
+omim_report <- DO.utils::inventory_report(omim_res)
+
+# add inventory_report() issue identifiers to inventory as "status"
+with_status <- dplyr::bind_rows(
+    omim_report[names(omim_report) != "stats"],
+    .id = "status"
+) %>%
+    dplyr::select(omim, doid, status) %>%
+    DO.utils::collapse_col(status, delim = " | ", na.rm = TRUE)
+
+if (nrow(with_status) > 0) {
+    omim_res <- dplyr::full_join(
+        omim_res,
+        with_status,
+        by = c("omim", "doid")
     )
-} else{
-    message("No OMIM from this PS are new.")
 }
 
-if (nrow(omim_res$in_onto) > 0) {
-    in_onto <- omim_res$in_onto %>%
-        dplyr::mutate(
-            id = DO.utils::build_hyperlink(
-                x = id,
-                url = "DO_website",
-                as = "gs",
-                txt = id,
-                preserve = "txt"
-            ),
-            mapping = DO.utils::build_hyperlink(
-                x = stringr::str_remove(mapping, ".*:"),
-                url = stringr::str_remove(mapping, ":.*"),
-                as = "gs",
-                txt = mapping,
-                preserve = "txt"
-            ),
-        )
-    googlesheets4::write_sheet(
-        data = in_onto,
-        ss = gs_output,
-        sheet = paste0("in_onto-", timestamp)
-    )
-} else {
-    message("All OMIM in this PS are new!!")
+# write to google sheets?
+continue <- readline("Write to file? yes/no ")
+
+if (continue == "yes") {
+    gs_output <- readline("Provide a Google Sheet identifier: ")
+    x <- DO.utils::write_gs(data = omim_res, ss = gs_output)
 }
