@@ -15,8 +15,21 @@ ps_inventory <- DO.utils::inventory_omim(de_file, ps)
 
 # check if OMIMPS on deprecated DOID
 ps_report <- DO.utils::inventory_report(ps_inventory)
-if (nrow(ps_dep) != 0) {
-    rlang::warn("OMIM PS on deprecated DOID: check `ps_dep`")
+
+# add inventory_report() issue identifiers to inventory as "status"
+with_status <- dplyr::bind_rows(
+    ps_report[names(ps_report) != "stats"],
+    .id = "status"
+) %>%
+    dplyr::select(omim, doid, status) %>%
+    DO.utils::collapse_col(status, delim = " | ", na.rm = TRUE)
+
+if (nrow(with_status) > 0) {
+    ps_inventory <- dplyr::full_join(
+        ps_inventory,
+        with_status,
+        by = c("omim", "doid")
+    )
 }
 
 # write inventory results to google sheets?
