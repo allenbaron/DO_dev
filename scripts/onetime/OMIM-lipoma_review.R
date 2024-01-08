@@ -31,63 +31,40 @@ lipoma <- dplyr::mutate(
     tidyr::pivot_wider(
         names_from = pred,
         values_from = obj,
-        values_fn = unique_to_string
+        values_fn = ~ unique_to_string(.x, na.rm = TRUE, sort = TRUE)
     ) %>%
     dplyr::select(
         id, label, def, hasAlternativeId, top, subClassOf, inSubset,
         sc_anon, equivalentClass, dplyr::everything()
     ) %>%
-    dplyr::select(!class) %>%
-    dplyr::arrange(top, id)
+    dplyr::select(!class)
 
 # replace top ID with label for easier identification
 top_recode <- dplyr::filter(lipoma, top == id) %>%
     { setNames(.$label, .$id) }
 
-lipoma <- dplyr::mutate(lipoma, top = dplyr::recode(top, !!!top_recode))
+lipoma <- dplyr::mutate(lipoma, top = dplyr::recode(top, !!!top_recode)) %>%
+    dplyr::arrange(top, id)
 
 
-# split dataset to enhance info and reduce repetition
-lipoma_list <- list(
-    details = dplyr::select(lipoma, id:equivalentClass),
-    xrefs = dplyr::select(lipoma, id, label, top, hasDbXref, exactMatch) %>%
-        DO.utils::lengthen_col(c(hasDbXref, exactMatch), convert = FALSE) %>%
-        tidyr::pivot_longer(
-            cols = c(hasDbXref, exactMatch),
-            names_to = "mapping_type",
-            values_to = "mapping"
-        ) %>%
-        DO.utils::collapse_col(mapping_type, na.rm = TRUE) %>%
-        dplyr::filter(!is.na(mapping)) %>%
-        dplyr::mutate(
-            mapping2 = dplyr::if_else(
-                stringr::str_detect(mapping, "^(GARD|ICDO|SNOMEDCT)"),
-                mapping,
-                NA_character_
-            ),
-            mapping = dplyr::if_else(
-                stringr::str_detect(mapping, "^(GARD|ICDO|SNOMEDCT)"),
-                NA,
-                DO.utils::build_hyperlink(
-                    x = stringr::str_remove(mapping, ".*:"),
-                    url = stringr::str_remove(mapping, ":.*"),
-                    text = mapping,
-                    as = "gs"
-                )
-            )
-        ) %>%
-        dplyr::arrange(top, id, mapping, mapping2),
-    synonyms = dplyr::select(lipoma, id, label, top, hasExactSynonym) %>%
-        DO.utils::lengthen_col(hasExactSynonym, convert = FALSE) %>%
-        dplyr::filter(!is.na(hasExactSynonym)) %>%
-        dplyr::arrange(top, id, hasExactSynonym)
-)
+# merge xref + exactMatch into mapping (don't split xref & synonym)
+lipoma <- lipoma %>%
+    DO.utils::lengthen_col(
+        cols = c("hasDbXref", "exactMatch"),
+        trim = TRUE,
+        convert = FALSE
+    ) %>%
+    tidyr::pivot_longer(
+        cols = c("hasDbXref", "exactMatch"),
+        names_to = "mapping_type",
+        values_to = "mapping"
+    ) %>%
+    dplyr::select(!mapping_type) %>%
+    dplyr::arrange(top, id, mapping) %>%
+    DO.utils::collapse_col(mapping, na.rm = TRUE) %>%
+    dplyr::arrange(top, id)
 
 # write to google sheet
 gs <- "https://docs.google.com/spreadsheets/d/17fK2ZXXxbjip6kLOB3MzlcDpegwvN8CGbDVMdG_318s/edit#gid=0"
 
-purrr::walk2(
-    lipoma_list,
-    names(lipoma_list),
-    ~ googlesheets4::write_sheet(.x, ss = gs, sheet = .y)
-)
+googlesheets4::write_sheet(lipoma, ss = gs, sheet = "DO_data_w_manual_changes")
