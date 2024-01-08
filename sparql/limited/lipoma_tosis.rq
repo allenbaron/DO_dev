@@ -1,0 +1,15 @@
+# return all triples for lipoma(tosis) and descendants
+PREFIX rdfs: <http://www.w3.org/2000/01/rdf-schema#>
+PREFIX oboInOwl: <http://www.geneontology.org/formats/oboInOwl#>
+PREFIX DOID: <http://purl.obolibrary.org/obo/DOID_>
+
+SELECT *
+WHERE {
+	?class oboInOwl:id ?id ;
+		rdfs:label ?label ;
+		rdfs:subClassOf* ?top ;
+		?pred ?obj .
+	FILTER( STRSTARTS( ?id, "DOID" ) )
+
+	VALUES ?top { DOID:3315 DOID:3153 }
+}
