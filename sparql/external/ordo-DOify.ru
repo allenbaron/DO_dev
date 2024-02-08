@@ -1,10 +1,12 @@
 # converts ORDO into a more DO-friendly format
 # - ID: Convert skos:notation to oboInOwl:id
-# - HIERARCHY: Convert part of hierarchy to rdfs:subClassOf
+# - HIERARCHY:
+#  - Convert part of hierarchy to rdfs:subClassOf
+#  - Convert disease type from is_a hierarchy to annotation
 # - SYNONYMS: Convert efo:alternative_term to oboInOwl:hasExactSynonym (https://github.com/EBISPOT/efo/issues/1166)
 # - MAPPINGS:
-#   - Retain only exact matches as xref
-#   - Convert annotated xrefs to matching skos mappings (or special notMatch/uncertain preds)
+#  - Retain only exact matches as xref
+#  - Convert annotated xrefs to matching skos mappings (or special notMatch/uncertain preds)
 
 PREFIX rdfs: <http://www.w3.org/2000/01/rdf-schema#>
 PREFIX owl: <http://www.w3.org/2002/07/owl#>
@@ -12,6 +14,7 @@ PREFIX obo: <http://purl.obolibrary.org/obo/>
 PREFIX oboInOwl: <http://www.geneontology.org/formats/oboInOwl#>
 PREFIX skos: <http://www.w3.org/2004/02/skos/core#>
 PREFIX efo: <http://www.ebi.ac.uk/efo/>
+PREFIX ORDO: <http://www.orpha.net/ORDO/Orphanet_>
 PREFIX doid: <http://purl.obolibrary.org/obo/doid#>
 
 # Standardize ORDO xref mapping_type annotations
@@ -37,6 +40,7 @@ WHERE {
 DELETE {
     ?class skos:notation ?id ;
         rdfs:subClassOf ?part_of ;
+        rdfs:subClassOf ?disease_type ;
         efo:alternative_term ?syn ;
         oboInOwl:hasDbXref ?xref .
     ?xref_annot ?p ?o .
@@ -46,6 +50,7 @@ DELETE {
 INSERT {
     ?class oboInOwl:id ?id ;
         rdfs:subClassOf ?parent ;
+        doid:disease_type ?disease_type_label ;
         oboInOwl:hasExactSynonym ?syn ;
         ?mapping_type ?xref ;
         oboInOwl:hasDbXref ?xref_exact .
@@ -59,6 +64,13 @@ WHERE {
         ?class rdfs:subClassOf ?part_of .
         ?part_of owl:onProperty obo:BFO_0000050 ;
             owl:someValuesFrom ?parent .
+    }
+
+    OPTIONAL {
+        ?disease_type rdfs:subClassOf ORDO:C001 ;
+            rdfs:label ?disease_type_label .
+        ?disease_child rdfs:subClassOf+ ORDO:377788 .
+        ?class rdfs:subClassOf+ ?disease_type .
     }
 
     OPTIONAL {
