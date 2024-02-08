@@ -9,10 +9,15 @@ library(DO.utils)
 # Load data ---------------------------------------------------------------
 
 ### LOCATIONS ###
+# Search for 'susceptibility' at omim.org and download file to following location
+susc_file <- here::here("data/mapping/src/omim_susceptibility.tsv")
+
 de_file <- here::here("../Ontologies/HumanDiseaseOntology/src/ontology/doid-edit.owl")
 omim_gs <- "https://docs.google.com/spreadsheets/d/1DFEqe1_jDgQNuJjgx-uIZUicNxHXI0br6DR669-F8Z8/edit#gid=771734333"
 
 ### LOAD FILES ###
+omim_susc <- DO.utils::read_omim(susc_file, keep_mim = c("#", "%", "^", "none"))
+
 sb_omim <- purrr::map(
     c("Exact", "Broad"),
     function(.s) {
@@ -75,7 +80,20 @@ ois_same <- purrr::map(
 googlesheets4::write_sheet(ois_same, omim_gs, "stats-comparison")
 
 
-# write to new sheets
+# Identify SciBite-recommended xrefs that are susceptibilities ------------
+
+omim_inv <- purrr::map(
+    omim_inv,
+    ~ dplyr::left_join(
+        .x,
+        dplyr::select(omim_susc, omim, omim_title = title),
+        by = "omim"
+    )
+)
+
+
+# Write output data to new sheets -----------------------------------------
+
 purrr::walk2(
     omim_inv,
     names(omim_inv),
