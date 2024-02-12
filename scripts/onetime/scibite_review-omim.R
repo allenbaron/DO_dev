@@ -37,6 +37,44 @@ sb_omim <- purrr::map(
 ) %>%
     purrr::set_names(nm = c("exact", "broad"))
 
+# GET parent child relationships in DO
+dh_file <- tempfile(fileext = ".tsv")
+q_hier <- '
+PREFIX rdfs: <http://www.w3.org/2000/01/rdf-schema#>
+PREFIX owl: <http://www.w3.org/2002/07/owl#>
+PREFIX oboInOwl: <http://www.geneontology.org/formats/oboInOwl#>
+
+SELECT ?id (GROUP_CONCAT(DISTINCT ?ancestor;separator="|") AS ?ancestors)
+    (GROUP_CONCAT(DISTINCT ?descendant;separator="|") AS ?descendants)
+WHERE {
+    ?class oboInOwl:id ?id ;
+        rdfs:subClassOf+ ?ancestor_uri .
+    ?descendant_uri rdfs:subClassOf+ ?class ;
+        oboInOwl:id ?descendant .
+    ?ancestor_uri oboInOwl:id ?ancestor .
+    FILTER(STRSTARTS(?id, "DOID"))
+    FILTER NOT EXISTS { ?class owl:deprecated true }
+}
+GROUP BY ?id'
+qh_file <- tempfile(fileext = ".rq")
+readr::write_lines(q_hier, qh_file)
+DO.utils::robot("query", i = de_file, query = qh_file, dh_file)
+do_hier <- readr::read_tsv(dh_file) %>%
+    DO.utils::tidy_sparql() %>%
+    tidyr::pivot_longer(
+        cols = c(ancestors, descendants),
+        names_to = "relationship",
+        values_to = "id2"
+    ) %>%
+    dplyr::mutate(
+        relationship = dplyr::recode(
+            relationship,
+            ancestors = "narrow",
+            descendants = "broad"
+        )
+    ) %>%
+    DO.utils::lengthen_col(id2, delim = "|")
+
 
 # Inventory SciBite OMIM suggestions --------------------------------------
 
@@ -62,9 +100,12 @@ omim_inv <- purrr::map(
     omim_inv,
     ~ dplyr::mutate(
         .x,
-        doid_same = doid_scibite == doid,
-        do_label_same = doid_same & do_label_scibite == do_label
-    )
+        doid_same = doid_scibite == doid, # are DOIDs the same?
+        do_label_same = doid_same & do_label_scibite == do_label # if DOIDs the same, are labels?
+    ) %>%
+        # if DOIDs are not the same, show relationship (broad/narrow) scibite -> DOID, if any
+        dplyr::left_join(do_hier, by = c("doid_scibite" = "id", "doid" = "id2")) %>%
+        dplyr::rename(do_scibite_inventory_relationship = relationship)
 )
 
 # how many unique OMIM IDs are the same
@@ -73,7 +114,7 @@ ois_same <- purrr::map(
     ~ dplyr::summarize(
         .x,
         n = dplyr::n_distinct(omim),
-        .by = c(doid_same, do_label_same)
+        .by = c(doid_same, do_label_same, do_scibite_inventory_relationship)
     )
 ) %>%
     dplyr::bind_rows(.id = "match")
