@@ -6,18 +6,39 @@ library(tidyverse)
 library(DO.utils)
 
 
-# Load data ---------------------------------------------------------------
 
-### LOCATIONS ###
-# Search for 'susceptibility' at omim.org and download file to following location
-susc_file <- here::here("data/mapping/src/omim_susceptibility.tsv")
+# Data paths/locations ----------------------------------------------------
 
-de_file <- here::here("../Ontologies/HumanDiseaseOntology/src/ontology/doid-edit.owl")
+# OMIM_DOID_Mapping = main data from SciBite mapping for analysis
 omim_gs <- "https://docs.google.com/spreadsheets/d/1DFEqe1_jDgQNuJjgx-uIZUicNxHXI0br6DR669-F8Z8/edit#gid=771734333"
 
-### LOAD FILES ###
-omim_susc <- DO.utils::read_omim(susc_file, keep_mim = c("#", "%", "^", "none"))
+# doid-edit.owl file
+de_file <- here::here("../Ontologies/HumanDiseaseOntology/src/ontology/doid-edit.owl")
 
+# MANUALLY search for 'susceptibility' at omim.org and download file to
+# following location
+susc_file <- here::here("data/mapping/src/omim_susceptibility.tsv")
+
+# 'OMIM updates from MGI' google sheet
+mgi_omim <- "https://docs.google.com/spreadsheets/d/1SUiFOMGeO3QJfnevpXAPFN90UmAaeoIHF7u0X5lvgc4/edit#gid=686803456"
+
+# download OMIM entry names in phenotypic series (only if file older 7 days)
+omimps_file <- here::here("data/external/omim/phenotypicSeries.txt")
+if (
+    !file.exists(omimps_file) ||
+    Sys.time() - file.info(omimps_file)$ctime > as.difftime(7, units = "days")
+) {
+    omimps_file <- DO.utils::download_omim(
+        "phenotypicSeries",
+        dirname(omimps_file),
+        api_key = keyring::key_get("omim_key")
+    )
+}
+
+
+# Load data ---------------------------------------------------------------
+
+# scibite omim mapping
 sb_omim <- purrr::map(
     c("Exact", "Broad"),
     function(.s) {
@@ -37,7 +58,38 @@ sb_omim <- purrr::map(
 ) %>%
     purrr::set_names(nm = c("exact", "broad"))
 
-# GET parent child relationships in DO
+omim_susc <- DO.utils::read_omim(
+    susc_file,
+    keep_mim = c("#", "%", "^", "none")
+) %>%
+    dplyr::select(omim, name.from_susc = title) %>%
+    DO.utils::collapse_col(name.from_susc)
+
+omim_ps <- DO.utils::read_omim(omimps_file, col_types = "c") %>%
+    dplyr::rename(
+        ps = phenotypic_series_number,
+        omim = mim_number,
+        name.from_ps = phenotype
+    ) %>%
+    dplyr::mutate(
+        omim = as.character(omim),
+        omim = paste0(
+            "OMIM:",
+            dplyr::if_else(is.na(omim), ps, omim)
+        )
+    ) %>%
+    dplyr::select(omim, name.from_ps) %>%
+    DO.utils::collapse_col(name.from_ps)
+
+# new term names from 'OMIM updates from MGI' google sheet
+omim_new <- googlesheets4::read_sheet(
+    ss = mgi_omim,
+    sheet = "OMIM new terms"
+) %>%
+    dplyr::select(omim = id, name.from_new = name) %>%
+    DO.utils::collapse_col(name.from_new)
+
+# parent child relationships in DO
 dh_file <- tempfile(fileext = ".tsv")
 q_hier <- '
 PREFIX rdfs: <http://www.w3.org/2000/01/rdf-schema#>
@@ -59,7 +111,7 @@ GROUP BY ?id'
 qh_file <- tempfile(fileext = ".rq")
 readr::write_lines(q_hier, qh_file)
 DO.utils::robot("query", i = de_file, query = qh_file, dh_file)
-do_hier <- readr::read_tsv(dh_file) %>%
+do_hier <- readr::read_tsv(dh_file, show_col_types = FALSE) %>%
     DO.utils::tidy_sparql() %>%
     tidyr::pivot_longer(
         cols = c(ancestors, descendants),
@@ -90,7 +142,16 @@ ois_full <- purrr::map(
     ois,
     function(.x) { class(.x) <- class(.x)[-1] ; .x}
 ) %>%
-    dplyr::bind_rows(.id = "match")
+    dplyr::bind_rows(.id = "scibite_set") %>%
+    dplyr::mutate(
+        dataset = stringr::str_extract(report, "omim|doid"),
+        report = stringr::str_remove(report, "(omim|doid)_")
+    ) %>%
+    tidyr::pivot_wider(
+        names_from = report,
+        values_from = n
+    ) %>%
+    dplyr::relocate(present, .before = absent)
 googlesheets4::write_sheet(ois_full, omim_gs, "stats")
 
 
@@ -98,38 +159,61 @@ googlesheets4::write_sheet(ois_full, omim_gs, "stats")
 
 omim_inv <- purrr::map(
     omim_inv,
-    ~ dplyr::mutate(
-        .x,
-        doid_same = doid_scibite == doid, # are DOIDs the same?
-        do_label_same = doid_same & do_label_scibite == do_label # if DOIDs the same, are labels?
-    ) %>%
-        # if DOIDs are not the same, show relationship (broad/narrow) scibite -> DOID, if any
-        dplyr::left_join(do_hier, by = c("doid_scibite" = "id", "doid" = "id2")) %>%
+    ~ # identify relationship (broad/narrow) scibite -> DOID, if any
+        dplyr::left_join(
+            .x,
+            do_hier,
+            by = c("doid_scibite" = "id", "doid" = "id2")
+        ) %>%
+        dplyr::mutate(
+            # identify exact matches
+            relationship = dplyr::case_when(
+                doid_scibite == doid & do_label_scibite != do_label ~ "exact (diff label)",
+                doid_scibite == doid ~ "exact",
+                TRUE ~ relationship
+            )
+        ) %>%
         dplyr::rename(do_scibite_inventory_relationship = relationship)
 )
 
 # how many unique OMIM IDs are the same
-ois_same <- purrr::map(
+ois_compare <- purrr::map(
     omim_inv,
-    ~ dplyr::summarize(
+    ~ dplyr::mutate(
         .x,
-        n = dplyr::n_distinct(omim),
-        .by = c(doid_same, do_label_same, do_scibite_inventory_relationship)
-    )
+        do_scibite_inventory_relationship = tidyr::replace_na(
+            do_scibite_inventory_relationship,
+            "none"
+        ),
+        do_scibite_inventory_relationship = factor(
+            do_scibite_inventory_relationship,
+            levels = c("exact", "exact (diff label)", "broad", "narrow", "none")
+        )
+    ) %>%
+        dplyr::summarize(
+            n = dplyr::n_distinct(omim),
+            .by = do_scibite_inventory_relationship
+        )
 ) %>%
-    dplyr::bind_rows(.id = "match")
-googlesheets4::write_sheet(ois_same, omim_gs, "stats-comparison")
+    dplyr::bind_rows(.id = "scibite_set") %>%
+    dplyr::arrange(
+        dplyr::desc(scibite_set),
+        do_scibite_inventory_relationship,
+    )
+googlesheets4::write_sheet(ois_compare, omim_gs, "stats-comparison")
 
 
-# Identify SciBite-recommended xrefs that are susceptibilities ------------
+# Add OMIM names from various sources -------------------------------------
 
 omim_inv <- purrr::map(
     omim_inv,
-    ~ dplyr::left_join(
-        .x,
-        dplyr::select(omim_susc, omim, omim_title = title),
-        by = "omim"
-    )
+    ~ dplyr::left_join(.x, omim_susc, by = "omim", relationship = "many-to-many") %>%
+        dplyr::left_join(omim_ps, by = "omim", relationship = "many-to-many") %>%
+        dplyr::left_join(omim_new, by = "omim", relationship = "many-to-many") %>%
+        dplyr::mutate(
+            omim_title = dplyr::coalesce(name.from_susc, name.from_ps, name.from_new)
+        ) %>%
+        dplyr::select(-dplyr::starts_with("name.from"))
 )
 
 
