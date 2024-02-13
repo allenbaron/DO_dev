@@ -12,29 +12,8 @@ de_path <- here::here(
 
 omim_res <- DO.utils::inventory_omim(de_path, omim_tsv)
 
-# drop genes when using search results
-if ("omim_search" %in% class(omim_res)) {
-    omim_res <- dplyr::filter(omim_res, mim_type != "gene")
-}
-
 # review results
-omim_report <- DO.utils::inventory_report(omim_res)
-
-# add inventory_report() issue identifiers to inventory as "status"
-with_status <- dplyr::bind_rows(
-    omim_report[names(omim_report) != "stats"],
-    .id = "status"
-) %>%
-    dplyr::select(omim, doid, status) %>%
-    DO.utils::collapse_col(status, delim = " | ", na.rm = TRUE)
-
-if (nrow(with_status) > 0) {
-    omim_res <- dplyr::full_join(
-        omim_res,
-        with_status,
-        by = c("omim", "doid")
-    )
-}
+report <- DO.utils::elucidate(omim_res)
 
 # write to google sheets?
 continue <- readline("Write to file? yes/no ")
