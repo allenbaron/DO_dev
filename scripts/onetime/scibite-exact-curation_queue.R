@@ -229,6 +229,14 @@ googlesheets4::write_sheet(
 
 # CHANGES NEEDING REVIEW --------------------------------------------------
 
+sb_nr <- sb_exact %>%
+    dplyr::filter(
+        stringr::str_detect(
+            DO_review,
+            stringr::coll("needs review", ignore_case = TRUE)
+        )
+    ) %>%
+    dplyr::select(dplyr::where(~ !DO.utils::is_invariant(.x)))
 
 
 # EXTRA -------------------------------------------------------------------
