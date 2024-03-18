@@ -13,6 +13,7 @@ de_path <- "~/Documents/Ontologies/HumanDiseaseOntology/src/ontology/doid-edit.o
 
 # Supporting function(s) --------------------------------------------------
 
+# merges a template into an input ontology file
 rt_merge <- function(input, template, format = "ofn") {
     if (is.data.frame(template)) {
         temp <- tempfile(fileext = ".csv")
@@ -79,7 +80,7 @@ def_fmla <- function(df) {
 # Read in review of Scibite's OMIM-DO exact mappings ----------------------
 
 sb_exact <- googlesheets4::read_sheet(
-    gs,
+    sb_review_gs,
     "omim_inventory-exact"
 ) %>%
     dplyr::mutate(
