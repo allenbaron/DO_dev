@@ -76,6 +76,15 @@ def_fmla <- function(df) {
     googlesheets4::gs4_formula(fmla)
 }
 
+# appends the Google sheets filename & sheet name (put in together as sheet_nm)
+# to a column so all sheets where curation is taking place are noted
+note_curate_in <- function(x, test, sheet_nm) {
+    dplyr::case_when(
+        test & is.na(x) ~ sheet_nm,
+        test ~ paste(x, sheet_nm, sep = " | "),
+        TRUE ~ NA_character_
+    )
+}
 
 # Read in review of Scibite's OMIM-DO exact mappings ----------------------
 
@@ -98,8 +107,18 @@ sb_exact <- googlesheets4::read_sheet(
 
 # XREFS -------------------------------------------------------------------
 
-xref_add <- sb_exact %>%
-    dplyr::filter(!is.na(add_xref)) %>%
+xref_curate_note <- "xref: Scibite_template-simple_add > omim-exact-xref"
+sb_exact_out <- sb_exact %>%
+    dplyr::mutate(
+        curate_in = dplyr::if_else(
+            !is.na(add_xref),
+            xref_curate_note,
+            NA_character_
+        )
+    )
+
+xref_add <- sb_exact_out %>%
+    dplyr::filter(stringr::str_detect(curate_in, xref_add_curate_sheet)) %>%
     dplyr::select(add_xref, DO_review)
 
 
