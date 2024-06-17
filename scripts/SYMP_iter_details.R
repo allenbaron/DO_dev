@@ -163,7 +163,8 @@ symp_counts <- dplyr::bind_rows(
         dplyr::mutate(id_type = "commit") %>%
         dplyr::select(id = commit, id_type, dplyr::everything())
 ) %>%
-    dplyr::arrange(date)
+    dplyr::arrange(date) %>%
+    dplyr::relocate(id, id_type, date, terms, defs)
 
 readr::write_csv(
     symp_counts,
@@ -178,9 +179,9 @@ symp_plot_df <- symp_counts %>%
         n_terms = .data$terms - .data$defs,
         n_defs = .data$defs
     ) %>%
-    dplyr::select(-.data$terms, -.data$defs) %>%
+    dplyr::select(-"terms", -"defs") %>%
     tidyr::pivot_longer(
-        cols = c(.data$n_terms, .data$n_defs),
+        cols = c(n_terms, n_defs),
         names_to = "variable",
         values_to = "value"
     ) %>%
@@ -191,7 +192,7 @@ symp_plot_df <- symp_counts %>%
 g_symp <- ggplot2::ggplot(symp_plot_df) +
     ggplot2::geom_area(
         ggplot2::aes(x = .data$date, y = .data$value, fill = .data$variable),
-        size = 1
+        linewidth = 1
     ) +
     ggplot2::scale_fill_manual(
         name = "Total",
