@@ -3,22 +3,23 @@
 PREFIX rdfs: <http://www.w3.org/2000/01/rdf-schema#>
 PREFIX owl: <http://www.w3.org/2002/07/owl#>
 PREFIX oboInOwl: <http://www.geneontology.org/formats/oboInOwl#>
+PREFIX DOID: <http://purl.obolibrary.org/obo/DOID_>
 
 SELECT DISTINCT ?id ?label
-    (GROUP_CONCAT(?parent_label; SEPARATOR="|") AS ?parents)
-    (GROUP_CONCAT(?branch_label; SEPARATOR="|") AS ?branch)
+    (GROUP_CONCAT(DISTINCT ?parent_label; SEPARATOR="|") AS ?parents)
+    (GROUP_CONCAT(DISTINCT ?branch_label; SEPARATOR="|") AS ?branch)
 WHERE {
     ?class a owl:Class ;
         oboInOwl:id ?id ;
         rdfs:label ?label ;
         rdfs:subClassOf ?superclass .
-    FILTER (CONTAINS(STR(?class), "DOID"))
-    FILTER NOT EXISTS { ?class owl:deprecated ?obsolete . }
 
     ?superclass rdfs:label ?parent_label ;
         rdfs:subClassOf* ?branch_iri .
 
     ?branch_iri rdfs:label ?branch_label ;
-        rdfs:subClassOf obo:DOID_4 .
+        rdfs:subClassOf DOID:4 .
+
+    FILTER NOT EXISTS { ?class owl:deprecated ?obsolete . }
 }
 GROUP BY ?id ?label
