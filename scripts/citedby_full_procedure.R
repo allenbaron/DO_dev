@@ -282,13 +282,9 @@ new <- match_citations(final_merge, gs_data) %>%
     is.na()
 new_df <- dplyr::filter(final_merge, new)
 
-
-# Add new data to GS data & count -----------------------------------------
-
-updated <- dplyr::bind_rows(gs_data, new_df)
-
-to_count <- rep(TRUE, nrow(updated))
-counts <- updated %>%
+# number of new records by source matched
+to_count <- rep(TRUE, nrow(new_df))
+new_src_count <- new_df %>%
     dplyr::select(pmid, pmcid, scopus_eid, doi) %>%
     purrr::map_int(
         function(.col) {
@@ -299,9 +295,47 @@ counts <- updated %>%
             n
         }
     )
-counts
-sum(counts)
-nrow(updated)
+new_src_count
+
+# total number of new publications
+sum(new_src_count)
+
+# Add new data to GS data & count -----------------------------------------
+
+updated <- dplyr::bind_rows(gs_data, new_df)
+
+to_count <- rep(TRUE, nrow(updated))
+updated_src_count <- updated %>%
+    dplyr::select(pmid, pmcid, scopus_eid, doi) %>%
+    purrr::map_int(
+        function(.col) {
+            n <- .col[to_count] %>%
+                stats::na.omit() %>%
+                dplyr::n_distinct()
+            to_count <<- dplyr::if_else(to_count == FALSE, FALSE, is.na(.col))
+            n
+        }
+    )
+
+# number of publications identified using each ID, to date
+updated_src_count
+
+# total number of publications identified to date (unique should equal total rows)
+sum(updated_src_count)
+if (nrow(updated) == sum(counts)) {
+    continue <- TRUE
+} else {
+    continue <- FALSE
+    stop(
+        paste0(
+            "Number of rows in updated cited by data (",
+            nrow(updated),
+            ") != unique number of records (",
+            sum(counts),
+            ")"
+        )
+    )
+}
 
 
 # Append new data to GS ---------------------------------------------------
@@ -321,6 +355,6 @@ new_df <- new_df %>%
     tibble::add_column(!!!cols_add) %>%
     dplyr::select(dplyr::one_of(names(gs_data)))
 
-if (!interactive()) {
+if (!interactive() && isTRUE(continue)) {
     googlesheets4::sheet_append(gs, new_df, cb_sheet)
 }
