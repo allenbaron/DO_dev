@@ -62,8 +62,8 @@ data_dir <- here::here("data/DO_release")
 repo_path <- here::here("../Ontologies/HumanDiseaseOntology")
 repo <- DO.utils::DOrepo(repo_path)
 
-svn_path <- here::here("../DO_website")
-plot_outdir <- file.path(svn_path, "disease_ontology/media/images/statistics")
+svn_path <- here::here("../DO_website/do_trunk")
+plot_outdir <- file.path(svn_path, "static/disease_ontology/media/images/statistics")
 
 # for data/DO_release/DO_release_details.csv
 source(here::here("scripts/DO_release_details.R"))
