@@ -81,7 +81,8 @@ def_fmla <- function(df) {
 
 sb_exact <- googlesheets4::read_sheet(
     sb_review_gs,
-    "omim_inventory-exact"
+    "omim_inventory-exact",
+    col_types = "cccclcclcccccccccc"
 ) %>%
     dplyr::mutate(
         # convert xref col to chr from list (lgl + chr col read in as list)
