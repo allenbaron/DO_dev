@@ -30,11 +30,6 @@ rt_auto <- dplyr::filter(rt_main, stringr::str_detect(type, "auto"))$header
 
 camrq_cur <- googlesheets4::read_sheet(gs_camrq, sheet_ct, col_types = "c")
 
-# PREP:
-header_drop <- c(
-    "parent label", "def phrase: genetic basis", "def phrase: characterized by"
-)
-
 # 1. drop curation columns
 camrq_prep <- camrq_cur %>%
     dplyr::select("iri/curie", "annotation", "value", "remove") %>%
@@ -99,7 +94,7 @@ ann1 <- dplyr::filter(
 )$header
 camrq_err <- camrq_prep %>%
     dplyr::filter(.data$annotation %in% ann1 & !.data$remove) %>%
-    DO.utils::collapse_col(.cols = .data$value, delim = " | ") %>%
+    DO.utils::collapse_col(.cols = "value", delim = " | ") %>%
     dplyr::filter(stringr::str_detect(.data$value, "\\|"))
 
 if (nrow(camrq_err) > 0) {
@@ -118,7 +113,7 @@ if (nrow(camrq_err) > 0) {
 camrq_err <- camrq_prep %>%
     dplyr::filter(!.data$annotation %in% rt_main$header) %>%
     dplyr::select("iri/curie", "annotation") %>%
-    DO.utils::collapse_col(.cols = .data$annotation, delim = ", ")
+    DO.utils::collapse_col(.cols = "annotation", delim = ", ")
 
 if (nrow(camrq_err) > 0) {
     rlang::abort(
@@ -135,36 +130,59 @@ if (nrow(camrq_err) > 0) {
 # 5. confirm existing / new diseases being added
 all_id <- unique(camrq_prep[["iri/curie"]])
 
-# check if classes exist --> safe, can also return label & deprecated status, takes > 6 s
+# check if classes exist --> safe, can also return term info, takes > 6 s
 query <- DO.utils:::glueV('
-PREFIX owl: <http://www.w3.org/2002/07/owl#>
 PREFIX rdfs: <http://www.w3.org/2000/01/rdf-schema#>
+PREFIX owl: <http://www.w3.org/2002/07/owl#>
+PREFIX obo: <http://purl.obolibrary.org/obo/>
+PREFIX oboInOwl: <http://www.geneontology.org/formats/oboInOwl#>
+
 !<<prefix_stmt>>!
 
-SELECT ?iri ?label ?deprecated
+SELECT DISTINCT ?iri ?ns ?label ?parent_iri ?definition ?comment ?deprecated
 WHERE {
-    VALUES ?iri { !<<IRI>>! }
+    VALUES ?iri { !<<iri>>! }
 
     ?iri a owl:Class ;
-        rdfs:label ?label_en .
+        oboInOwl:hasOBONamespace ?ns ;
+        # oboInOwl:id ?id ; #### temporarily not checking, auto-dropped ####
+        rdfs:label ?label_en ;
+        rdfs:subClassOf ?parent_iri .
+
+    FILTER(!isBlank(?parent_iri))
     FILTER(lang(?label_en) IN ("", "en"))
     BIND(str(?label_en) AS ?label)
 
+    OPTIONAL {
+        ?iri obo:IAO_0000115 ?def_en .
+        FILTER(lang(?def_en) IN ("", "en"))
+        BIND(str(?def_en) AS ?definition)
+    }
+    OPTIONAL {
+        ?iri rdfs:comment ?comment_en .
+        FILTER(lang(?comment_en) IN ("", "en"))
+        BIND(str(?comment_en) AS ?comment)
+    }
     OPTIONAL { ?iri owl:deprecated true }
 }',
     prefix_stmt = "PREFIX DOID: <http://purl.obolibrary.org/obo/DOID_>",
-    IRI = DO.utils::vctr_to_string(all_id, delim = " ")
+    iri = DO.utils::vctr_to_string(all_id, delim = " ")
 )
 
-in_DO_id <- DO.utils::robot_query(
+in_DO <- DO.utils::robot_query(
     de,
     query,
-    tidy_what = c("header", "uri_to_curie", "lgl_NA_FALSE")
-)
-new_id <- all_id[!all_id %in% in_DO_id$iri]
+    tidy_what = c("header", "uri_to_curie")
+) %>%
+    dplyr::mutate(
+        dplyr::across(c("definition", "comment"), as.character)
+    ) %>%
+    tidy_sparql(tidy_what = "lgl_NA_FALSE")
 
-dep_n <- sum(in_DO_id$deprecated)
-id_n <- c(nrow(in_DO_id), length(new_id), length(all_id))
+new_id <- all_id[!all_id %in% in_DO$iri]
+
+dep_n <- sum(in_DO$deprecated)
+id_n <- c(nrow(in_DO), length(new_id), length(all_id))
 print(
     array(
         data = id_n,
@@ -182,13 +200,13 @@ if (dep_n > 0) {
 #     # DO.utils::
 #     DO.utils::vctr_to_string(delim = "|")
 #
-# in_DO_id <- readr::read_file(de) %>%
+# in_DO <- readr::read_file(de) %>%
 #     stringr::str_extract_all(all_regex) %>%
 #     unlist() %>%
 #     unique()
-# new_id <- all_id[!all_id %in% in_DO_id]
+# new_id <- all_id[!all_id %in% in_DO]
 #
-# id_n <- c(length(in_DO_id), length(new_id), length(all_id))
+# id_n <- c(length(in_DO), length(new_id), length(all_id))
 # print(
 #     array(
 #         data = id_n,
@@ -223,7 +241,7 @@ if (user_check != "y") {
 
     # return(
         list(
-            in_DO = dplyr::rename(in_DO_id, "iri/curie" = "iri"),
+            in_DO = dplyr::rename(in_DO, "iri/curie" = "iri"),
             new = get_cur_label(new = new_id)
         )
     # )
@@ -259,20 +277,104 @@ if (nrow(camrq_err) > 0) {
     )
 }
 
+# 7. determine if any single value headers would be added to existing terms --> error
+#   --> will report which requirements are missing for all given iri/curie
+exist_data <- in_DO %>%
+    dplyr::rename(
+        "iri/curie" = "iri", "obo namespace" = "ns" ,
+        "parent iri/curie" = "parent_iri"
+    ) %>%
+    dplyr::select(dplyr::any_of(ann1)) %>%
+    tidyr::pivot_longer(
+        -"iri/curie",
+        names_to = "annotation",
+        values_to = "value",
+        values_drop_na = TRUE
+    )
+
+camrq_err <- camrq_prep %>%
+    dplyr::filter(
+        .data$`iri/curie` %in% exist_data[["iri/curie"]],
+        .data$annotation %in% ann1
+    ) %>%
+    dplyr::anti_join(exist_data, by = names(exist_data)) #%>%
+# can't manage to show the two values without some serious processing... not worth it at this point
+    # dplyr::left_join(
+    #     dplyr::rename(exist_data, existing_value = "value"),
+    #     by = c("iri/curie", "annotation")
+    # )
+
+if (nrow(camrq_err) > 0) {
+    rlang::abort(
+        c(
+            "Curated disease info must not duplicate existing, singular data.",
+            purrr::set_names(
+                paste(
+                    camrq_err[["iri/curie"]], camrq_err$annotation,
+                    # paste0(
+                    #     "curated: ", camrq_err$value,
+                    #     "vs existing: ", camrq_err$existing_value
+                    # ),
+                    sep = " - "
+                ),
+                rep("x", nrow(camrq_err))
+            )
+        )
+    )
+}
+
 
 
 # Generate ROBOT template -------------------------------------------------
 
+# retain ONLY data to be added (exclude data to remove)
+camrq_add <- camrq_prep %>%
+    dplyr::filter(!.data$remove) %>%
+    dplyr::select("iri/curie", "annotation", "value")
 
-# format data
-camrq_wide <- camrq_prep %>%
-    # retain data to add with an existing template
-    dplyr::filter(!.data$remove & .data$annotation %in% header_order) %>%
-    dplyr::select("iri/curie", "annotation", "value") %>%
-    dplyr::rename("iri/curie" = "iri/curie") %>%
-    DO.utils::collapse_col(.data$value, delim = "|") %>%
+# add obo id & namespace to new diseases
+obo_req <- tibble::tibble(
+    'iri/curie' = rep(new_id, times = 2),
+    annotation = rep(c("obo id", "obo namespace"), each = length(new_id)),
+    value = c(
+        DO.utils::to_curie(new_id),
+        rep("disease_ontology", length(new_id))
+    )
+)
+
+
+# if def src or src type & no def for existing in curated sheet, add existing def
+### THIS DOES NOT WORK AS DESIRED... IT ADDS ANOTHER COPY OF THE DEFINITION
+needed_def <- camrq_add %>%
+    dplyr::summarize(
+        .by = "iri/curie",
+        temp = any(annotation %in% c("definition source(s)", "definition source type(s)")) &
+            !any(annotation == "definition")
+    ) %>%
+    dplyr::filter(temp) %>%
+    dplyr::select("iri/curie") %>%
+    dplyr::left_join(
+        dplyr::filter(exist_data, .data$annotation == "definition"),
+        by = "iri/curie"
+    )
+
+# reciprocally add oboInOwl:hasDbXref / skos:exactMatch annotations
+xref_skos <- camrq_add %>%
+    dplyr::filter(.data$annotation %in% c("xref(s)", "skos mapping(s): exact")) %>%
     dplyr::mutate(
-        annotation = factor(.data$annotation, levels = header_order)
+        annotation = dplyr::recode(
+            annotation,
+            "xref(s)" = "skos mapping(s): exact",
+            "skos mapping(s): exact" = "xref(s)"
+        )
+    )
+
+# add & format data
+camrq_wide <- camrq_add %>%
+    dplyr::bind_rows(obo_req, needed_def, xref_skos) %>%
+    DO.utils::collapse_col("value", delim = "|") %>%
+    dplyr::mutate(
+        annotation = factor(.data$annotation, levels = rt_main$header)
     ) %>%
     dplyr::arrange(.data$annotation, .data$`iri/curie`) %>%
     tidyr::pivot_wider(
@@ -282,6 +384,7 @@ camrq_wide <- camrq_prep %>%
 
 # add templates to existing columns
 rt_template <- rt_main %>%
+    dplyr::select("header", "template") %>%
     dplyr::filter(.data$header %in% names(camrq_wide)) %>%
     tidyr::pivot_wider(
         names_from = "header",
@@ -293,12 +396,13 @@ camrq_rt <- tibble::add_row(camrq_wide, rt_template, .before = 1)
 #   multiple acronym columns with varying synonym types are supported
 #   annotation column name will match acronym col being annotated appended with " - annotation"
 acr_header <- names(camrq_rt)[stringr::str_detect(names(camrq_rt), "^acronym")]
+acr_template <- dplyr::filter(rt_main, header == "acronym annotation")$template
 purrr::walk2(
     acr_header,
     1:length(acr_header),
     function(.x, .y) {
         acr_ann <- dplyr::if_else(!is.na(camrq_rt[[.x]]), "acronym", NA_character_)
-        acr_ann[1] <- ">A oboInOwl:SynonymTypeProperty"
+        acr_ann[1] <- acr_template
         acr_ann_col <- list(acr_ann)
         names(acr_ann_col) <- paste0(.x, " - annotation")
         camrq_rt <<- tibble::add_column(
@@ -329,7 +433,7 @@ camrq_rm <- camrq_prep %>%
         annotation,
         values_linked = paste0("(", `iri/curie`, " ", value, ")"),
     ) %>%
-    DO.utils::collapse_col(values_linked, delim = " ", na.rm = TRUE)
+    DO.utils::collapse_col("values_linked", delim = " ", na.rm = TRUE)
 
 values_stmt <- paste0(
     "VALUES ",
@@ -370,4 +474,9 @@ header_order <- c(
     "sc axiom: inheritance", "sc axiom: anatomical location",
     "sc axiom: onset", "sc axiom: has_material_basis_in", "sc axiom: located_in",
     "disjoint class"
+)
+
+# PREP:
+header_drop <- c(
+    "parent label", "def phrase: genetic basis", "def phrase: characterized by"
 )
