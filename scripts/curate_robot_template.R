@@ -9,9 +9,9 @@ de <- here::here("../Ontologies/HumanDiseaseOntology/src/ontology/doid-edit.owl"
 
 gs_rt_recode <- "https://docs.google.com/spreadsheets/d/1Zn6p5xkVHUwbWe1N8FUa3fNcEkAOoE9P4ADb12f69hQ/edit"
 
-gs_camrq <- "https://docs.google.com/spreadsheets/d/1bWW6bcOm9tisTb0DroQrhD2oqe2XDEbbm8xkqPKiFkM/edit"
-sheet_ct <- "curation_20240718"
-sheet_rt <- "robot_template_20240718"
+gs <- "https://docs.google.com/spreadsheets/d/17SKWy4qNKOqNzJo63cKUimcC97u3uhXRyTyxTw6B2KE/edit"
+sheet_ct <- "curation_20240730"
+sheet_rt <- "robot_template_20240730"
 
 
 # Identify expected values and template codes -----------------------------
@@ -28,10 +28,10 @@ rt_auto <- dplyr::filter(rt_main, stringr::str_detect(type, "auto"))$header
 
 # Prep & check curated data -----------------------------------------------
 
-camrq_cur <- googlesheets4::read_sheet(gs_camrq, sheet_ct, col_types = "c")
+cur <- googlesheets4::read_sheet(gs, sheet_ct, col_types = "c")
 
 # 1. drop curation columns
-camrq_prep <- camrq_cur %>%
+prep <- cur %>%
     dplyr::select("iri/curie", "annotation", "value", "remove") %>%
 # 2. drop rows with only curation info (iri/curie, annotation, & value are empty)
     dplyr::filter(!dplyr::if_all("iri/curie":"value", is.na)) %>%
@@ -66,69 +66,91 @@ camrq_prep <- camrq_cur %>%
 #   confident correct if adding programmatically
 
 # CHECK:
-# 1. determine if either of annotation or value is missing --> error
-camrq_err <- camrq_prep %>%
-    dplyr::filter(
-        dplyr::if_any(
-            c("annotation", "value"),
-            ~ DO.utils::is_blank(.x) | is.na(.x)
-        )
-    )
-
-if (nrow(camrq_err) > 0) {
-    rlang::abort(
-        c(
-            "Annotations and values must be specified in pairs.",
-            purrr::set_names(
-                paste(camrq_err[["iri/curie"]], camrq_err$annotation, camrq_err$value, sep = " - "),
-                nm = rep("x", nrow(camrq_err))
-            )
-        )
-    )
-}
+# 1. determine if either of annotation or value is missing --> error ==> THIS IS PRECLUDED BY PREP STEP #3
+# err <- prep %>%
+#     dplyr::filter(
+#         dplyr::if_any(
+#             c("annotation", "value"),
+#             ~ DO.utils::is_blank(.x) | is.na(.x)
+#         )
+#     )
+#
+# if (nrow(err) > 0) {
+#     rlang::abort(
+#         c(
+#             "Annotations and values must be specified in pairs.",
+#             purrr::set_names(
+#                 paste(err[["iri/curie"]], err$annotation, err$value, sep = " - "),
+#                 nm = rep("x", nrow(err))
+#             )
+#         )
+#     )
+# }
 
 # 3. determine if headers are properly limited to single values
 ann1 <- dplyr::filter(
     rt_main,
     !stringr::str_detect(template, stringr::coll("SPLIT=", ignore_case = TRUE))
 )$header
-camrq_err <- camrq_prep %>%
+err <- prep %>%
     dplyr::filter(.data$annotation %in% ann1 & !.data$remove) %>%
     DO.utils::collapse_col(.cols = "value", delim = " | ") %>%
     dplyr::filter(stringr::str_detect(.data$value, "\\|"))
 
-if (nrow(camrq_err) > 0) {
+if (nrow(err) > 0) {
     rlang::abort(
         c(
             "Disease(s) must include no more than 1 value for specified annotations.",
             purrr::set_names(
-                paste(camrq_err[["iri/curie"]], camrq_err$annotation, camrq_err$value, sep = " - "),
-                rep("x", nrow(camrq_err))
+                paste(err[["iri/curie"]], err$annotation, err$value, sep = " - "),
+                rep("x", nrow(err))
             )
         )
     )
 }
 
-# 4. determine if there are unexpected data headers (besides drop & keep) --> error
-camrq_err <- camrq_prep %>%
-    dplyr::filter(!.data$annotation %in% rt_main$header) %>%
-    dplyr::select("iri/curie", "annotation") %>%
-    DO.utils::collapse_col(.cols = "annotation", delim = ", ")
+# 4. determine if there are unexpected data headers (besides drop & keep) --> error ==> THIS IS PRECLUDED BY PREP STEP #3
+# err <- prep %>%
+#     dplyr::filter(!.data$annotation %in% rt_main$header) %>%
+#     dplyr::select("iri/curie", "annotation") %>%
+#     DO.utils::collapse_col(.cols = "annotation", delim = ", ")
+#
+# if (nrow(err) > 0) {
+#     rlang::abort(
+#         c(
+#             "Unrecognized annotations exist in curated data.",
+#             purrr::set_names(
+#                 paste(err[["iri/curie"]], err$annotation, sep = " - "),
+#                 rep("x", nrow(err))
+#             )
+#         )
+#     )
+# }
 
-if (nrow(camrq_err) > 0) {
-    rlang::abort(
+# 4. make sure acronym/synonym annotations are correct
+err <- prep %>%
+    dplyr::mutate(
+        is_acronym = stringr::str_detect(value, "^[A-Za-z][A-Z0-9]{1,7}$")
+    ) %>%
+    dplyr::filter(
+        (!.data$is_acronym & stringr::str_detect(annotation, "acronym")) |
+            (.data$is_acronym & stringr::str_detect(annotation, "synonym"))
+    )
+
+if (nrow(err) > 0) {
+    rlang::warn(
         c(
-            "Unrecognized annotations exist in curated data.",
+            "Are acronyms/synonyms annotations mixed up?",
             purrr::set_names(
-                paste(camrq_err[["iri/curie"]], camrq_err$annotation, sep = " - "),
-                rep("x", nrow(camrq_err))
+                paste(err[["iri/curie"]], err$annotation, err$value, sep = " - "),
+                rep("i", nrow(err))
             )
         )
     )
 }
 
 # 5. confirm existing / new diseases being added
-all_id <- unique(camrq_prep[["iri/curie"]])
+all_id <- unique(prep[["iri/curie"]])
 
 # check if classes exist --> safe, can also return term info, takes > 6 s
 query <- DO.utils:::glueV('
@@ -224,7 +246,7 @@ if (user_check != "y") {
     # custom function to return curated labels when they exist
     get_cur_label <- function(.df, new) {
         new_w_label <- dplyr::filter(
-            camrq_prep,
+            prep,
             .data$`iri/curie` %in% new_id & .data$annotation == "label"
         ) %>%
             dplyr::select("iri/curie", label = "value")
@@ -254,7 +276,7 @@ new_req <- dplyr::filter(
     stringr::str_detect(type, stringr::coll("required manual", ignore_case = TRUE))
 )$header
 new_req <- new_req[!new_req == "iri/curie"]
-camrq_err <- camrq_prep %>%
+err <- prep %>%
     dplyr::filter(.data$`iri/curie` %in% new_id) %>%
     dplyr::summarize(
         missing = DO.utils::vctr_to_string(
@@ -265,13 +287,13 @@ camrq_err <- camrq_prep %>%
     ) %>%
     dplyr::filter(!is.na(.data$missing))
 
-if (nrow(camrq_err) > 0) {
+if (nrow(err) > 0) {
     rlang::abort(
         c(
             "New disease(s) must have all required annotations.",
             purrr::set_names(
-                paste(camrq_err[["iri/curie"]], camrq_err$missing, sep = " - "),
-                rep("x", nrow(camrq_err))
+                paste(err[["iri/curie"]], err$missing, sep = " - "),
+                rep("x", nrow(err))
             )
         )
     )
@@ -292,32 +314,45 @@ exist_data <- in_DO %>%
         values_drop_na = TRUE
     )
 
-camrq_err <- camrq_prep %>%
+err <- prep %>%
     dplyr::filter(
         .data$`iri/curie` %in% exist_data[["iri/curie"]],
-        .data$annotation %in% ann1
+        .data$annotation %in% ann1,
+        !.data$remove
     ) %>%
-    dplyr::anti_join(exist_data, by = names(exist_data)) #%>%
+    dplyr::bind_rows(
+        dplyr::filter(exist_data, .data$annotation %in% ann1),
+        .id = "src"
+    ) %>%
+    dplyr::group_by(.data[["iri/curie"]], .data$annotation) %>%
+    dplyr::mutate(
+        both = all(c("1", "2") %in% .data$src),
+        differ = dplyr::n_distinct(.data$value) > 1
+    ) %>%
+    dplyr::filter(.data$both, .data$differ) %>%
+    dplyr::select("iri/curie":"value") %>%
+    DO.utils::collapse_col("value")
+
 # can't manage to show the two values without some serious processing... not worth it at this point
     # dplyr::left_join(
     #     dplyr::rename(exist_data, existing_value = "value"),
     #     by = c("iri/curie", "annotation")
     # )
 
-if (nrow(camrq_err) > 0) {
+if (nrow(err) > 0) {
     rlang::abort(
         c(
             "Curated disease info must not duplicate existing, singular data.",
             purrr::set_names(
                 paste(
-                    camrq_err[["iri/curie"]], camrq_err$annotation,
+                    err[["iri/curie"]], err$annotation,
                     # paste0(
-                    #     "curated: ", camrq_err$value,
-                    #     "vs existing: ", camrq_err$existing_value
+                    #     "curated: ", err$value,
+                    #     "vs existing: ", err$existing_value
                     # ),
                     sep = " - "
                 ),
-                rep("x", nrow(camrq_err))
+                rep("x", nrow(err))
             )
         )
     )
@@ -328,7 +363,7 @@ if (nrow(camrq_err) > 0) {
 # Generate ROBOT template -------------------------------------------------
 
 # retain ONLY data to be added (exclude data to remove)
-camrq_add <- camrq_prep %>%
+add <- prep %>%
     dplyr::filter(!.data$remove) %>%
     dplyr::select("iri/curie", "annotation", "value")
 
@@ -345,7 +380,7 @@ obo_req <- tibble::tibble(
 
 # if def src or src type & no def for existing in curated sheet, add existing def
 ### THIS DOES NOT WORK AS DESIRED... IT ADDS ANOTHER COPY OF THE DEFINITION
-needed_def <- camrq_add %>%
+needed_def <- add %>%
     dplyr::summarize(
         .by = "iri/curie",
         temp = any(annotation %in% c("definition source(s)", "definition source type(s)")) &
@@ -358,19 +393,13 @@ needed_def <- camrq_add %>%
         by = "iri/curie"
     )
 
-# reciprocally add oboInOwl:hasDbXref / skos:exactMatch annotations
-xref_skos <- camrq_add %>%
-    dplyr::filter(.data$annotation %in% c("xref(s)", "skos mapping(s): exact")) %>%
-    dplyr::mutate(
-        annotation = dplyr::recode(
-            annotation,
-            "xref(s)" = "skos mapping(s): exact",
-            "skos mapping(s): exact" = "xref(s)"
-        )
-    )
+# add oboInOwl:hasDbXref from skos:exactMatch annotations (not reciprocal because of exceptions)
+xref_skos <- add %>%
+    dplyr::filter(.data$annotation %in% "skos mapping(s): exact") %>%
+    dplyr::mutate(annotation = "xref(s)")
 
 # add & format data
-camrq_wide <- camrq_add %>%
+wide <- add %>%
     dplyr::bind_rows(obo_req, needed_def, xref_skos) %>%
     DO.utils::collapse_col("value", delim = "|") %>%
     dplyr::mutate(
@@ -385,28 +414,28 @@ camrq_wide <- camrq_add %>%
 # add templates to existing columns
 rt_template <- rt_main %>%
     dplyr::select("header", "template") %>%
-    dplyr::filter(.data$header %in% names(camrq_wide)) %>%
+    dplyr::filter(.data$header %in% names(wide)) %>%
     tidyr::pivot_wider(
         names_from = "header",
         values_from = "template"
     )
-camrq_rt <- tibble::add_row(camrq_wide, rt_template, .before = 1)
+rt <- tibble::add_row(wide, rt_template, .before = 1)
 
 # add acronym annotations
 #   multiple acronym columns with varying synonym types are supported
 #   annotation column name will match acronym col being annotated appended with " - annotation"
-acr_header <- names(camrq_rt)[stringr::str_detect(names(camrq_rt), "^acronym")]
+acr_header <- names(rt)[stringr::str_detect(names(rt), "^acronym")]
 acr_template <- dplyr::filter(rt_main, header == "acronym annotation")$template
 purrr::walk2(
     acr_header,
     1:length(acr_header),
     function(.x, .y) {
-        acr_ann <- dplyr::if_else(!is.na(camrq_rt[[.x]]), "acronym", NA_character_)
+        acr_ann <- dplyr::if_else(!is.na(rt[[.x]]), "acronym", NA_character_)
         acr_ann[1] <- acr_template
         acr_ann_col <- list(acr_ann)
         names(acr_ann_col) <- paste0(.x, " - annotation")
-        camrq_rt <<- tibble::add_column(
-            camrq_rt,
+        rt <<- tibble::add_column(
+            rt,
             !!!acr_ann_col,
             .after = .x
         )
@@ -414,7 +443,7 @@ purrr::walk2(
 )
 
 # write final robot template
-googlesheets4::write_sheet(camrq_rt, gs_camrq, sheet_rt)
+googlesheets4::write_sheet(rt, gs, sheet_rt)
 
 # Generate SPARQL remove query --------------------------------------------
 
@@ -422,7 +451,7 @@ googlesheets4::write_sheet(camrq_rt, gs_camrq, sheet_rt)
 source(here::here("scripts/curate_remove_template.R"))
 
 # SPARQL remove query
-camrq_rm <- camrq_prep %>%
+rm <- prep %>%
     dplyr::filter(remove) %>%
     # format values for remove
     dplyr::mutate(
@@ -437,9 +466,9 @@ camrq_rm <- camrq_prep %>%
 
 values_stmt <- paste0(
     "VALUES ",
-    dplyr::recode(camrq_rm$annotation, !!!sparql_values),
+    dplyr::recode(rm$annotation, !!!sparql_values),
     " { ",
-    camrq_rm$values_linked,
+    rm$values_linked,
     " }"
 )
 # where_stmt = dplyr::if_else(
@@ -448,7 +477,7 @@ values_stmt <- paste0(
 #     annotation
 # ),
 # where_stmt = dplyr::recode(where_stmt, !!!sparql_where),
-delete_stmt <- dplyr::recode(camrq_rm$annotation, !!!sparql_delete)
+delete_stmt <- dplyr::recode(rm$annotation, !!!sparql_delete)
 
 
 
