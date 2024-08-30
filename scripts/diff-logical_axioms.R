@@ -2,11 +2,17 @@ library(here)
 library(DO.utils)
 library(tidyverse)
 
-onto_dir <- here::here("../Ontologies/HumanDiseaseOntology/src/ontology")
+do_dir <- here::here("../Ontologies/HumanDiseaseOntology")
 
 owl_paths <- c(
-    old = file.path(onto_dir, "doid.owl"),
-    new = file.path(onto_dir, "doid-edit.owl")
+    old = file.path(do_dir, "build/doid-last.owl"),
+    new = file.path(do_dir, "src/ontology/doid-edit.owl")
+)
+
+# make sure last official doid.owl file is at doid-last.owl
+download.file(
+    "https://purl.obolibrary.org/obo/doid/doid-merged.owl",
+    destfile = owl_paths$old
 )
 
 axiom_paths <- c(
@@ -81,3 +87,19 @@ axiom_review <- axioms %>%
     dplyr::left_join(do_info, by = "id") %>%
     dplyr::select(change_type, id, label, deprecated, dplyr::everything()) %>%
     dplyr::arrange(change_type, id, type, new, old)
+
+
+# review changes if many
+if (sum(axiom_review$change_type == "changed") > 5) {
+    change_review <- dplyr::filter(axiom_review, change_type == "changed") %>%
+        dplyr::mutate(
+            dplyr::across(
+                old:new,
+                ~ stringr::str_replace_all(.x, stringr::coll("|"), "\n")
+            )
+        )
+
+    write_csv(change_review, "DEL-axiom_review.csv")
+}
+
+View(axiom_review)
