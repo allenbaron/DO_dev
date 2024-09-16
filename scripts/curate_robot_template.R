@@ -9,9 +9,9 @@ de <- here::here("../Ontologies/HumanDiseaseOntology/src/ontology/doid-edit.owl"
 
 gs_rt_recode <- "https://docs.google.com/spreadsheets/d/1Zn6p5xkVHUwbWe1N8FUa3fNcEkAOoE9P4ADb12f69hQ/edit"
 
-gs <- "https://docs.google.com/spreadsheets/d/17SKWy4qNKOqNzJo63cKUimcC97u3uhXRyTyxTw6B2KE/edit"
-sheet_ct <- "curation_20240730"
-sheet_rt <- "robot_template_20240730"
+gs <- "https://docs.google.com/spreadsheets/d/1RAoK_6J4cuSnzLUFva92VqCqPcIJxRt_SM07KALhIRc/edit?gid=1343696215#gid=1343696215"
+sheet_ct <- "curation_20240820"
+sheet_rt <- paste0("robot_template_", stringr::str_extract(sheet_ct, "20[0-9]+$"))
 
 
 # Identify expected values and template codes -----------------------------
@@ -28,6 +28,7 @@ rt_auto <- dplyr::filter(rt_main, stringr::str_detect(type, "auto"))$header
 
 # Prep & check curated data -----------------------------------------------
 
+# Load and pre-process curated data
 cur <- googlesheets4::read_sheet(gs, sheet_ct, col_types = "c")
 
 # 1. drop curation columns
@@ -60,12 +61,13 @@ prep <- cur %>%
 # **. [TEMPORARY] drop automated columns that may have been entered manually
     dplyr::filter(!.data$annotation %in% rt_auto)
 
-
-##### ADDITIONAL PROCESSING IDEAS ####
+# ADDITIONAL PROCESSING IDEAS
 # 1. drop 'acronym annotation' header if it's been added; may be incorrect, more
 #   confident correct if adding programmatically
 
-# CHECK:
+
+# CHECK data
+
 # 1. determine if either of annotation or value is missing --> error ==> THIS IS PRECLUDED BY PREP STEP #3
 # err <- prep %>%
 #     dplyr::filter(
@@ -192,14 +194,30 @@ WHERE {
 )
 
 in_DO <- DO.utils::robot_query(
-    de,
-    query,
-    tidy_what = c("header", "uri_to_curie")
-) %>%
-    dplyr::mutate(
-        dplyr::across(c("definition", "comment"), as.character)
-    ) %>%
-    tidy_sparql(tidy_what = "lgl_NA_FALSE")
+        de,
+        query,
+        tidy_what = c("header", "uri_to_curie")
+    )
+
+# ensure cols exist when all diseases are new
+if (nrow(in_DO) == 0) {
+    in_DO <- tibble::tibble(
+        iri = character(0),
+        ns = character(0),
+        label = character(0),
+        parent_iri = character(0),
+        definition = character(0),
+        comment = character(0),
+        deprecated = logical(0)
+    )
+} else {
+    # otherwise, ensure columns are correctly formatted, even when empty
+    in_DO <- in_DO %>%
+        dplyr::mutate(
+            dplyr::across(c("definition", "comment"), as.character)
+        ) %>%
+        tidy_sparql(tidy_what = "lgl_NA_FALSE")
+}
 
 new_id <- all_id[!all_id %in% in_DO$iri]
 
