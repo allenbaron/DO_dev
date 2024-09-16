@@ -80,7 +80,7 @@ glys_res <- glys_ftxt %>%
         glys_gene = stringr::str_extract_all(
             ft,
             "\\b[A-Z]{3}[A-Z0-9]{1,}\\b"
-        )
+        ),
         glys_nm = stringr::str_extract_all(
             ft,
             stringr::regex(
