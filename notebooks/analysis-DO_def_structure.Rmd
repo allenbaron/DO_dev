@@ -1,7 +1,7 @@
 ---
 title: "Evaluation of Definition Structure"
 author: "J. Allen Baron"
-date: "Created: 2022-04-06<br style='line-height: 2;'>Updated: 2023-07-18"
+date: "Created: 2022-04-06<br style='line-height: 2;'>Updated: 2024-09-16"
 output: 
     html_notebook:
         toc: true
@@ -28,6 +28,9 @@ library(DO.utils)
 library(tidytext)
 library(wordcloud2)
 library(kableExtra)
+
+# avoid summarize messages about grouping
+options(dplyr.summarise.inform = FALSE)
 
 # custom functions
 percent <- function(x) {
@@ -90,7 +93,7 @@ def <- repo$doid$query(q) %>%
     tibble::as_tibble() %>%
     tidyr::unnest(obs, keep_empty = TRUE) %>%
     dplyr::mutate(
-        obs = dplyr::if_else(is.na(obs), FALSE, obs),
+        obs = dplyr::if_else(is.na(obs), FALSE, as.logical(obs)),
         cb_format = stringr::str_extract(def, "(that is )?characterized by"),
         chr_by = stringr::str_extract(def, "characterized by.*") %>%
             stringr::str_squish()
@@ -127,6 +130,8 @@ Newer IDs more often use "characterized by" without the "that is".
 
 **PREFER format without "that is ".**
 
+**NOTE 2024-09-16, JAB:** Lynn has said she prefers to include 'that is' before 'characterized by' but I still don't use it for brevity's sake and sticking with the more common pattern.
+
 
 3. What is the "characterized by" statement for?
 
@@ -135,6 +140,7 @@ def %>%
     dplyr::filter(!is.na(chr_by)) %>%
     dplyr::select(chr_by)
 ```
+
 There is a mix of its use preceding a list of symptoms/phenotypes/signs and use preceding a cause. I'll need to ask for clarification on the preference.
 
 **The consensus is that "characterized by" should precede a list of symptoms/phenotypes/signs.**
@@ -195,7 +201,7 @@ syn_def <- repo$doid$query(syndrome_q) %>%
     tibble::as_tibble() %>%
     tidyr::unnest(obs, keep_empty = TRUE) %>%
     dplyr::mutate(
-        obs = dplyr::if_else(is.na(obs), FALSE, obs),
+        obs = dplyr::if_else(is.na(obs), FALSE, as.logical(obs)),
         cb_format = stringr::str_extract(def, "(that is )?characterized by"),
         chr_by = stringr::str_extract(def, "characterized by.*") %>%
             stringr::str_squish()
@@ -251,11 +257,13 @@ It seems like "Budd-Chiari syndrome" (DOID:11512) really is a syndrome (no known
 3. How many syndromes _in name only_ have causes identified?
 
 ```{r}
-sino %>%
+sino_cause <- sino %>%
     dplyr::filter(stringr::str_detect(def, "from"))
+
+sino_cause
 ```
 
-About 38.
+About `r nrow(sino_cause)`.
 
 **Generally syndromes start with a "characterized by" list, which may be followed by the cause if known.**
 
@@ -376,6 +384,7 @@ no_cb %>%
     dplyr::filter(!is.na(is_a)) %>%
     dplyr::count(is_a, sort = TRUE)
 ```
+
 It appears that it is primarily used in place of one of the more common statements.
 
 **"that is a" should be avoided and used in only rare instances.**
@@ -402,8 +411,7 @@ count(def, newer, has_caused) %>%
 
 These statements are not common. They're use has declined in non-obsolete, newer terms.
 
-**ANSWER**
-On 2022-04-04 Lynn stated "caused by" should generally be avoided.
+**NOTE 2022-04-04, JAB:** Lynn stated "caused by" should generally be avoided.
 
 
 ## Parentheses & Terminology
@@ -580,7 +588,7 @@ inflate_col_ <- function(df, col, sep = " | ", fixed = TRUE,
 }
 ```
 
-Not all "has_material_basis_in" uses in definitions refer to a genetic basis and no one term or pattern exists to identify all of these. Most, if not all, can be matched with a search for words like mutation, gene, chromosome, etc. The breakdown of matches used to identify genetic "has_material_basis_in" definitions is as follows (with some definitions having multiple matches):
+Not all "has_material_basis_in" used in definitions refer to a genetic basis and no one term or pattern exists to identify all of these. Most, if not all, can be matched with a search for words like mutation, gene, chromosome, etc. The breakdown of matches used to identify genetic "has_material_basis_in" definitions is as follows (with some definitions having multiple matches):
 
 
 ```{r}
@@ -659,7 +667,8 @@ g3 <- hmbi %>%
 
 dplyr::count(g3, words, sort = TRUE)
 ```
-The major pattern BY FAR is probably "has_material_basis_in mutation in the <GENE SYMBOL> gene on chromosome <CYTOGENETIC LOCATION>." It's challenging to know how often gene names are included but it might be possible to measure how often the gene symbol appears without the gene name.
+
+The major pattern BY FAR is probably "has_material_basis_in mutation in the {GENE SYMBOL} gene on chromosome {CYTOGENETIC LOCATION}." It's challenging to know how often gene names are included but it might be possible to measure how often the gene symbol appears without the gene name.
 
 ```{r}
 hmbi %>%
@@ -682,7 +691,8 @@ gene_id <- hmbi %>%
 
 gene_id
 ```
-It seems ~ `r sum(gene_id$pct[c(1, 4:9)])` of all genetic has_material_basis_in statements have only the gene symbol (and not any type of name). While that's not a definitive majority, it is probably the predominant pattern, as the remaining ~ 50% is more variable.
+
+It seems ~ `r sum(gene_id$pct[c(1, 4:9)])` of all genetic has_material_basis_in statements have only the gene symbol (and not any type of name). This identifies a common, but not exclusive, pattern.
 
 
 ### Inheritance
@@ -723,8 +733,6 @@ def_inherit <- def %>%
 dplyr::count(def_inherit, term) %>%
     dplyr::arrange(term)
 ```
-
-Some typos... expected. There are few updates needed.
 
 1. It looks like it's common to have a combination of 5 words together related to autosomal inheritance in various arrangement: autosomal, recessive, dominant, inheritance, and gene plus derivatives.
     - I wonder what the more complete 'autosomal gene(s|tic)' phrases are?
@@ -885,13 +893,15 @@ def_inherit <- def %>%
     )
 ```
 
-The breakdown of text before each inheritance "term" is: 
+The breakdown of text before each inheritance "term" is:
+
 ```{r}
 def_inherit %>%
     dplyr::count(term, before, sort = TRUE)
 ```
 
 Hmmm... looks like a lot of "has_material_basis_in" and "characterized by" but the exact counts of those are split due to other text variations. Focusing on those two "terms", the counts become:
+
 ```{r}
 def_inherit <- def_inherit %>%
     dplyr::mutate(b_common = stringr::str_extract(before, "has_material_basis_in|characterized by"))
@@ -921,6 +931,7 @@ def_inherit %>%
 Looking at this it appears most common to include inheritance after has_material_basis_in but prior to description of the mutation type (homozygous/heterozygous/etc.).
 
 We can assign patterns to different people by organizing by assigned range(s) of IDs (Lynn: 50000,50999 & 80000,85999; etc.).
+
 ```{r}
 def_inherit <- def_inherit %>%
     dplyr::mutate(
@@ -937,6 +948,7 @@ dplyr::count(def_inherit, creator)
 ```
 
 And then look at trends in has_material_basis vs "characterized by" by author or group:
+
 ```{r}
 def_inherit <- def_inherit %>%
     dplyr::group_by(creator) %>%
@@ -950,6 +962,7 @@ ggplot(def_inherit) +
 Hmmm... it seems pre-2015 additions and those made by Lynn are generally preferred to be made after 'has_material_basis_in' while the MODs and others are variable over time (possibly curator-linked).
 
 Lynn's most 5 recent additions by inheritance term include the following definitions:
+
 ```{r}
 def_inherit %>%
     dplyr::filter(creator == "Lynn") %>%
@@ -1043,14 +1056,16 @@ no_gene_idf <- no_gene %>%
 
 no_gene_idf
 ```
+
 'region' > 'mutation' > 'variation' seem to be the most common genetic mutation/location words used when 'gene' is not. Other less frequent (< 10%) possibilities include 'deletion' > 'locus' > 'duplication' ~ 'genes' ~ 'variable' > 'mb' (assuming megabase) ~ 'mapped' ~ 'linkage' ~ 'snps' (i.e. SNPs)
 
 With regard to 'variation' vs 'variant', etc. it appears that DO has a clear and definite preference for variation, not using 'variant' at all.
+
 ```{r}
 dplyr::filter(no_gene_idf, stringr::str_detect(word, "^var"))
 ```
 
-I know from prior exploration that 'gene' is most frequently used in the phrase 'the <SYMBOL> gene'.
+I know from prior exploration that 'gene' is most frequently used in the phrase 'the {SYMBOL} gene'.
 
 **What about the phrases for 'region', 'mutation' and 'variation'?**
 
@@ -1102,6 +1117,7 @@ ng_phrase_n <- ng_phrase_split %>%
 
 
 The most common words at each position surrounding one of these 3 terms can be seen below.
+
 ```{r}
 ng_phrase_summary <- ng_phrase_n %>%
     purrr::map(
@@ -1127,6 +1143,7 @@ ng_phrase_summary %>%
 
 
 Simplifying these back into phrases makes the patterns more apparent.
+
 ```{r}
 purrr::map2(
     ng_phrase_summary,
@@ -1154,6 +1171,55 @@ purrr::map2(
     unlist() %>%
     unname()
 ```
+
+
+#### Variation, Gene Unknown
+
+When a disease is linked to a specific region on a chromosome and no gene has been identified what is the appropriate pattern to use?
+
+```{r}
+hmbi_region <- hmbi %>%
+    dplyr::filter(
+        stringr::str_detect(def, "region|linkage"),
+        # ignore gene-based hmbi statements
+        !stringr::str_detect(hmbi, stringr::coll("GENE_SYM")),
+        !stringr::str_detect(def, stringr::coll("gene")),
+        # ignore deletions and duplications, which are a special case
+        !stringr::str_detect(label, "deletion|duplication")
+    ) %>%
+    dplyr::mutate(
+        # ignore chromosome and variant symbols & drop CHROM_SYM
+        hmbi = stringr::str_replace_all(
+            hmbi,
+            "[YX0-9][pqter0-9_.-]+[^ ]*|CHROM_SYM[^ ]*",
+            "..."
+        )
+    )
+
+region_patterns <- dplyr::count(hmbi_region, hmbi, sort = TRUE) %>%
+    dplyr::mutate(pct = round(n / sum(n) * 100, 2))
+region_patterns
+```
+
+Of the `r sum(region_patterns$n)` definitions that fit this pattern in DO, the largest group (`r region_patterns$pct[1]`%) have the pattern `r region_patterns$hmbi[1]`). The next largest group appears to be missing the word "chromosome" before region. It seems most of the patterns could be condensed into this general pattern:
+
+`(inheritance)? (variation|mutation) in (the|a) (chromosom(e|al) region|region|region on chromosome)`
+
+I may standardize these somewhat. If I do that, I'd replace "region" and "chromsomal region" with the more frequent "chromosome region" and replace "a" with the more common "the". I might also replace "mutation" with "variation" but "mutation" is still common in genetic patterns we are creating in the DO, so I'm more hesitant to do that.
+
+Including inheritance in the phrase is fairly common (`r sum(dplyr::filter(region_patterns, stringr::str_detect(hmbi, "inherit|zygous"))$pct)`%) and I think is meaningful. It is much more common to include the phrase as "(hetero|homo|hemi)zygous" than to state the "dominant|recessive" inheritance, which is in a agreement with our other genetic patterns. I'm a bit surprised there are so many "zygous"-based statements since, technically speaking, zygosity is determined based on alleles. I guess it can be inferred from inheritance patterns but not perfectly (e.g. homozygous vs compound heterozygous). Because the "zygous" pattern exists, it seems to suggest it's preferred but it's technical inaccuracy makes me hesitant to use it. Admittedly, the "inheritance"-based pattern has a negative stigma to it. I think that might be because it just doesn't read well in a has_material_basis_in statement.
+
+**No clear answer here**, _but maybe it doesn't matter?_
+
+```{r}
+dplyr::filter(region_patterns, stringr::str_detect(hmbi, "inherit|zygous")) %>%
+    dplyr::mutate(inheritance = stringr::str_extract(hmbi, "inherit|zygous")) %>%
+    dplyr::summarize(.by = inheritance, n = sum(n), pct = sum(pct))
+```
+
+
+Two other patterns I see are one for deletions in a given region (those should've been dropped but weren't and can be ignored here) and one using a different pattern with "linkage" and mentioning SNPs that accounts for only `r sum(dplyr::filter(region_patterns, stringr::str_detect(hmbi, "linkage"))$pct)`%.
+
 
 
 ## Cellular Proliferation: Phrases or Words
