@@ -321,8 +321,7 @@ updated_src_count <- updated %>%
 updated_src_count
 
 # total number of publications identified to date (unique should equal total rows)
-sum(updated_src_count)
-if (nrow(updated) == sum(counts)) {
+if (nrow(updated) == sum(updated_src_count)) {
     continue <- TRUE
 } else {
     continue <- FALSE
@@ -331,7 +330,7 @@ if (nrow(updated) == sum(counts)) {
             "Number of rows in updated cited by data (",
             nrow(updated),
             ") != unique number of records (",
-            sum(counts),
+            sum(updated_src_count),
             ")"
         )
     )
