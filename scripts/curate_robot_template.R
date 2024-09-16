@@ -13,6 +13,9 @@ gs <- "https://docs.google.com/spreadsheets/d/1RAoK_6J4cuSnzLUFva92VqCqPcIJxRt_S
 sheet_ct <- "curation_20240820"
 sheet_rt <- paste0("robot_template_", stringr::str_extract(sheet_ct, "20[0-9]+$"))
 
+# INCOMPLETE - SPARQL remove procedure... may not want to source it at this point in script
+#source(here::here("scripts/curate_remove_template.R"))
+
 
 # Identify expected values and template codes -----------------------------
 
@@ -462,68 +465,3 @@ purrr::walk2(
 
 # write final robot template
 googlesheets4::write_sheet(rt, gs, sheet_rt)
-
-# Generate SPARQL remove query --------------------------------------------
-
-### INCOMPLETE - SPARQL remove query ####
-source(here::here("scripts/curate_remove_template.R"))
-
-# SPARQL remove query
-rm <- prep %>%
-    dplyr::filter(remove) %>%
-    # format values for remove
-    dplyr::mutate(
-        value = dplyr::case_when(
-            annotation %in% sparql_string ~
-                stringr::str_replace_all(value, c('^"?'
-    dplyr::transmute(
-        annotation,
-        values_linked = paste0("(", `iri/curie`, " ", value, ")"),
-    ) %>%
-    DO.utils::collapse_col("values_linked", delim = " ", na.rm = TRUE)
-
-values_stmt <- paste0(
-    "VALUES ",
-    dplyr::recode(rm$annotation, !!!sparql_values),
-    " { ",
-    rm$values_linked,
-    " }"
-)
-# where_stmt = dplyr::if_else(
-#     annotation %in% c("definition source(s)", "definition source type(s)"),
-#     "definition",
-#     annotation
-# ),
-# where_stmt = dplyr::recode(where_stmt, !!!sparql_where),
-delete_stmt <- dplyr::recode(rm$annotation, !!!sparql_delete)
-
-
-
-
-# EXTRA -------------------------------------------------------------------
-
-
-# header order ensure consistent output (mostly for human review but also
-#   ensures definition annotation columns are in correct position)
-header_order <- c(
-    "iri/curie", "obo id", "obo namespace", "label", "comment",
-    "deprecate", "alternate id(s)", "term replaced by",
-    "parent iri/curie",
-    "definition", "definition source(s)", "definition source type(s)",
-    "acronym(s): exact", "acronym(s): related",
-    "synonym(s): exact", "synonym(s): broad", "synonym(s): narrow",
-    "synonym(s): related",
-    "xref(s)",
-    "skos mapping(s): exact", "skos mapping(s): broad",
-    "skos mapping(s): narrow", "skos mapping(s): related",
-    "subset(s)",
-    "equivalent class",
-    "sc axiom: inheritance", "sc axiom: anatomical location",
-    "sc axiom: onset", "sc axiom: has_material_basis_in", "sc axiom: located_in",
-    "disjoint class"
-)
-
-# PREP:
-header_drop <- c(
-    "parent label", "def phrase: genetic basis", "def phrase: characterized by"
-)
