@@ -94,15 +94,26 @@ continue <- readline("Do all approximate matches look okay? y/n")
 
 # combine all matches back into a single df (should be same length as orig_df)
 if (continue == "y") {
+    # get matching DOID
+    do_data <- googlesheets4::read_sheet(gs, "audit_20240923") |>
+        dplyr::select(id, url)
+
     res_df <- df |>
+        # get exact URL matches
         dplyr::filter(!url %in% approx_match$url) |>
+        # get confirmed approx URL matches
         dplyr::bind_rows(
             dplyr::select(approx_match, url = url_decode, status:impact)
         ) |>
         dplyr::full_join(orig_df, by = c("url" = "url_decode")) |>
         dplyr::relocate(orig_url, .before = 1) |>
         dplyr::rename(url_decode = url) |>
-        tidyr::replace_na(list(impact = "OK"))
+        # mark tested URLs that did not error
+        tidyr::replace_na(list(impact = "OK")) |>
+        # add DOIDs
+        dplyr::left_join(do_data, by = c("orig_url" = "url")) |>
+        dplyr::relocate(id, .before = 1) |>
+        DO.utils::collapse_col("id")
 
     dplyr::count(res_df, status, sort = TRUE)
 }
