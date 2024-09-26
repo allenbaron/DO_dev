@@ -9,11 +9,14 @@ owl_paths <- c(
     new = file.path(do_dir, "src/ontology/doid-edit.owl")
 )
 
-# make sure last official doid.owl file is at doid-last.owl
-download.file(
-    "https://purl.obolibrary.org/obo/doid/doid-merged.owl",
-    destfile = owl_paths$old
-)
+# make sure last official doid-merged.owl file is at doid-last.owl
+#   --> downloads if not already updated today
+if (format(file.mtime(owl_paths["old"]), "%Y-%m-%d") != Sys.Date()) {
+    download.file(
+        "https://purl.obolibrary.org/obo/doid/doid-merged.owl",
+        destfile = owl_paths["old"]
+    )
+}
 
 axiom_paths <- c(
     old = tempfile(tmpdir = ".", fileext = ".tsv"),
