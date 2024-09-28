@@ -13,7 +13,7 @@ owl_paths <- c(
 #   --> downloads if not already updated today
 if (format(file.mtime(owl_paths["old"]), "%Y-%m-%d") != Sys.Date()) {
     download.file(
-        "https://purl.obolibrary.org/obo/doid/doid-merged.owl",
+        "https://purl.obolibrary.org/obo/doid.owl",
         destfile = owl_paths["old"]
     )
 }
@@ -87,6 +87,8 @@ axiom_review <- axioms %>%
         names_from = file_version,
         values_from = value
     ) %>%
+    # in case axioms are only added or removed and one of the cols is missing
+    DO.utils::append_empty_col(col = c("new", "old")) %>%
     dplyr::left_join(do_info, by = "id") %>%
     dplyr::select(change_type, id, label, deprecated, dplyr::everything()) %>%
     dplyr::arrange(change_type, id, type, new, old)

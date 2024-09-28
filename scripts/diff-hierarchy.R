@@ -3,17 +3,17 @@ library(DO.utils)
 library(tidyverse)
 
 do_dir <- here::here("../Ontologies/HumanDiseaseOntology")
-
+de_path <- file.path(do_dir, "src/ontology/doid-edit.owl")
 owl_paths <- c(
     old = file.path(do_dir, "build/doid-last.owl"),
-    new = file.path(do_dir, "src/ontology/doid-merged.owl")
+    new = file.path(do_dir, "build/doid-reasoned.owl")
 )
 
 # make sure last official doid-merged.owl file is at doid-last.owl
 #   --> downloads if not already updated today
 if (format(file.mtime(owl_paths["old"]), "%Y-%m-%d") != Sys.Date()) {
     download.file(
-        "https://purl.obolibrary.org/obo/doid/doid-merged.owl",
+        "https://purl.obolibrary.org/obo/doid.owl",
         destfile = owl_paths["old"]
     )
 }
@@ -22,6 +22,18 @@ hier_paths <- c(
     old = tempfile(tmpdir = ".", fileext = ".tsv"),
     new = tempfile(tmpdir = ".", fileext = ".tsv")
 )
+
+# create reasoned output (pre-release)
+DO.utils::robot(
+    "reason",
+    i = de_path,
+    "create-new-ontology" = FALSE,
+    "annotate-inferred-axioms" = FALSE,
+    "exclude-duplicate-axioms" = TRUE,
+    o = owl_paths["new"],
+    .robot_path = file.path(do_dir, "build/robot.jar")
+)
+
 
 # get axioms
 hier <- purrr::map2(
