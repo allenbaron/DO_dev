@@ -65,30 +65,49 @@ do_info <- DO.utils::robot_query(
 sc_recode <- paste0(do_info$label, " (", do_info$id, ")") |>
     purrr::set_names(do_info$id)
 
-hier_review <- hier |>
+hier_tmp <- hier |>
+    # drop IDs with no changed parents
+    dplyr::filter(
+        !all(c("new", "old") %in% file_version),
+        .by = c("id", "parent")
+    ) |>
     DO.utils::lengthen_col("parent") |>
-    dplyr::mutate(parent = dplyr::recode(parent, !!!sc_recode)) |>
-    DO.utils::collapse_col("parent") |>
-    dplyr::filter(!all_duplicated(paste0(.data$id, .data$parent))) |>
+    DO.utils::collapse_col("file_version") |>
     dplyr::mutate(
         change_type = dplyr::case_when(
-            all(c("new", "old") %in% file_version) ~ "changed",
-            all(file_version == "new") ~ "added",
-            all(file_version == "old") ~ "removed"
+            all(c("new", "old") %in% file_version, na.rm = TRUE) ~ "changed",
+            all(!"old" %in% file_version) ~ "added",
+            all(!"new" %in% file_version) ~ "removed"
         ),
         .by = "id"
     ) |>
     dplyr::mutate(
+        file_version = dplyr::if_else(
+            stringr::str_detect(.data$file_version, stringr::coll("|")),
+            "unchanged",
+            .data$file_version
+        ),
+        parent = dplyr::recode(.data$parent, !!!sc_recode),
         change_type = factor(change_type, levels = c("added", "removed", "changed"))
-    ) |>
+    )
+# ensure relocate works when any of new, old, or unchanged is missing
+fversion <- factor(
+    unique(hier_tmp$file_version),
+    levels = c("unchanged", "old", "new")
+) |>
+    sort() # set order
+
+hier_review <- hier_tmp |>
     tidyr::pivot_wider(
         names_from = file_version,
         values_from = "parent",
         values_fn = ~ DO.utils::vctr_to_string(.x)
     ) |>
     dplyr::left_join(do_info, by = "id") |>
-    dplyr::relocate(change_type, id, label, deprecated, old, .before = new) |>
-    dplyr::arrange(new, old, change_type, id)
+    dplyr::relocate(
+        change_type, id, label, deprecated, dplyr::one_of(fversion)
+    ) |>
+    dplyr::arrange(label, change_type)
 
 
 # review changes if many
