@@ -110,17 +110,14 @@ hier_review <- hier_tmp |>
     dplyr::arrange(label, change_type)
 
 
-# review changes if many
-if (sum(hier_review$change_type == "changed") > 5) {
-    change_review <- dplyr::filter(hier_review, change_type == "changed") |>
-        dplyr::mutate(
-            dplyr::across(
-                old:new,
-                ~ stringr::str_replace_all(.x, stringr::coll("|"), "\n")
-            )
+# write changes for review
+change_review <- hier_review |>
+    dplyr::mutate(
+        dplyr::across(
+            dplyr::all_of(fversion),
+            ~ stringr::str_replace_all(.x, stringr::coll("|"), "\n")
         )
-
-    write_csv(change_review, "DEL-hier_review.csv")
-}
+    )
+write_csv(change_review, "DEL-hier_review.csv")
 
 View(hier_review)
