@@ -67,6 +67,8 @@ sc_recode <- paste0(do_info$label, " (", do_info$id, ")") |>
 
 hier_review <- hier |>
     DO.utils::lengthen_col("parent") |>
+    dplyr::mutate(parent = dplyr::recode(parent, !!!sc_recode)) |>
+    DO.utils::collapse_col("parent") |>
     dplyr::filter(!all_duplicated(paste0(.data$id, .data$parent))) |>
     dplyr::mutate(
         change_type = dplyr::case_when(
@@ -77,7 +79,6 @@ hier_review <- hier |>
         .by = "id"
     ) |>
     dplyr::mutate(
-        parent = dplyr::recode(parent, !!!sc_recode),
         change_type = factor(change_type, levels = c("added", "removed", "changed"))
     ) |>
     tidyr::pivot_wider(
