@@ -47,9 +47,9 @@ hier <- purrr::map2(
         )
         readr::read_tsv(.y, col_types = "c") |>
             dplyr::rename(
-                id = ID, parent = `SubClass Of [ID NAMED]`
+                id = "ID", parent = "SubClass Of [ID NAMED]"
             ) |>
-            dplyr::filter(stringr::str_detect(id, "DOID"))
+            dplyr::filter(stringr::str_detect(.data$id, "DOID"))
     }
 ) |>
     dplyr::bind_rows(.id = "file_version")
@@ -68,16 +68,16 @@ sc_recode <- paste0(do_info$label, " (", do_info$id, ")") |>
 hier_tmp <- hier |>
     # drop IDs with no changed parents
     dplyr::filter(
-        !all(c("new", "old") %in% file_version),
+        !all(c("new", "old") %in% .data$file_version),
         .by = c("id", "parent")
     ) |>
     DO.utils::lengthen_col("parent") |>
     DO.utils::collapse_col("file_version") |>
     dplyr::mutate(
         change_type = dplyr::case_when(
-            all(c("new", "old") %in% file_version, na.rm = TRUE) ~ "changed",
-            all(!"old" %in% file_version) ~ "added",
-            all(!"new" %in% file_version) ~ "removed"
+            all(c("new", "old") %in% .data$file_version, na.rm = TRUE) ~ "changed",
+            all(!"old" %in% .data$file_version) ~ "added",
+            all(!"new" %in% .data$file_version) ~ "removed"
         ),
         .by = "id"
     ) |>
@@ -88,7 +88,10 @@ hier_tmp <- hier |>
             .data$file_version
         ),
         parent = dplyr::recode(.data$parent, !!!sc_recode),
-        change_type = factor(change_type, levels = c("added", "removed", "changed"))
+        change_type = factor(
+            .data$change_type,
+            levels = c("added", "removed", "changed")
+        )
     )
 # ensure relocate works when any of new, old, or unchanged is missing
 fversion <- factor(
@@ -99,15 +102,15 @@ fversion <- factor(
 
 hier_review <- hier_tmp |>
     tidyr::pivot_wider(
-        names_from = file_version,
+        names_from = "file_version",
         values_from = "parent",
         values_fn = ~ DO.utils::vctr_to_string(.x)
     ) |>
     dplyr::left_join(do_info, by = "id") |>
     dplyr::relocate(
-        change_type, id, label, deprecated, dplyr::one_of(fversion)
+        "change_type", "id", "label", "deprecated", dplyr::all_of(fversion)
     ) |>
-    dplyr::arrange(label, change_type)
+    dplyr::arrange(.data$label, .data$change_type)
 
 
 # write changes for review
