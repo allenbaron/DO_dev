@@ -10,8 +10,8 @@ de <- here::here("../Ontologies/HumanDiseaseOntology/src/ontology/doid-edit.owl"
 gs_rt_recode <- "https://docs.google.com/spreadsheets/d/1Zn6p5xkVHUwbWe1N8FUa3fNcEkAOoE9P4ADb12f69hQ/edit"
 
 gs <- "https://docs.google.com/spreadsheets/d/1RAoK_6J4cuSnzLUFva92VqCqPcIJxRt_SM07KALhIRc/edit?gid=1343696215#gid=1343696215"
-sheet_ct <- "curation_20240820"
-sheet_rt <- paste0("robot_template_", stringr::str_extract(sheet_ct, "20[0-9]+$"))
+sheet_ct <- "curation-20240820"
+sheet_rt <- paste0("robot_template-", stringr::str_extract(sheet_ct, "20[0-9]+$"))
 
 # INCOMPLETE - SPARQL remove procedure... may not want to source it at this point in script
 #source(here::here("scripts/curate_remove_template.R"))
@@ -21,7 +21,7 @@ sheet_rt <- paste0("robot_template_", stringr::str_extract(sheet_ct, "20[0-9]+$"
 
 rt_main <- googlesheets4::read_sheet(
     gs_rt_recode,
-    range = "main!A:C",
+    range = "template_options!A:C",
     col_types = "c"
 ) %>%
     dplyr::filter(!is.na(template))
@@ -32,7 +32,7 @@ rt_auto <- dplyr::filter(rt_main, stringr::str_detect(type, "auto"))$header
 # Prep & check curated data -----------------------------------------------
 
 # Load and pre-process curated data
-cur <- googlesheets4::read_sheet(gs, sheet_ct, col_types = "c")
+cur <- googlesheets4::read_sheet(gs, sheet_ct, range = "B:E", col_types = "c")
 
 # 1. drop curation columns
 prep <- cur %>%
