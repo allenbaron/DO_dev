@@ -170,16 +170,19 @@ SELECT DISTINCT ?iri ?ns ?label ?parent_iri ?definition ?comment ?deprecated
 WHERE {
     VALUES ?iri { !<<iri>>! }
 
-    ?iri a owl:Class ;
-        oboInOwl:hasOBONamespace ?ns ;
-        # oboInOwl:id ?id ; #### temporarily not checking, auto-dropped ####
-        rdfs:label ?label_en ;
-        rdfs:subClassOf ?parent_iri .
+    ?iri a owl:Class .
 
-    FILTER(!isBlank(?parent_iri))
-    FILTER(lang(?label_en) IN ("", "en"))
-    BIND(str(?label_en) AS ?label)
-
+    OPTIONAL { ?iri oboInOwl:id ?id }
+    OPTIONAL { ?iri oboInOwl:hasOBONamespace ?ns }
+    OPTIONAL {
+        ?iri rdfs:label ?label_en .
+        FILTER(lang(?label_en) IN ("", "en"))
+        BIND(str(?label_en) AS ?label)
+    }
+    OPTIONAL {
+        ?iri rdfs:subClassOf ?parent_iri .
+        FILTER(!isBlank(?parent_iri))
+    }
     OPTIONAL {
         ?iri obo:IAO_0000115 ?def_en .
         FILTER(lang(?def_en) IN ("", "en"))
@@ -190,7 +193,7 @@ WHERE {
         FILTER(lang(?comment_en) IN ("", "en"))
         BIND(str(?comment_en) AS ?comment)
     }
-    OPTIONAL { ?iri owl:deprecated true }
+    OPTIONAL { ?iri owl:deprecated ?any }
 }',
     prefix_stmt = "PREFIX DOID: <http://purl.obolibrary.org/obo/DOID_>",
     iri = DO.utils::vctr_to_string(all_id, delim = " ")
