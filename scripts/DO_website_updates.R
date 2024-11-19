@@ -4,7 +4,7 @@
 # Last Updated: 2023-04-05
 
 library(here)
-library(DO.utils) # >= 0.2.7
+library(DO.utils) # >= 0.3.3
 
 # MANUALLY Update Data!!! -------------------------------------------------
 
@@ -60,7 +60,6 @@ library(DO.utils) # >= 0.2.7
 data_dir <- here::here("data/DO_release")
 
 repo_path <- here::here("../Ontologies/HumanDiseaseOntology")
-repo <- DO.utils::DOrepo(repo_path)
 
 svn_path <- here::here("../DO_website/do_trunk")
 plot_outdir <- file.path(svn_path, "static/disease_ontology/media/images/statistics")
@@ -83,8 +82,8 @@ source(here::here("scripts/DO_term_def_counts.R"))
 
 g_cb <- DO.utils::plot_citedby(out_dir = plot_outdir)
 g_term <- DO.utils::plot_term_def_counts(out_dir = plot_outdir)
-g_branch <- DO.utils::plot_branch_counts(repo, out_dir = plot_outdir)
-g_xref <- DO.utils::plot_xref_counts(repo, out_dir = plot_outdir)
+g_branch <- DO.utils::plot_branch_counts(repo_path, out_dir = plot_outdir)
+g_xref <- DO.utils::plot_xref_counts(repo_path, out_dir = plot_outdir)
 g_src <- DO.utils::plot_def_src(repo_path, out_dir = plot_outdir)
 
 
