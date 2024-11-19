@@ -19,8 +19,8 @@ if (format(file.mtime(owl_paths["old"]), "%Y-%m-%d") != Sys.Date()) {
 }
 
 axiom_paths <- c(
-    old = tempfile(tmpdir = ".", fileext = ".tsv"),
-    new = tempfile(tmpdir = ".", fileext = ".tsv")
+    old = tempfile(fileext = ".tsv"),
+    new = tempfile(fileext = ".tsv")
 )
 
 info_path <- tempfile(fileext = ".tsv")
@@ -94,17 +94,15 @@ axiom_review <- axioms %>%
     dplyr::arrange(change_type, id, type, new, old)
 
 
-# review changes if many
-if (sum(axiom_review$change_type == "changed") > 5) {
-    change_review <- dplyr::filter(axiom_review, change_type == "changed") %>%
-        dplyr::mutate(
-            dplyr::across(
-                old:new,
-                ~ stringr::str_replace_all(.x, stringr::coll("|"), "\n")
-            )
+# write changes for review
+change_review <- axiom_review |>
+    dplyr::arrange(label, type, change_type) |>
+    dplyr::mutate(
+        dplyr::across(
+            old:new,
+            ~ stringr::str_replace_all(.x, stringr::coll("|"), "\n")
         )
-
-    write_csv(change_review, "DEL-axiom_review.csv")
-}
+    )
+write_csv(change_review, "DEL-axiom_review.csv")
 
 View(axiom_review)
