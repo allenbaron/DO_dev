@@ -37,12 +37,12 @@ cur <- googlesheets4::read_sheet(gs, sheet_ct, range = "B:E", col_types = "c")
 # 1. drop curation columns
 prep <- cur %>%
     dplyr::select("iri/curie", "annotation", "value", "remove") %>%
-# 2. drop rows with only curation info (iri/curie, annotation, & value are empty)
-    dplyr::filter(!dplyr::if_all("iri/curie":"value", is.na)) %>%
-# 3. keep only rows with headers of defined templates
-    dplyr::filter(.data$annotation %in% rt_main$header) %>%
-# 4. propagate iri/curie
+# 2. propagate iri/curie
     tidyr::fill("iri/curie", .direction = "down") %>%
+# 3. drop rows with only curation info (iri/curie, annotation, & value are empty)
+    dplyr::filter(!dplyr::if_any("annotation":"value", is.na)) %>%
+# 4. keep only rows with headers of defined templates
+    dplyr::filter(.data$annotation %in% rt_main$header) %>%
 # 5. standardize remove column values
     dplyr::mutate(
         remove = dplyr::if_else(
