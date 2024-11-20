@@ -11,17 +11,18 @@ sparse <- stringr::str_match_all(
         "\n(?<loc>#: .+?)\nmsgid (?<english>.+?)\nmsgstr (?<spanish>.+?)(?=\n\n#:)",
         dotall = TRUE
     )
-)[[1]][, 2:4] %>%
-    tibble::as_tibble() %>%
+)[[1]][, 2:4] |>
+    tibble::as_tibble() |>
     dplyr::mutate(
         fuzzy = stringr::str_detect(loc, stringr::coll("#, fuzzy")),
         loc = stringr::str_remove(loc, "\n#, fuzzy")
     )
 
-# Load translation google sheet (latest translation = 5/23)
+# Load translation google sheet (assume created today)
+sheet_nm <- paste0("translation-", format(Sys.Date(), "%Y%m%d"))
 sf_gs <- googlesheets4::read_sheet(
     ss = "1DTKwKr6AYSiLsTmnKavtKN6b52xJM0Kp3LTh1bxxknc",
-    sheet = "New Additions 5/23"
+    sheet = sheet_nm
 )
 
 
@@ -29,41 +30,38 @@ sf_gs <- googlesheets4::read_sheet(
 
 # rows in sheet that don't match messages.po
 missing <- dplyr::anti_join(sf_gs, sparse, by = c("loc", "fuzzy", "english"))
-dplyr::count(missing, Notes, sort = TRUE)
-# review rows in z data.frame (excluded ones are expected not to match for reason in Notes column)
-z <- dplyr::filter(missing, !stringr::str_detect(Notes, "NO|ignored|combined") | is.na(Notes))
+dplyr::count(missing, sort = TRUE)
 
 # remaining rows that do match messages.po
 remain <- dplyr::semi_join(sf_gs, sparse, by = c("loc", "fuzzy", "english"))
 
 # check those that state a check is needed in Notes column (likely fix after spanish replacement)
-check <- remain %>%
-    dplyr::filter(str_detect(Notes, "check in")) %>%
+check <- remain |>
+    # dplyr::filter(str_detect(Notes, "check in")) |>
     dplyr::mutate(
         # identify multi-line in messages.po which may not correspond directly
         # to text in templates... these will need to be checked manually
         multi = stringr::str_detect(english, '^""'),
         # convert template file paths to character vectors
-        templates = stringr::str_remove(loc, "^#: ") %>%
-            stringr::str_remove_all(":[0-9]+") %>%
+        templates = stringr::str_remove(loc, "^#: ") |>
+            stringr::str_remove_all(":[0-9]+") |>
             stringr::str_split("(\n)?(#:)? ")
     )
 
 # identify places where spanish is new (i.e. messages.po = "") or differs
-sp_diff_all <- sf_gs %>%
-    dplyr::anti_join(missing) %>%
+sp_diff_all <- sf_gs |>
+    dplyr::anti_join(missing) |>
     dplyr::anti_join(
         sparse,
         by = c("loc", "fuzzy", "english", "spanish")
-    ) %>%
+    ) |>
     dplyr::left_join(
         dplyr::select(sparse, loc, fuzzy, english, sp_current = spanish)
-    ) %>%
-    dplyr::relocate(Notes, .after = dplyr::last_col())
+    )
 
 # new only
-sp_diff <- sp_diff_all %>%
-    dplyr::filter(sp_current != '""' | is.na(sp_current))
+sp_diff <- sp_diff_all |>
+    dplyr::filter(sp_current == '""' | is.na(sp_current))
 
 
 # Replace translation with update from Google Sheet -----------------------
@@ -72,12 +70,12 @@ sp_diff <- sp_diff_all %>%
 #   different existing translation already in messages.po
 
 # build replacement dictionary
-match_replace_df <- sp_diff_all %>%
-    dplyr::rowwise() %>%
+match_replace_df <- sp_diff_all |>
+    dplyr::rowwise() |>
     dplyr::mutate(
         match = paste0(
             "\n", loc,
-            "\nmsgid ", english_orig,
+            "\nmsgid ", english,
             "\nmsgstr ", sp_current
         ),
         replace = paste0(
@@ -121,20 +119,20 @@ dplyr::count(missing, Notes, sort = TRUE)
 # review rows in z data.frame (excluded ones are expected not to match for reason in Notes column)
 z <- dplyr::filter(missing, !stringr::str_detect(Notes, "NO|ignored|combined") | is.na(Notes))
 
-sp_diff_all <- sf_gs_adjust %>%
-    dplyr::anti_join(missing) %>%
+sp_diff_all <- sf_gs_adjust |>
+    dplyr::anti_join(missing) |>
     dplyr::anti_join(
         sparse_adjust,
         by = c("english", "spanish")
-    ) %>%
+    ) |>
     dplyr::left_join(
         dplyr::select(sparse_adjust, english, english_orig, sp_current = spanish)
-    ) %>%
+    ) |>
     dplyr::relocate(Notes, .after = dplyr::last_col())
 
 # build replacement dictionary
-match_replace_df <- sp_diff_all %>%
-    dplyr::rowwise() %>%
+match_replace_df <- sp_diff_all |>
+    dplyr::rowwise() |>
     dplyr::mutate(
         match = paste0(
             "\nmsgid ", english_orig,
@@ -161,30 +159,30 @@ readr::write_file(sraw_new, sf)
 
 ## didn't replace everything... check remainder manually
 
-z1 <- sp_diff_all %>%
+z1 <- sp_diff_all |>
     dplyr::mutate(
         sp_current = str_replace_all(sp_current, c('"|\n' = "", " +" = " ")),
         spanish = str_replace_all(spanish, c('"|\n' = "", " +" = " "))
-    ) %>%
-    dplyr::filter(sp_current != spanish) %>%
+    ) |>
+    dplyr::filter(sp_current != spanish) |>
     dplyr::select(english, sp_current, spanish)
 
 googlesheets4::write_sheet(z1, "https://docs.google.com/spreadsheets/d/1DTKwKr6AYSiLsTmnKavtKN6b52xJM0Kp3LTh1bxxknc/edit?gid=1805918238#gid=1805918238", "temp-fix")
 
 # For manual check... ignoring now that it's completed --------------------
 
-z <- check %>%
-    dplyr::rowwise() %>%
-    dplyr::mutate(
-        by_temp = list(purrr::set_names(rep(english, length(templates)), templates))
-    ) %>%
-    {.$by_temp} %>%
-    unlist()
+# z <- check %>%
+#     dplyr::rowwise() %>%
+#     dplyr::mutate(
+#         by_temp = list(purrr::set_names(rep(english, length(templates)), templates))
+#     ) %>%
+#     {.$by_temp} %>%
+#     unlist()
 
-check_by_template <- tibble::tibble(
-    template = names(z),
-    english = z
-    ) %>%
-    dplyr::arrange(template)
+# check_by_template <- tibble::tibble(
+#     template = names(z),
+#     english = z
+#     ) |>
+#     dplyr::arrange(template)
 
-readr::write_tsv(check_by_template, "DEL-check_placeholders.tsv")
+# readr::write_tsv(check_by_template, "DEL-check_placeholders.tsv")

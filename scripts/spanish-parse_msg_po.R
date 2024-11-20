@@ -19,9 +19,10 @@ sparse <- stringr::str_match_all(
     )
 
 if (!interactive()) {
+    sheet_nm <- paste0("translation-", format(Sys.Date(), "%Y%m%d"))
     googlesheets4::write_sheet(
         sparse,
         ss = "1DTKwKr6AYSiLsTmnKavtKN6b52xJM0Kp3LTh1bxxknc",
-        sheet = "New Additions 5/23"
+        sheet = sheet_nm
     )
 }
