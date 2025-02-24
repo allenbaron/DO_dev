@@ -1,0 +1,319 @@
+---
+title: "Analysis of DOID:11123 name & synonyms"
+date: "2025-02-21"
+output:
+    html_notebook:
+        toc: true
+        toc_float: true
+        code_folding: hide
+---
+
+The label for DOID:11123 in the latest release is "Henoch-Schoenlein purpura". A number of synonyms exist and some of these have issues (i.e. "Henoch-Sch?nlein purpura", "Henoch-Sch@nlein purpura"). To determine if these should be removed or updated to remove the errors, a google search was done and other names for this disease were identified (e.g. "IgA vasculitis") but it's not immediately clear if these are new names or which names are in primary use.
+
+The goal of this analysis is to determine what name is in primary use at this stage. Note that this is not a genetic disease, so OMIM cannot be relied on for identifying the primary name. Other sources, such as Orphanet, often have names that are unique to those resources but are not used by the clinical or research communities and cannot, therefore, be relied on.
+
+
+```{r setup, include=FALSE}
+library(europepmc)
+library(tidyverse)
+library(xml2)
+library(here)
+library(hues)
+library(plotly)
+```
+
+```{r in_progress_data}
+data_file <- here::here("data/disease_info/IgA_vasculitis-20250213.rda")
+```
+
+```{r custom_functions}
+# get_ftxt_safely() will automatically get PMC articles or books and will NOT
+#   fail if on errors caused by individual download failures
+safe_epmc_ftxt <- purrr::safely(europepmc::epmc_ftxt, otherwise = NA, quiet = FALSE)
+safe_epmc_ftxt_bk <- purrr::safely(europepmc::epmc_ftxt_book, otherwise = NA, quiet = FALSE)
+
+get_ftxt_safely <- function(pmcid = NA, bookid = NA) {
+    if (is.na(pmcid) && is.na(bookid) ) return(NA)
+    if (!is.na(pmcid)) {
+        out <- list(safe_epmc_ftxt(pmcid))
+    } else {
+        out <- list(safe_epmc_ftxt_bk(bookid))
+    }
+    cat(".")
+    out
+}
+
+
+# parse_ftxt_xml() parses results from get_ftxt_safely()
+parse_ftxt_xml <- function(safe_ftxt_xml, xml_accessor) {
+    if (!is.null(safe_ftxt_xml$error)) {
+        return(paste0("ERROR: ", safe_ftxt_xml$error$message))
+    }
+    out <- safe_ftxt_xml$result |>
+        xml2::xml_find_all(xml_accessor) |>
+        xml2::xml_text()
+
+    if (length(out) == 0) {
+        out <- paste0(
+            "ERROR [NO BODY]: ",
+            xml2::xml_text(safe_ftxt_xml$result)
+        )
+        if (length(out) == 0) {
+            out <- "ERROR: No text extractable"
+        }
+    } else if (length(out) > 1) {
+        out <- DO.utils::vctr_to_string(out, delim = "%%%%%") |>
+            paste0("WARNING: Multilength output, separated by %%%%%.")
+    }
+
+    out
+}
+```
+
+
+These are the terms currently in DO, or that have been identified in initial searches.
+
+```{r}
+terms <- c(
+    "Henoch-Schoenlein purpura", # current label
+    "Henoch-Schönlein purpura",
+    "Henoch-Schonlein purpura",
+    "Henoch-Scholein purpura", # assumed mis-spelling
+    # "Henoch-Sch?nlein purpura", # currently in DO, presumed errors
+    # "Henoch-Sch@nlein purpura",
+    "Allergic purpura",
+    "Autoimmune purpura",
+    "Purpura, autoimmune",
+    # presumed acronym
+    "HSP",
+    # new name
+    "IgA vasculitis",
+    "immunoglobulin A vasculitis",
+    "IgAV",
+    # spelling variants
+    "Henoch Schoenlein purpura",
+    "Henoch Schönlein purpura",
+    "Henoch Schonlein purpura",
+    "Henoch Scholein purpura",
+    "Henoch Schoelein purpura"
+)
+```
+
+
+Begin by searching EuropePMC for articles that contain one or more exact matches to these terms using the default search. This search will exclude abbreviations since they are likely to find matches to irrelevant content (e.g. HSP = heat shock proteins). _Save output to file, to avoid potential of repeat API call._
+
+```{r}
+# exclude abbreviations when searching for publications (too likely to 
+search_str <- paste0(
+    'OPEN_ACCESS:y AND (',
+    paste0('"', terms[stringr::str_length(terms) > 4] , '"', collapse = " OR "),
+    ')'
+)
+
+if (!file.exists(data_file)) {
+    res <- europepmc::epmc_search(search_str, synonym = FALSE, limit = 20000)
+
+    save(res, file = data_file)
+} else {
+    load(data_file)
+}
+```
+
+The number of publication hits (`r format(nrow(res), big.mark = ",")`), even limited to OPEN ACCESS, is greater than can be reasonably be processed using all the full text articles, but perhaps a sample of 1/4 would do. This sample will be done grouped by year to ensure representation over time and exclude preprints and retractions, or any publications with full-text unavailable (i.e. no PMCID or Book ID).
+
+```{r}
+res_tidy <- res |>
+    dplyr::filter(
+        !stringr::str_detect(pubType, "retract|preprint"),
+        !(is.na(pmcid) & is.na(bookid))
+    ) |>
+    dplyr::select(
+        "id", "title", "pubYear", pubDate = "firstPublicationDate",
+        "pmcid", "bookid") |>
+    dplyr::mutate(
+        pubDate = lubridate::as_date(pubDate),
+        pubYear = lubridate::year(pubDate)
+    )
+
+if (!exists("res_sample")) {
+    res_sample <- res_tidy |>
+        dplyr::slice_sample(prop = 0.25, by = pubYear)
+
+    save(res, res_sample, file = data_file)
+}
+
+if (!exists("res_ftxt")) {
+    res_ftxt <- res_sample |>
+        dplyr::rowwise() |>
+        dplyr::mutate(ft_xml = get_ftxt_safely(pmcid, bookid)) |>
+        dplyr::mutate(ft = parse_ftxt_xml(ft_xml, "//body"))
+    
+    save(res, res_sample, res_ftxt, file = data_file)
+}
+```
+
+
+# Evaluating Usage
+
+Extracting all these values from the full text of the sample publications and all the titles (in a case-insensitive manner).
+```{r}
+regex_str <- terms |>
+    DO.utils::length_sort(decreasing = TRUE) |>
+    paste0(collapse = "|")
+
+hsp <- res_tidy |>
+    dplyr::left_join(
+        res_ftxt,
+        by = c("id", "title", "pubYear", "pubDate", "pmcid", "bookid")
+    ) |>
+    dplyr::select("id", "pubDate", "title", "ft") |>
+    dplyr::mutate(
+        title_match = stringr::str_extract_all(
+            .data$title,
+            stringr::regex(regex_str, ignore_case = TRUE)
+        ),
+        ft_match = stringr::str_extract_all(
+            .data$ft,
+            stringr::regex(regex_str, ignore_case = TRUE)
+        )
+    ) |>
+    tidyr::unnest(title_match, keep_empty = TRUE) |>
+    tidyr::unnest(ft_match, keep_empty = TRUE) |>
+    dplyr::mutate(ft = !is.na(ft))
+```
+
+The number of publications with and without matches in their titles or full text, noting whether their full-text was obtained are as follows:
+
+```{r}
+hsp |>
+    dplyr::summarize(
+        title_match = any(!is.na(title_match)),
+        ft_match = any(!is.na(ft_match)),
+        ft = unique(ft),
+        .by = "id"
+    ) |>
+    dplyr::count(ft, title_match, ft_match) |>
+    dplyr::mutate(pct = round(n / sum(n) * 100, 2)) |>
+    dplyr::rename(ft_obtained = "ft")
+```
+Most of the publications do not contain one of these terms, including ~20% of those that were downloaded as full text. Any non-matches will just be dropped for the analysis of names.
+
+```{r}
+hsp_match <- hsp |>
+    tidyr::pivot_longer(
+        title_match:ft_match,
+        names_to = c("source", ".value"),
+        names_sep = "_",
+        values_drop_na = TRUE
+    ) |>
+    dplyr::mutate(match = stringr::str_to_lower(.data$match)) |>
+    dplyr::select(-"title") |>
+    # only count once per publication and title/full-text
+    DO.utils::collapse_col("match")
+```
+
+The terms of interest that and whether they were found is as follows:
+```{r}
+terms_match <- tibble::tibble(
+    terms = terms,
+    match = stringr::str_to_lower(terms)
+)
+
+terms_match |>
+    dplyr::left_join(dplyr::count(hsp_match, match), by = "match") |>
+    dplyr::mutate(n = tidyr::replace_na(n, 0)) |>
+    dplyr::select(-"match") |>
+    dplyr::arrange(dplyr::desc(.data$n))
+```
+Only two terms weren't found. One is likely historical and may not be available in a computable form and the other looks like it may be a misspelling.
+
+The current name in DO is not in the top 5 most common names in the literature.
+
+Organized by publication date and binned into year intervals, the results are as follows:
+```{r}
+hsp_df <- hsp_match |>
+    dplyr::left_join(terms_match, by = "match") |>
+    dplyr::select(-"match") |>
+    dplyr::rename(term = "terms") |>
+    dplyr::filter(!is.na(term))
+
+hsp_colors <- hues::iwanthue(dplyr::n_distinct(hsp_df$term))
+    
+ggplot2::ggplot(hsp_df) +
+    ggplot2::geom_freqpoly(
+        ggplot2::aes(x = pubDate, color = term),
+        binwidth = 365
+    ) +
+    ggplot2::scale_color_manual(values = hsp_colors) +
+    ggplot2::facet_wrap(~ source, ncol = 1, scales = "free_y")
+```
+
+Hmm... the oldest uses are quite a long time ago and make the graph a bit hard to read. Subsetting the graph to after the year 2000:
+```{r warning=FALSE}
+g <- ggplot2::ggplot(hsp_df) +
+    ggplot2::geom_freqpoly(
+        ggplot2::aes(x = pubDate, color = term, group = term),
+        binwidth = 365,
+        linewidth = 1
+    ) +
+    ggplot2::scale_color_manual(values = hsp_colors) +
+    ggplot2::scale_x_date(
+        date_breaks = "5 years",
+        date_labels = "%Y"
+    ) +
+    ggplot2::facet_wrap(~ source, ncol = 1, scales = "free_y") +
+    ggplot2::coord_cartesian(
+        xlim = c(as.Date("2000-01-01"), as.Date("2025-01-01"))
+    ) +
+    ggplot2::theme_minimal()
+
+plotly::ggplotly(g)
+```
+
+Based on this, it seems that for most of the DO's history, this disease has primarily been called "Henoch-Schönlein purpura" which was the original name of the published disease. It's likely this was not used by the DO because of potential encoding issues with the "ö" and, in the literature, it appears that using a normal "o" was next most commmon, but the current label in DO has barely been used and should likely NOT be used as the label.
+
+Furthermore, since ~2020, the name "IgA vasculitis" has been used more frequently in publications. An NIDDK source also suggests that this disease has been renamed to IgA vasculitis: https://www.niddk.nih.gov/health-information/kidney-disease/iga-vasculitis. Although the full name "immunoglobulin A vasculitis" seems like it would be more appropriate, it is used far less frequently. Together, these suggest the primary name should be updated to "IgA vasculitis".
+
+The initialisms for these names are used far less frequently, with HSP being greater than IgAV. It's possible that HSP represents something else given it's more common (e.g. "heat shock proteins", "hereditary spastic paraplegia").
+
+
+### Confirming relevance of HSP
+
+Just to confirm that HSP is used in conjunction with this disease name:
+```{r}
+dplyr::count(hsp_df, term, source) |>
+    dplyr::filter(term == "HSP")
+```
+
+It seems to appear in titles. Looking at which those are:
+```{r}
+dplyr::filter(hsp, title_match == "HSP")$title
+```
+
+Well, it is used to mean this disease but clearly also used for other things. It seems like it should be added as a synonym.
+
+
+# CONCLUSION
+
+New primary label: "IgA vasculitis"
+
+Ensure all these terms are included as synonyms in the DO:
+
+
+```{r results='asis', echo = FALSE}
+cat(
+    sprintf('* %s   ',terms[terms %in% hsp_df$term]),
+    sep = '\n'
+)
+```
+
+Even those these terms were not found in this analysis, there's a possibility that they have been used, historically or perhaps accidentally, so they will be left in the ontology, if they are there already but not added.
+```{r results="asis", echo = FALSE}
+cat(
+    sprintf('* %s   ',terms[!terms %in% hsp_df$term]),
+    sep = '\n'
+)
+```
+
+
+On review, it appears that only "Autoimmune purpura" is already in the ontology. That will be kept and the other potential synonym will not be added.
