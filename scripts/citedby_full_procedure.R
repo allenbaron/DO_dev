@@ -21,6 +21,27 @@ library(googlesheets4)
 #       exported parent function.
 
 
+# Ensure API keys are available -------------------------------------------
+
+check_api_key <- function(key_nm) {
+    if ("try-error" == class(try(invisible(keyring::key_get(key_nm)), silent = TRUE))) {
+        keyring::key_set(
+            key_nm,
+            prompt = paste0("The key ", key_nm, " is not set. Please enter it:")
+        )
+    }
+    invisible(keyring::key_get(key_nm))
+}
+
+confirm_cb_keys <- function() {
+    check_api_key("ENTREZ_KEY")
+    check_api_key("Elsevier_API")
+    check_api_key("Elsevier_insttoken")
+}
+
+confirm_cb_keys()
+
+
 # Files -------------------------------------------------------------------
 
 # Google sheet - Final place for storage & review
@@ -59,6 +80,9 @@ if (file.exists(cb_pm_raw_file)) {
         DO.utils::DO_pubs$pmid,
         by_id = TRUE
     )
+    if (!dir.exists(dirname(cb_pm_raw_file))) {
+        dir.create(dirname(cb_pm_raw_file), recursive = TRUE)
+    }
     save(do_cb_pm_summary_by_id, file = cb_pm_raw_file)
 }
 
