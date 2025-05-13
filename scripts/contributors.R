@@ -66,6 +66,7 @@ brand_fa <- c(
     "x" = "fa-x-twitter",
     "x.com" = "fa-x-twitter",
     "twitter" = "fa-x-twitter",
+    "youtube" = "fa-youtube",
     "instagram" = "fa-instagram",
     "facebook" = "fa-facebook"
 )
