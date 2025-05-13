@@ -57,6 +57,82 @@ add_tfoot <- function(html) {
     )
 }
 
+brand_fa <- c(
+    "orcid" = "fa-orcid",
+    "github" = "fa-github",
+    "linkedin" = "fa-linkedin",
+    "bsky" = "fa-bluesky",
+    "mastodon" = "fa-mastodon",
+    "x" = "fa-x-twitter",
+    "x.com" = "fa-x-twitter",
+    "twitter" = "fa-x-twitter",
+    "instagram" = "fa-instagram",
+    "facebook" = "fa-facebook"
+)
+
+# custom function to add font awesome brand logos
+as_fa_icon <- function(brand, size = "fa-lg", report_unknown = 3) {
+    brand_tidy <- stringr::str_trim(stringr::str_to_lower(brand))
+
+    icon <- paste0(
+        '<i class="fa-brands ',
+        dplyr::recode(brand_tidy, !!!brand_fa),
+        ' ',
+        size,
+        '"></i>'
+    )
+
+    # optionally warn about unknown brands; always pass them through unchanged
+    unknown <- !stringr::str_detect(
+        brand_tidy,
+        paste0("^", names(brand_fa), "$", collapse = "|")
+    )
+    if (any(unknown)) {
+        icon[unknown] <- brand[unknown]
+        if (report_unknown < 1) return(icon)
+
+        # if all unknown are URLs report them as such (without listing them)
+        url <- stringr::str_detect(brand, "^https?://")
+        url_n <- sum(url)
+        if (identical(unknown, url)) {
+            warning(
+                paste0(
+                    url_n,
+                    " URL(s) are present & will pass through unchanged",
+                )
+            )
+        } else {
+            unknown_brand <- unique(brand[unknown & !url])
+            unknown_n <- length(unknown_brand)
+            if (unknown_n > report_unknown) {
+                attr(icon, "unknown") <- unknown_brand
+                unknown_list <- paste0(
+                    c(
+                        unknown_brand[1:report_unknown],
+                        "...\n  --> Full brand list in 'unknown' attribute"
+                    ),
+                    collapse = ", "
+                )
+            } else {
+                unknown_list <- paste0(unknown_brand, collapse = ", ")
+            }
+
+            unknown_msg <- NULL
+            if (url_n > 0) unknown_msg <- paste0(url_n, " URL(s) and ")
+
+            unknown_msg <- paste0(
+                unknown_msg,
+                unknown_n,
+                " unrecognized brand(s) will pass through unchanged.\n  Brands: ",
+                unknown_list
+            )
+            warning(unknown_msg)
+        }
+    }
+
+    icon
+}
+
 # Generate Individual Contributors Table ----------------------------------
 
 do_indiv <- googlesheets4::read_sheet(
