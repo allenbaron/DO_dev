@@ -88,7 +88,7 @@ as_fa_icon <- function(brand, size = "fa-lg", report_unknown = 3) {
         paste0("^", names(brand_fa), "$", collapse = "|")
     )
     if (any(unknown)) {
-        icon[unknown] <- brand[unknown]
+        icon[unknown] <- NA_character_
         if (report_unknown < 1) return(icon)
 
         # if all unknown are URLs report them as such (without listing them)
@@ -98,7 +98,7 @@ as_fa_icon <- function(brand, size = "fa-lg", report_unknown = 3) {
             warning(
                 paste0(
                     url_n,
-                    " URL(s) are present & will pass through unchanged",
+                    " URL(s) were ignored",
                 )
             )
         } else {
@@ -123,7 +123,7 @@ as_fa_icon <- function(brand, size = "fa-lg", report_unknown = 3) {
             unknown_msg <- paste0(
                 unknown_msg,
                 unknown_n,
-                " unrecognized brand(s) will pass through unchanged.\n  Brands: ",
+                " unrecognized brand(s) were ignored.\n  Brands: ",
                 unknown_list
             )
             warning(unknown_msg)
