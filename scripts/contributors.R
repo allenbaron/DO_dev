@@ -57,6 +57,84 @@ add_tfoot <- function(html) {
     )
 }
 
+brand_fa <- c(
+    "orcid" = "fa-orcid",
+    "github" = "fa-github",
+    "linkedin" = "fa-linkedin",
+    "bsky" = "fa-bluesky",
+    "mastodon" = "fa-mastodon",
+    "x" = "fa-x-twitter",
+    "x.com" = "fa-x-twitter",
+    "twitter" = "fa-x-twitter",
+    "instagram" = "fa-instagram",
+    "facebook" = "fa-facebook"
+)
+
+# custom function to add font awesome brand logos
+as_fa_icon <- function(brand, size = "fa-lg", report_unknown = 3) {
+    brand_tidy <- stringr::str_trim(stringr::str_to_lower(brand))
+
+    icon <- paste0(
+        '<i class="fa-brands ',
+        dplyr::recode(brand_tidy, !!!brand_fa),
+        ' ',
+        size,
+        '"></i>'
+    )
+
+    # optionally warn about unknown brands; always replace with NA
+    missing <- is.na(brand_tidy)
+    unknown <- !stringr::str_detect(
+        brand_tidy,
+        paste0("^", names(brand_fa), "$", collapse = "|")
+    )
+    icon[unknown | missing] <- NA_character_
+
+    if (any(unknown)) {
+        if (report_unknown < 1) return(icon)
+
+        # if all unknown are URLs report them as such (without listing them)
+        url <- stringr::str_detect(brand, "^https?://")
+        url_n <- sum(url, na.rm = TRUE)
+        if (identical(unknown, url)) {
+            warning(
+                paste0(
+                    url_n,
+                    " URL(s) were ignored",
+                )
+            )
+        } else {
+            unknown_brand <- unique(brand[unknown & !url])
+            unknown_n <- length(unknown_brand)
+            if (unknown_n > report_unknown) {
+                attr(icon, "unknown") <- unknown_brand
+                unknown_list <- paste0(
+                    c(
+                        unknown_brand[1:report_unknown],
+                        "...\n  --> Full brand list in 'unknown' attribute"
+                    ),
+                    collapse = ", "
+                )
+            } else {
+                unknown_list <- paste0(unknown_brand, collapse = ", ")
+            }
+
+            unknown_msg <- NULL
+            if (url_n > 0) unknown_msg <- paste0(url_n, " URL(s) and ")
+
+            unknown_msg <- paste0(
+                unknown_msg,
+                unknown_n,
+                " unrecognized brand(s) were ignored.\n  Brands: ",
+                unknown_list
+            )
+            warning(unknown_msg)
+        }
+    }
+
+    icon
+}
+
 # Generate Individual Contributors Table ----------------------------------
 
 do_indiv <- googlesheets4::read_sheet(
@@ -64,6 +142,11 @@ do_indiv <- googlesheets4::read_sheet(
     sheet = "DO-individuals",
     col_types = "c"
 )
+
+brand_regex <- brand_fa[!names(brand_fa) == "x"] |>
+    names() |>
+    stringr::str_escape() |>
+    paste0(collapse = "|")
 
 do_indiv_tbl <- do_indiv |>
     DO.utils::lengthen_col(cols = "links", delim = "\n") |>
@@ -74,50 +157,58 @@ do_indiv_tbl <- do_indiv |>
             .data$name,
             stringr::str_match(.data$links, "github.com/([^/]+)")[, 2]
         ),
-        link_type = dplyr::case_when(
-            stringr::str_detect(
-                .data$links,
-                stringr::coll("orcid", ignore_case = TRUE)
-            ) ~ "ORCID",
-            stringr::str_detect(
-                .data$links,
-                stringr::coll("github", ignore_case = TRUE)
-            ) ~ "GitHub",
-            stringr::str_detect(
+        # identify link_type (special handling for URLs)
+        link_type = stringr::str_extract(
+            .data$links,
+            stringr::regex(brand_regex, ignore_case = TRUE)
+        ),
+        link_type = dplyr::if_else(
+            is.na(.data$link_type) & stringr::str_detect(
                 .data$links,
                 stringr::regex("^https?://", ignore_case = TRUE),
-            ) ~ "url",
-            TRUE ~ NA_character_
+            ),
+            "url",
+            .data$link_type
         ),
-        # drop unidentifiable links (e.g. emails)
-        links = dplyr::if_else(
-            is.na(.data$link_type),
-            NA_character_,
-            .data$links
+        link_type = factor(
+            .data$link_type,
+            levels = c(names(brand_fa), "url")
         ),
-        # use full URLs when needed
+        # drop private or un-hyperlinkable links (e.g. emails)
         links = dplyr::if_else(
-            link_type == "url",
-            DO.utils::format_hyperlink(.data$links, as = "html"),
-            DO.utils::format_hyperlink(
-                .data$links,
-                as = "html",
-                text = stringr::str_remove(.data$links, ".*/")
-            )
-        ),
-        # finalize link display for table
-        links = dplyr::if_else(
-            !is.na(.data$link_type) & .data$link_type != "url",
-            paste0(.data$link_type, ": ", .data$links),
-            .data$links
+            !is.na(.data$link_type),
+            .data$links,
+            NA_character_
         )
     ) |>
+    # order links by preference (set by brand_fa order)
+    dplyr::arrange(.data$name, .data$link_type) |>
+    # generate icon links
+    dplyr::mutate(
+        icon = as_fa_icon(.data$link_type, size = "fa-xl"),
+        # use full URLs when needed
+        links = dplyr::case_when(
+            .data$link_type == "url" ~ DO.utils::format_hyperlink(
+                .data$links,
+                as = "html",
+                target = "_blank"
+            ),
+            !is.na(.data$icon) ~ DO.utils::format_hyperlink(
+                .data$links,
+                as = "html",
+                text = .data$icon,
+                target = "_blank"
+            ),
+            .default = NA_character_
+        )
+    ) |>
+    # drop rows with missing name or noted as "exclude"
     dplyr::filter(
         !is.na(.data$name),
         is.na(.data$notes) | !stringr::str_detect(.data$notes, "exclude")
     ) |>
     dplyr::select("name", "links", "affiliation") |>
-    DO.utils::collapse_col(.cols = .data$links, delim = "\n") |>
+    DO.utils::collapse_col(.cols = "links", delim = ", ") |>
     dplyr::mutate(
         dplyr::across(
             dplyr::everything(),
