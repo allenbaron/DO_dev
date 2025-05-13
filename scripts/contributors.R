@@ -143,6 +143,11 @@ do_indiv <- googlesheets4::read_sheet(
     col_types = "c"
 )
 
+brand_regex <- brand_fa[!names(brand_fa) == "x"] |>
+    names() |>
+    stringr::str_escape() |>
+    paste0(collapse = "|")
+
 do_indiv_tbl <- do_indiv |>
     DO.utils::lengthen_col(cols = "links", delim = "\n") |>
     dplyr::mutate(
@@ -152,50 +157,58 @@ do_indiv_tbl <- do_indiv |>
             .data$name,
             stringr::str_match(.data$links, "github.com/([^/]+)")[, 2]
         ),
-        link_type = dplyr::case_when(
-            stringr::str_detect(
-                .data$links,
-                stringr::coll("orcid", ignore_case = TRUE)
-            ) ~ "ORCID",
-            stringr::str_detect(
-                .data$links,
-                stringr::coll("github", ignore_case = TRUE)
-            ) ~ "GitHub",
-            stringr::str_detect(
+        # identify link_type (special handling for URLs)
+        link_type = stringr::str_extract(
+            .data$links,
+            stringr::regex(brand_regex, ignore_case = TRUE)
+        ),
+        link_type = dplyr::if_else(
+            is.na(.data$link_type) & stringr::str_detect(
                 .data$links,
                 stringr::regex("^https?://", ignore_case = TRUE),
-            ) ~ "url",
-            TRUE ~ NA_character_
+            ),
+            "url",
+            .data$link_type
         ),
-        # drop unidentifiable links (e.g. emails)
-        links = dplyr::if_else(
-            is.na(.data$link_type),
-            NA_character_,
-            .data$links
+        link_type = factor(
+            .data$link_type,
+            levels = c(names(brand_fa), "url")
         ),
-        # use full URLs when needed
+        # drop private or un-hyperlinkable links (e.g. emails)
         links = dplyr::if_else(
-            link_type == "url",
-            DO.utils::format_hyperlink(.data$links, as = "html"),
-            DO.utils::format_hyperlink(
-                .data$links,
-                as = "html",
-                text = stringr::str_remove(.data$links, ".*/")
-            )
-        ),
-        # finalize link display for table
-        links = dplyr::if_else(
-            !is.na(.data$link_type) & .data$link_type != "url",
-            paste0(.data$link_type, ": ", .data$links),
-            .data$links
+            !is.na(.data$link_type),
+            .data$links,
+            NA_character_
         )
     ) |>
+    # order links by preference (set by brand_fa order)
+    dplyr::arrange(.data$name, .data$link_type) |>
+    # generate icon links
+    dplyr::mutate(
+        icon = as_fa_icon(.data$link_type, size = "fa-xl"),
+        # use full URLs when needed
+        links = dplyr::case_when(
+            .data$link_type == "url" ~ DO.utils::format_hyperlink(
+                .data$links,
+                as = "html",
+                target = "_blank"
+            ),
+            !is.na(.data$icon) ~ DO.utils::format_hyperlink(
+                .data$links,
+                as = "html",
+                text = .data$icon,
+                target = "_blank"
+            ),
+            .default = NA_character_
+        )
+    ) |>
+    # drop rows with missing name or noted as "exclude"
     dplyr::filter(
         !is.na(.data$name),
         is.na(.data$notes) | !stringr::str_detect(.data$notes, "exclude")
     ) |>
     dplyr::select("name", "links", "affiliation") |>
-    DO.utils::collapse_col(.cols = .data$links, delim = "\n") |>
+    DO.utils::collapse_col(.cols = "links", delim = ", ") |>
     dplyr::mutate(
         dplyr::across(
             dplyr::everything(),
