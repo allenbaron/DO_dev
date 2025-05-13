@@ -82,18 +82,20 @@ as_fa_icon <- function(brand, size = "fa-lg", report_unknown = 3) {
         '"></i>'
     )
 
-    # optionally warn about unknown brands; always pass them through unchanged
+    # optionally warn about unknown brands; always replace with NA
+    missing <- is.na(brand_tidy)
     unknown <- !stringr::str_detect(
         brand_tidy,
         paste0("^", names(brand_fa), "$", collapse = "|")
     )
+    icon[unknown | missing] <- NA_character_
+
     if (any(unknown)) {
-        icon[unknown] <- NA_character_
         if (report_unknown < 1) return(icon)
 
         # if all unknown are URLs report them as such (without listing them)
         url <- stringr::str_detect(brand, "^https?://")
-        url_n <- sum(url)
+        url_n <- sum(url, na.rm = TRUE)
         if (identical(unknown, url)) {
             warning(
                 paste0(
