@@ -298,10 +298,11 @@ resource_html <- tableHTML::tableHTML(
 ) |>
     stringr::str_replace_all(
         c(
-            # strip out undesired attributes
+            # strip out undesired attributes & starting \n
             "(style|id)=\"[^\"]+\"[; ]*|border=[0-9.]+" = "",
             "< *" = "<",
             " *>" = ">",
+            "^\n" = "",
             # add table ID & styling
             "<table( ?)" = paste0(
                 "<table id=\"", resource_nm, "\" style=\"width:100%;\"\\1"
