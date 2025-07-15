@@ -163,7 +163,7 @@ out1 <- out |>
 		dplyr::select(ordo_sssom, -dplyr::ends_with("label")),
 		by = c("mapping" = "subject_id")
 	) |>
-	dplyr::rename(ordo_pred = predicate, ordo_mapping = object_id)
+	dplyr::rename(ordo_pred = predicate_id, ordo_mapping = object_id)
 
 
 ##### ADD TO CURATION SHEET #####
