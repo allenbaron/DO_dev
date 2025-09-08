@@ -17,24 +17,11 @@ repo_path <- "~/Documents/Ontologies/HumanDiseaseOntology"
 
 # Custom functions --------------------------------------------------------
 
-query_tags <- function(tags, repo_path) {
+query_tags <- function(tags, repo_path, rel_doid_path, query) {
     init <- git2r::repository_head(repo_path)
     on.exit(git2r::checkout(init))
 
-    doid_path <- file.path(repo_path, "src/ontology/doid.owl")
-    query <- '
-        PREFIX rdfs: <http://www.w3.org/2000/01/rdf-schema#>
-        PREFIX owl: <http://www.w3.org/2002/07/owl#>
-        PREFIX oboInOwl: <http://www.geneontology.org/formats/oboInOwl#>
-
-        SELECT ?id ?label ?deprecated
-        WHERE {
-          ?iri oboInOwl:id ?id ;
-            rdfs:label ?label .
-
-          OPTIONAL { ?iri owl:deprecated ?deprecated }
-        }
-        '
+    doid_path <- file.path(repo_path, rel_doid_path)
 
     purrr::map(
         tags,
@@ -101,7 +88,25 @@ if (any(tag_missing)) {
     stop(stop_msg)
 }
 
-list_df <- query_tags(rel_tags, repo_path)
+all_disease_query <- '
+    PREFIX rdfs: <http://www.w3.org/2000/01/rdf-schema#>
+    PREFIX owl: <http://www.w3.org/2002/07/owl#>
+    PREFIX oboInOwl: <http://www.geneontology.org/formats/oboInOwl#>
+
+    SELECT ?id ?label ?deprecated
+    WHERE {
+      ?iri oboInOwl:id ?id ;
+        rdfs:label ?label .
+
+      OPTIONAL { ?iri owl:deprecated ?deprecated }
+    }'
+
+list_df <- query_tags(
+    rel_tags,
+    repo_path,
+    "src/ontology/doid.owl",
+    all_disease_query
+)
 comparison <- list_df |>
     dplyr::bind_rows(.id = "release") |>
     DO.utils::collapse_col(c("label", "deprecated", "release")) |>
