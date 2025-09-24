@@ -107,26 +107,28 @@ if (nrow(es_fix) > 0) {
 }
 
 
-if (any(es$parsed$fuzzy)) {
-    stop("Fuzzy matches exist!!!")
-} else {
-    es_gt <- es$parsed |>
-        dplyr::filter(.data$spanish == '""') |>
-        dplyr::anti_join(es_fix, by = "match") |>
-        dplyr::mutate(
-            spanish = stringr::str_replace_all(english, "\\\\n|\n|\"", " ") |>
-                stringr::str_squish() |>
-                DO.utils::sandwich_text('"') |>
-                (\(x) paste0("=GOOGLETRANSLATE(", x, ", \"en\", \"es\")"))() |>
-                googlesheets4::gs4_formula()
-        )
+if (any(es$parsed$fuzzy)) warning("Fuzzy matches exist!!!", immediate. = TRUE)
 
-    gs <- googlesheets4::gs4_get(ss)
-    message(
-        paste0(
-            "Submitting ", nrow(es_gt), " units to ", gs$name, " for translation"
-        )
+es_gt <- es$parsed |>
+    dplyr::filter(.data$spanish == '""' | .data$fuzzy) |>
+    dplyr::anti_join(es_fix, by = "match") |>
+    dplyr::mutate(
+        english_tidy = stringr::str_replace_all(english, "\\\\n|\n|\"", " ") |>
+            stringr::str_squish(),
+        .after = "english"
+    ) |>
+    dplyr::mutate(
+        spanish_fuzzy = dplyr::if_else(.data$fuzzy, .data$spanish, NA_character_),
+        spanish = DO.utils::sandwich_text(.data$english_tidy, '"') |>
+            (\(x) paste0("=GOOGLETRANSLATE(", x, ", \"en\", \"es\")"))() |>
+            googlesheets4::gs4_formula()
     )
 
-    googlesheets4::write_sheet(es_gt, ss = ss, sheet = sheet)
-}
+gs <- googlesheets4::gs4_get(ss)
+message(
+    paste0(
+        "Submitting ", nrow(es_gt), " units to ", gs$name, " for translation"
+    )
+)
+
+googlesheets4::write_sheet(es_gt, ss = ss, sheet = sheet)
