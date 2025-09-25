@@ -9,8 +9,8 @@ de <- here::here("../Ontologies/HumanDiseaseOntology/src/ontology/doid-edit.owl"
 
 gs_rt_recode <- "https://docs.google.com/spreadsheets/d/1Zn6p5xkVHUwbWe1N8FUa3fNcEkAOoE9P4ADb12f69hQ/edit"
 
-gs <- "https://docs.google.com/spreadsheets/d/1VFVb3DkkXLvhI97uBVzJjQoT976ougSR3arap1zcgV0/edit?gid=1717515514#gid=1717515514"
-sheet_ct <- "curation-20250709"
+gs <- "https://docs.google.com/spreadsheets/d/1VYddDuDEQ_EpvuNE4O2QvdgcCq1WBcp-yI85DW5vnRI/edit?gid=874791186#gid=874791186"
+sheet_ct <- "curation-20251121"
 sheet_rt <- paste0("robot_template-", stringr::str_extract(sheet_ct, "20[0-9]+$"))
 
 # INCOMPLETE - SPARQL remove procedure... may not want to source it at this point in script
@@ -26,42 +26,33 @@ rt_main <- googlesheets4::read_sheet(
 ) |>
     dplyr::filter(
         !is.na(.data$template),
-        is.na(.data$notes) | !stringr::str_detect(
-            .data$notes,
-            stringr::coll("deprecated", ignore_case = TRUE)
-        )
+        is.na(.data$inclusion) | .data$inclusion != "deprecated"
     )
 
 
-rt_auto <- dplyr::filter(rt_main, stringr::str_detect(type, "auto"))$header
+rt_auto <- dplyr::filter(
+    rt_main,
+    stringr::str_detect(.data$inclusion, "auto")
+)$data_type
 
 
 # Prep & check curated data -----------------------------------------------
 
 # Load and pre-process curated data
-cur <- googlesheets4::read_sheet(gs, sheet_ct, range = "A:D", col_types = "c")
+cur <- googlesheets4::read_sheet(gs, sheet_ct, range = "A:E", col_types = "c")
 
 # 1. drop curation columns
 prep <- cur %>%
-    dplyr::select("id", "annotation", "value", "remove") %>%
 # 2. propagate id
     tidyr::fill("id", .direction = "down") %>%
-# 3. drop rows with only curation info (id, annotation, & value are empty)
-    dplyr::filter(!dplyr::if_any("annotation":"value", is.na)) %>%
+# 3. drop rows with only curation info (id, data_type, or value are empty)
+    dplyr::filter(!dplyr::if_any("data_type":"value", is.na)) %>%
 # 4. keep only rows with headers of defined templates
-    dplyr::filter(.data$annotation %in% rt_main$header) %>%
-# 5. standardize remove column values
-    dplyr::mutate(
-        remove = dplyr::if_else(
-            !(DO.utils::is_blank(.data$remove) | is.na(.data$remove)),
-            as.logical(.data$remove),
-            FALSE
-        )
-    ) %>%
+    dplyr::filter(.data$data_type %in% rt_main$data_type) %>%
 # 6. ensure def sources start with 'url:'
     dplyr::mutate(
         value = dplyr::if_else(
-            .data$annotation == "definition source(s)",
+            .data$data_type == "definition source(s)",
             stringr::str_replace_all(value, "(url:)?(https?://)", "url:\\2"),
             .data$value
         )
@@ -69,7 +60,7 @@ prep <- cur %>%
 # 7. unsplit multiple values in one row
     DO.utils::lengthen_col(value, delim = "|") %>%
 # **. [TEMPORARY] drop automated columns that may have been entered manually
-    dplyr::filter(!.data$annotation %in% rt_auto)
+    dplyr::filter(!.data$data_type %in% rt_auto)
 
 # ADDITIONAL PROCESSING IDEAS
 # 1. drop 'acronym annotation' header if it's been added; may be incorrect, more
@@ -99,22 +90,25 @@ prep <- cur %>%
 #     )
 # }
 
-# 3. determine if headers are properly limited to single values
+# 3. determine if data_type headers are properly limited to single values
 ann1 <- dplyr::filter(
     rt_main,
     !stringr::str_detect(template, stringr::coll("SPLIT=", ignore_case = TRUE))
-)$header
+)$data_type
 err <- prep %>%
-    dplyr::filter(.data$annotation %in% ann1 & !.data$remove) %>%
+    dplyr::filter(
+        .data$data_type %in% ann1,
+        !.data$status %in% c("remove", "exclude", "ignore")
+    ) %>%
     DO.utils::collapse_col(.cols = "value", delim = " | ") %>%
     dplyr::filter(stringr::str_detect(.data$value, "\\|"))
 
 if (nrow(err) > 0) {
     rlang::abort(
         c(
-            "Disease(s) must include no more than 1 value for specified annotations.",
+            "Disease(s) must include no more than 1 value for specified data_types.",
             purrr::set_names(
-                paste(err[["id"]], err$annotation, err$value, sep = " - "),
+                paste(err[["id"]], err$data_type, err$value, sep = " - "),
                 rep("x", nrow(err))
             )
         )
@@ -145,8 +139,8 @@ err <- prep %>%
         is_acronym = stringr::str_detect(value, "^[A-Za-z][A-Z0-9]{1,7}$")
     ) %>%
     dplyr::filter(
-        (!.data$is_acronym & stringr::str_detect(annotation, "acronym")) |
-            (.data$is_acronym & stringr::str_detect(annotation, "synonym"))
+        (!.data$is_acronym & stringr::str_detect(.data$data_type, "acronym")) |
+            (.data$is_acronym & stringr::str_detect(.data$data_type, "synonym"))
     )
 
 if (nrow(err) > 0) {
@@ -154,7 +148,7 @@ if (nrow(err) > 0) {
         c(
             "Are acronyms/synonyms annotations mixed up?",
             purrr::set_names(
-                paste(err[["id"]], err$annotation, err$value, sep = " - "),
+                paste(err[["id"]], err$data_type, err$value, sep = " - "),
                 rep("i", nrow(err))
             )
         )
@@ -269,8 +263,10 @@ if (dep_n > 0) {
 # )
 
 # maybe change this to ask if the user wants to check the list first, then ask if continue?
-user_check <- readline("Does existing/new disease counts appear correct?  y/n")
-
+user_check <- NA
+while (!user_check %in% c("y", "n")) {
+    user_check <- readline("Does existing/new disease counts appear correct?  y/n")
+}
 if (user_check != "y") {
     rlang::warn("Exiting with existing/new disease info for user review.")
 
@@ -278,7 +274,7 @@ if (user_check != "y") {
     get_cur_label <- function(.df, new) {
         new_w_label <- dplyr::filter(
             prep,
-            .data$id %in% new_id & .data$annotation == "label"
+            .data$id %in% new_id & .data$data_type == "label"
         ) %>%
             dplyr::select("id", label = "value")
 
@@ -300,18 +296,21 @@ if (user_check != "y") {
     # )
 }
 
-# 6. determine if any required manual headers are missing for new diseases --> error
+# 6. determine if any required manual data_types are missing for new diseases --> error
 #   --> will report which requirements are missing for all given id
 new_req <- dplyr::filter(
     rt_main,
-    stringr::str_detect(type, stringr::coll("required manual", ignore_case = TRUE))
-)$header
+    stringr::str_detect(
+        .data$inclusion,
+        stringr::coll("required manual", ignore_case = TRUE)
+    )
+)$data_type
 new_req <- new_req[new_req != "id"]
 err <- prep %>%
     dplyr::filter(.data$id %in% new_id) %>%
     dplyr::summarize(
         missing = DO.utils::vctr_to_string(
-            new_req[!new_req %in% .data$annotation],
+            new_req[!new_req %in% .data$data_type],
             delim = ", "
         ),
         .by = "id"
@@ -321,7 +320,7 @@ err <- prep %>%
 if (nrow(err) > 0) {
     rlang::abort(
         c(
-            "New disease(s) must have all required annotations.",
+            "New disease(s) must have all required data_types.",
             purrr::set_names(
                 paste(err[["id"]], err$missing, sep = " - "),
                 rep("x", nrow(err))
@@ -330,7 +329,8 @@ if (nrow(err) > 0) {
     )
 }
 
-# 7. determine if any single value headers would be added to existing terms --> error
+# 7. determine if any single value data_types would be added to existing terms
+#.  resulting in multiples --> error
 #   --> will report which requirements are missing for all given id
 exist_data <- in_DO %>%
     dplyr::rename(
@@ -338,9 +338,10 @@ exist_data <- in_DO %>%
         "parent id" = "parent_iri"
     ) %>%
     dplyr::select(dplyr::any_of(ann1)) %>%
+    dplyr::mutate(dplyr::across(-"id", as.character)) |>
     tidyr::pivot_longer(
         -"id",
-        names_to = "annotation",
+        names_to = "data_type",
         values_to = "value",
         values_drop_na = TRUE
     )
@@ -348,14 +349,14 @@ exist_data <- in_DO %>%
 err <- prep %>%
     dplyr::filter(
         .data$id %in% exist_data[["id"]],
-        .data$annotation %in% ann1,
-        !.data$remove
+        .data$data_type %in% ann1,
+        !.data$status %in% c("remove", "exclude", "ignore")
     ) %>%
     dplyr::bind_rows(
-        dplyr::filter(exist_data, .data$annotation %in% ann1),
+        dplyr::filter(exist_data, .data$data_type %in% ann1),
         .id = "src"
     ) %>%
-    dplyr::group_by(.data[["id"]], .data$annotation) %>%
+    dplyr::group_by(.data[["id"]], .data$data_type) %>%
     dplyr::mutate(
         both = all(c("1", "2") %in% .data$src),
         differ = dplyr::n_distinct(.data$value) > 1
@@ -376,7 +377,7 @@ if (nrow(err) > 0) {
             "Curated disease info must not duplicate existing, singular data.",
             purrr::set_names(
                 paste(
-                    err[["id"]], err$annotation,
+                    err[["id"]], err$data_type,
                     # paste0(
                     #     "curated: ", err$value,
                     #     "vs existing: ", err$existing_value
@@ -393,15 +394,15 @@ if (nrow(err) > 0) {
 
 # Generate ROBOT template -------------------------------------------------
 
-# retain ONLY data to be added (exclude data to remove)
+# retain ONLY data to be added
 add <- prep %>%
-    dplyr::filter(!.data$remove) %>%
-    dplyr::select("id", "annotation", "value")
+    dplyr::filter(.data$status %in% c("add", "restore")) %>%
+    dplyr::select("id", "data_type", "value")
 
 # add obo id & namespace to new diseases
 obo_req <- tibble::tibble(
     'id' = rep(new_id, times = 2),
-    annotation = rep(c("obo id", "obo namespace"), each = length(new_id)),
+    data_type = rep(c("obo id", "obo namespace"), each = length(new_id)),
     value = c(
         DO.utils::to_curie(new_id),
         rep("disease_ontology", length(new_id))
@@ -414,52 +415,52 @@ obo_req <- tibble::tibble(
 needed_def <- add %>%
     dplyr::summarize(
         .by = "id",
-        temp = any(annotation %in% c("definition source(s)", "definition source type(s)")) &
-            !any(annotation == "definition")
+        temp = any(.data$data_type %in% c("definition source(s)", "definition source type(s)")) &
+            !any(.data$data_type == "definition")
     ) %>%
     dplyr::filter(temp) %>%
     dplyr::select("id") %>%
     dplyr::left_join(
-        dplyr::filter(exist_data, .data$annotation == "definition"),
+        dplyr::filter(exist_data, .data$data_type == "definition"),
         by = "id"
     )
 
 # add oboInOwl:hasDbXref from skos:exactMatch annotations (not reciprocal because of exceptions)
 xref_skos <- add %>%
-    dplyr::filter(.data$annotation %in% "skos mapping(s): exact") %>%
-    dplyr::mutate(annotation = "xref(s)")
+    dplyr::filter(.data$data_type %in% "skos mapping(s): exact") %>%
+    dplyr::mutate(data_type = "xref(s)")
 
 # add & format data
 wide <- add %>%
     dplyr::bind_rows(obo_req, needed_def, xref_skos) %>%
     DO.utils::collapse_col("value", delim = "|") %>%
     dplyr::mutate(
-        annotation = factor(.data$annotation, levels = rt_main$header)
+        data_type = factor(.data$data_type, levels = rt_main$data_type)
     ) %>%
-    dplyr::arrange(.data$annotation, .data$id) %>%
+    dplyr::arrange(.data$data_type, .data$id) %>%
     tidyr::pivot_wider(
-        names_from = "annotation",
+        names_from = "data_type",
         values_from = "value"
     )
 
 # add templates to existing columns
 rt_template <- rt_main %>%
-    dplyr::select("header", "template") %>%
-    dplyr::filter(.data$header %in% names(wide)) %>%
+    dplyr::select("data_type", "template") %>%
+    dplyr::filter(.data$data_type %in% names(wide)) %>%
     tidyr::pivot_wider(
-        names_from = "header",
+        names_from = "data_type",
         values_from = "template"
     )
 rt <- tibble::add_row(wide, rt_template, .before = 1)
 
 # add acronym annotations
 #   multiple acronym columns with varying synonym types are supported
-#   annotation column name will match acronym col being annotated appended with " - annotation"
-acr_header <- names(rt)[stringr::str_detect(names(rt), "^acronym")]
-acr_template <- dplyr::filter(rt_main, header == "acronym annotation")$template
+#   data_type column name will match acronym col being annotated appended with " - annotation"
+acr_dt <- names(rt)[stringr::str_detect(names(rt), "^acronym")]
+acr_template <- dplyr::filter(rt_main, .data$data_type == "acronym annotation")$template
 purrr::walk2(
-    acr_header,
-    seq_along(acr_header),
+    acr_dt,
+    seq_along(acr_dt),
     function(.x, .y) {
         acr_ann <- dplyr::if_else(!is.na(rt[[.x]]), "acronym", NA_character_)
         acr_ann[1] <- acr_template
