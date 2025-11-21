@@ -17,3 +17,6 @@ scratch/
 *.docx
 *.svg
 *.png
+
+# Mac files
+.DS_Store
