@@ -10,9 +10,15 @@ library(tidyverse)
 
 repo_path <- here::here("../Ontologies/HumanDiseaseOntology")
 
-text_pred <- "rdfs:label"
+# Set text limits (SPARQL query)
+text_pred <- "VALUES ?predicate { rdfs:label }"
+text_filter <- "FILTER(datatype(?text_lang) IN (xsd:string, rdf:langString))"
 
+# chose which limiter to use
+limiter <- text_filter
 
+# choose number of examples to return of each character (per lang)
+examples_n <- 2
 
 # STANDARD PROCESSING -----------------------------------------------------
 
@@ -37,7 +43,7 @@ query <- glue::glue(
 
     SELECT ?iri ?predicate ?text ?lang
     WHERE {
-        VALUES ?predicate { @text_pred@ }
+        #@limiter#
         ?iri a owl:Class ;
             ?predicate ?text_lang .
         BIND(str(?text_lang) AS ?text)
@@ -45,8 +51,8 @@ query <- glue::glue(
         FILTER NOT EXISTS { ?iri owl:deprecated ?any }
     }',
     .sep = " ",
-    .open = "@",
-    .close = "@"
+    .open = "#@",
+    .close = "#"
 )
 
 di_df <- DO.utils::robot_query(
@@ -67,18 +73,34 @@ all_chr <- di_df$text |>
 
 #### identify examples of potentially problematic characters ####
 
-# choose number of examples to return of each character (per lang)
-examples_n <- 2
-
 chr_check <- all_chr[!stringr::str_detect(all_chr, "^[A-Za-z0-9]+$")]
 
 # priortize DOID namespace over others and text predicates as ordered in initial
-#  input
+# input (or as specified below if input is not specific)
+if (!identical(limiter, text_pred)) {
+    all_pred <- di_df$predicate |>
+        unique()
+    text_order <- c(
+        "rdfs:label",
+        "oboInOwl:hasExactSynonym",
+        "oboInOwl:hasRelatedSynonym",
+        "oboInOwl:hasBroadSynonym",
+        "oboInOwl:hasNarrowSynonym",
+        "IAO:0000115"
+    )
+    text_pred <- union(text_order, all_pred)
+} else {
+    text_order <- text_pred
+}
+
 di_df2 <- di_df |>
     dplyr::mutate(
         ns = stringr::str_remove(.data$iri, ":.*"),
         priority = dplyr::if_else(.data$ns == "DOID", 0, 1) +
-            as.integer(factor(.data$predicate, levels = text_pred)) - 1
+            pmin(
+                as.integer(factor(.data$predicate, levels = text_pred)),
+                length(text_order)
+            ) - 1,
     )
 
 di_check <- purrr::map(
