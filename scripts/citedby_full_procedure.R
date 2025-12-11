@@ -341,8 +341,10 @@ updated_src_count <- updated %>%
         }
     )
 
-# number of publications identified using each ID, to date
+# display number of publications identified using each ID, to date
 updated_src_count
+# and total
+cat("total: ", nrow(updated))
 
 # total number of publications identified to date (unique should equal total rows)
 if (nrow(updated) == sum(updated_src_count)) {
