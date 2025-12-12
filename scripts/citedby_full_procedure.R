@@ -113,49 +113,47 @@ cb_pm_merge <- cb_pm_by_id %>%
 
 # Scopus cited by data ----------------------------------------------------
 
-### HTTP 401 ERROR (2025) - currently inaccessible --> skip ###
+# get data if it isn't available
+if (file.exists(cb_scop_raw_file)) {
+    load(file = cb_scop_raw_file)
+} else {
+    do_cb_scop_by_id <- citedby_scopus(
+        title = DO.utils::DO_pubs$title,
+        id = DO.utils::DO_pubs$internal_id,
+        by_id = TRUE,
+        # set API key
+        api_key = keyring::key_get("Elsevier_API"),
+        # set institution token
+        headers = rscopus::inst_token_header(
+            keyring::key_get("Elsevier_insttoken")
+        ),
+        verbose = FALSE
+    )
 
-# # get data if it isn't available
-# if (file.exists(cb_scop_raw_file)) {
-#     load(file = cb_scop_raw_file)
-# } else {
-#     do_cb_scop_by_id <- citedby_scopus(
-#         title = DO.utils::DO_pubs$title,
-#         id = DO.utils::DO_pubs$internal_id,
-#         by_id = TRUE,
-#         # set API key
-#         api_key = keyring::key_get("Elsevier_API"),
-#         # set institution token
-#         headers = rscopus::inst_token_header(
-#             keyring::key_get("Elsevier_insttoken")
-#         ),
-#         verbose = FALSE
-#     )
-#
-#     save(do_cb_scop_by_id, file = cb_scop_raw_file)
-# }
-#
-# cb_scop_by_id <- as_tibble(do_cb_scop_by_id)
-#
-# # prepare for merge
-# cb_scop_merge <- cb_scop_by_id %>%
-#     dplyr::mutate(
-#         first_author = stringr::str_remove_all(`dc:creator`, "\\."),
-#         pub_type = paste(
-#             `prism:aggregationType`,
-#             subtypeDescription,
-#             sep = "|"
-#         ),
-#         pub_date = lubridate::date(`prism:coverDate`),
-#     ) %>%
-#     dplyr::select(
-#         first_author, title = "dc:title", journal = "prism:publicationName",
-#         pub_date, doi = "prism:doi", pmid = "pubmed-id", scopus_eid = eid, cites,
-#         pub_type, added_dt
-#     ) %>%
-#     dplyr::mutate(source = "scopus") %>%
-#     # collapse cited by records that cite multiple DO_pubs
-#     DO.utils::collapse_col_flex(cites = "unique", added_dt = "first")
+    save(do_cb_scop_by_id, file = cb_scop_raw_file)
+}
+
+cb_scop_by_id <- as_tibble(do_cb_scop_by_id)
+
+# prepare for merge
+cb_scop_merge <- cb_scop_by_id %>%
+    dplyr::mutate(
+        first_author = stringr::str_remove_all(`dc:creator`, "\\."),
+        pub_type = paste(
+            `prism:aggregationType`,
+            subtypeDescription,
+            sep = "|"
+        ),
+        pub_date = lubridate::date(`prism:coverDate`),
+    ) %>%
+    dplyr::select(
+        first_author, title = "dc:title", journal = "prism:publicationName",
+        pub_date, doi = "prism:doi", pmid = "pubmed-id", scopus_eid = eid, cites,
+        pub_type, added_dt
+    ) %>%
+    dplyr::mutate(source = "scopus") %>%
+    # collapse cited by records that cite multiple DO_pubs
+    DO.utils::collapse_col_flex(cites = "unique", added_dt = "first")
 
 
 # PubMed collection data --------------------------------------------------
@@ -241,21 +239,18 @@ col_pmc_merge <- col_pmc %>%
 
 # Merge -------------------------------------------------------------------
 
-### HTTP 401 ERROR (2025) - currently inaccessible --> skip ###
+# PubMed and Scopus cited by results (prefer PubMed data for matches)
+match_scop <- match_citations(cb_pm_merge, cb_scop_merge)
 
-# # PubMed and Scopus cited by results (prefer PubMed data for matches)
-# match_scop <- match_citations(cb_pm_merge, cb_scop_merge)
-#
-# cb_merge <- cb_pm_merge %>%
-#     dplyr::mutate(
-#         source = dplyr::if_else(
-#             is.na(match_scop),
-#             source,
-#             paste(source, "scopus", sep = "; ")
-#         )
-#     ) %>%
-#     dplyr::bind_rows(cb_scop_merge[-na.omit(match_scop), ])
-cb_merge <- cb_pm_merge
+cb_merge <- cb_pm_merge %>%
+    dplyr::mutate(
+        source = dplyr::if_else(
+            is.na(match_scop),
+            source,
+            paste(source, "scopus", sep = "; ")
+        )
+    ) %>%
+    dplyr::bind_rows(cb_scop_merge[-na.omit(match_scop), ])
 
 ## ...and Collection PubMed results (prefer previously merged data)
 match_col_pm <- match_citations(cb_merge, col_pm_merge)
@@ -314,8 +309,7 @@ new_df <- dplyr::filter(final_merge, new)
 # number of new records by source matched
 to_count <- rep(TRUE, nrow(new_df))
 new_src_count <- new_df %>%
-    # dplyr::select(pmid, pmcid, scopus_eid, doi) %>%  ### modified due to Scopus HTTP 401 error
-    dplyr::select(pmid, pmcid, doi) %>%
+    dplyr::select(pmid, pmcid, scopus_eid, doi) %>%
     purrr::map_int(
         function(.col) {
             n <- .col[to_count] %>%
