@@ -1,0 +1,259 @@
+---
+title: "Analysis of RTT abbreviation"
+date: "2025-09-19"
+output:
+    md_document:
+        variant: markdown_github
+    html_notebook:
+        toc: true
+        toc_float: true
+        code_folding: hide
+---
+
+Seems to be used frequently for Rett syndrome (DOID:1206), but should it be added?
+
+**GOAL:** Determine if RTT is worth adding as a synonym of Rett syndrome.
+
+_It will be if it is not used for other diseases and Rett syndrome appears to be a sizable proportion of instances identified in the published literature._
+
+
+```{r setup, include=FALSE}
+library(europepmc)
+library(tidyverse)
+library(xml2)
+library(here)
+
+knitr::opts_chunk$set(echo = if (knitr::is_html_output()) TRUE else FALSE)
+```
+
+```{r in_progress_data}
+data_file <- here::here("data/disease_info/RTT-abbrev.rda")
+```
+
+```{r custom_functions}
+# get_ftxt_safely() will automatically get PMC articles or books and will NOT
+#   fail if on errors caused by individual download failures
+safe_epmc_ftxt <- purrr::safely(europepmc::epmc_ftxt, otherwise = NA, quiet = FALSE)
+safe_epmc_ftxt_bk <- purrr::safely(europepmc::epmc_ftxt_book, otherwise = NA, quiet = FALSE)
+
+get_ftxt_safely <- function(pmcid = NA, bookid = NA) {
+    if (is.na(pmcid) && is.na(bookid) ) return(NA)
+    if (!is.na(pmcid)) {
+        out <- list(safe_epmc_ftxt(pmcid))
+    } else {
+        out <- list(safe_epmc_ftxt_bk(bookid))
+    }
+    cat(".")
+    out
+}
+
+# drops retractions & pre-prints, reduces columns, and formats dates
+tidy_epmc_search <- function(.df) {
+    tidy_df <- .df |>
+        dplyr::filter(!stringr::str_detect(pubType, "retract|preprint")) |>
+        dplyr::select(
+            "id", "title", "pubYear", pubDate = "firstPublicationDate",
+            "pmcid", dplyr::any_of("bookid")
+        ) |> 
+        dplyr::mutate(
+            pubDate = lubridate::as_date(pubDate),
+            pubYear = lubridate::year(pubDate)
+        )
+    # bookid sometimes missing --> standardize
+    if (!("bookid" %in% names(tidy_df))) {
+        tidy_df <- tidy_df |>
+            dplyr::mutate(bookid = NA_character_)
+    }
+    tidy_df
+}
+
+get_open_access <- function(tidy_epmc, nmax = 5000) {
+    # limit to open access likely to be available
+    oa <- tidy_epmc |>
+        dplyr::filter(isOpenAccess == "Y" & !(is.na(pmcid) & is.na(bookid)))
+    
+    # sample maintaining general pattern over time, if too many
+    oa_total <- nrow(oa)
+    if (oa_total > nmax) {
+        warning(
+            paste0(
+                oa_total, " open access publications found; ",
+                "sampling ≤ ", nmax
+            ),
+            immediate. = TRUE
+        )
+        n_yr <- dplyr::count(oa, pubYear, name = "yr_total") |>
+            dplyr::mutate(
+                frac = .data$yr_total / sum(.data$yr_total),
+                frac_n = DO.utils::round_down(.data$frac * 5000)
+            )
+        oa <- purrr::map2(
+            n_yr$pubYear,
+            n_yr$frac_n,
+            ~ oa |> 
+                dplyr::filter(.data$pubYear == .x) |>
+                dplyr::slice_sample(n = .y)
+        ) |>
+            dplyr::bind_rows()
+    }
+    
+    full_text <- oa |>
+        dplyr::rowwise() |>
+        dplyr::mutate(ft_xml = get_ftxt_safely(.data$pmcid, .data$bookid)) |>
+        dplyr::mutate(ft = parse_ftxt_xml(ft_xml, "//body"))
+
+    full_text
+}
+
+# parse_ftxt_xml() parses results from get_ftxt_safely()
+parse_ftxt_xml <- function(safe_ftxt_xml, xml_accessor) {
+    if (!is.null(safe_ftxt_xml$error)) {
+        return(paste0("ERROR: ", safe_ftxt_xml$error$message))
+    }
+    out <- safe_ftxt_xml$result |>
+        xml2::xml_find_all(xml_accessor) |>
+        xml2::xml_text()
+
+    if (length(out) == 0) {
+        out <- paste0(
+            "ERROR [NO BODY]: ",
+            xml2::xml_text(safe_ftxt_xml$result)
+        )
+        if (length(out) == 0) {
+            out <- "ERROR: No text extractable"
+        }
+    } else if (length(out) > 1) {
+        out <- DO.utils::vctr_to_string(out, delim = "%%%%%") |>
+            paste0("WARNING: Multilength output, separated by %%%%%.")
+    }
+
+    out
+}
+```
+
+
+# Approach
+
+In this case, I'll identify all open access publications with "RTT" in them and then try to extract the full-length equivalent from each publication to estimate the prevalence and determine how this abbreviation is used.
+
+_The output will be saved to a file to avoid need of repeat API call (until the next desired updated)._
+
+```{r}
+abbrev <- "RTT"
+search_str <- DO.utils::sandwich_text(abbrev, c('OPEN_ACCESS:y AND "', '"'))
+
+if (!file.exists(data_file)) {
+    res <- europepmc::epmc_search(search_str, synonym = FALSE, limit = 20000)
+
+    save(res, file = data_file)
+} else {
+    load(data_file)
+}
+```
+
+The number of publication hits was `r format(nrow(res), big.mark = ",")`.
+
+The full text of Open Access publications will also be downloaded for this analysis, excluding retractions and preprints.
+
+```{r}
+use_bookid <- "bookid" %in% names(res)
+
+res_tidy <- res |>
+    dplyr::filter(
+        !stringr::str_detect(.data$pubType, "retract|preprint"),
+        !(is.na(.data$pmcid) & is.na(.data$bookid))
+    ) |>
+    dplyr::select(
+        "id", "title", "pubYear", pubDate = "firstPublicationDate",
+        "pmcid", if (use_bookid) { "bookid" }) |>
+    dplyr::mutate(
+        pubDate = lubridate::as_date(.data$pubDate),
+        pubYear = lubridate::year(.data$pubDate)
+    )
+
+if (!exists("res_ftxt")) {
+    res_ftxt <- res_tidy |>
+        dplyr::rowwise() |>
+        dplyr::mutate(
+            ft_xml = get_ftxt_safely(
+                .data$pmcid,
+                if (use_bookid) { .data$bookid } else { NA }
+            )
+        ) |>
+        dplyr::mutate(ft = parse_ftxt_xml(.data$ft_xml, "//body"))
+    
+    save(res, res_ftxt, file = data_file)
+}
+```
+
+
+# Evaluating Usage
+
+Extracting all these values from the full text of the sample publications and all the titles (in a case-insensitive manner).
+```{r}
+regex_str <- "\\b[Rr]([^ ]+ ){1,3}\\(RTT\\)"
+
+anal_df <- res_ftxt |>
+    dplyr::select(-"ft_xml") |>
+    dplyr::mutate(
+        ft_status = dplyr::case_when(
+            .data$ft == "" ~ "none",
+            stringr::str_detect(.data$ft, "^ERROR.*NO BODY") ~ "abstract?",
+            stringr::str_detect(.data$ft, "^ERROR") ~ "inaccessible",
+            !is.na(.data$ft) ~ "available"
+        ),
+        title_match = stringr::str_extract_all(
+            .data$title,
+            stringr::regex(regex_str, ignore_case = TRUE)
+        ),
+        ft_match = stringr::str_extract_all(
+            .data$ft,
+            stringr::regex(regex_str, ignore_case = TRUE)
+        )
+    ) |>
+    tidyr::unnest(title_match, keep_empty = TRUE) |>
+    tidyr::unnest(ft_match, keep_empty = TRUE) |>
+    tidyr::pivot_longer(
+        cols = c("title_match", "ft_match"),
+        names_sep = "_",
+        names_to = c("type", ".value")
+    ) |>
+    dplyr::mutate(
+        type = dplyr::if_else(
+            .data$type == "ft",
+            paste(.data$type, .data$ft_status, sep = "-"),
+            .data$type
+        )
+    ) |>
+    dplyr::select(-"ft", -"ft_status")
+```
+
+The number of publications with and without matches in their titles or full text (or what approximates for full text) are as follows:
+
+```{r}
+anal_df |>
+    dplyr::summarize(match = any(!is.na(.data$match)), .by = c("id", "type")) |>
+    dplyr::count(.data$type, .data$match) |>
+    dplyr::mutate(title = .data$type == "title") |>
+    dplyr::mutate(pct = round(.data$n / sum(.data$n) * 100, 2), .by = "title") |>
+    dplyr::arrange(.data$title, .data$match, .data$type) |>
+    dplyr::select(-"title")
+```
+The breakdown of terms identified (total = `r format(sum(!is.na(anal_df$match)), big.mark = ",")`) is as follows:
+
+```{r}
+terms <- anal_df |>
+    dplyr::filter(!is.na(.data$match)) |>
+    dplyr::mutate(
+        std_match = stringr::str_remove(.data$match, "\\(.*") |>
+            stringr::str_replace_all("[[:punct:]]", " ") |>
+            stringr::str_to_lower()
+    )
+
+dplyr::count(terms, .data$std_match, sort = T) |>
+    dplyr::mutate(pct = round(.data$n / sum(.data$n) * 100, 2))
+```
+
+# Conclusion
+
+Though Rett syndrome represents about 1/3 of the uses for RTT, it is the major meaning for RTT in the disease realm. It seems reasonable to add RTT as a synonym for Rett syndrome (this will use the acronym annotation, since DO does not use an annotation for abbreviation, even though it's not exactly an acronym).

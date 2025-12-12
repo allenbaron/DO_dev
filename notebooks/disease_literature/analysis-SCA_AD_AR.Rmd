@@ -1,0 +1,204 @@
+---
+title: "Use of autosomal dominant with spinicerebellar ataxia"
+output: html_notebook
+---
+
+```{r setup, include=FALSE}
+library(europepmc)
+library(dplyr)
+library(glue)
+library(purrr)
+library(stringr)
+library(DO.utils)
+
+sca_file <- here::here("data/disease_info/sca-20250722.R")
+```
+
+
+This analysis is to inform the disambuiguation requested in DO issue [#1512](https://github.com/DiseaseOntology/HumanDiseaseOntology/issues/1512) regarding the use of "autosomal dominant" versus "autosomal recessive" with spinicerebellar ataxia.
+
+> NOTE  
+> Data obtained from this analysis will be saved to `r stringr::str_extract(sca_file, "data/.*$")`, in case there is a need for further analysis or review.
+
+There's some variation in DO with regarding to naming of the spinocerebellar ataxias. These are all children of autosomal dominant cerebellar ataxia (DOID:1441) or autosomal recessive cerebellar ataxia (DOID:0050950). The autosomal dominant (AD) subtypes are primarily named 'spinocerebellar ataxia type #' (OMIM abbreivation SCA) but some are just "cerebellar ataxia" and most have "type" before the number. Both of these variations are _INCONSISTENT_ with OMIM's names. The autosomal recessive (AR) subtypes are all named "autosomal recessive spinocerebellar ataxia #" (OMIM abbreviation SCAR).
+
+Note that there are additionally children of these parents with totally different names.
+
+To disambuiguate naming, the following exact searches were defined. These should allow disambuiguation of the AD subtype names, mentioned above, and the use of AD/AR for SCAs.
+
+```{r}
+# search exact matches
+search <- c(
+    SCA = '"spinocerebellar ataxia"',
+    SCAD = '"autosomal dominant spinocerebellar ataxia"',
+    SCAR = '"autosomal recessive spinocerebellar ataxia"',
+    SCAT = '"spinocerebellar ataxia type"',
+    CA = '"cerebellar ataxia"',
+    CAT = '"cerebellar ataxia type"'
+)
+```
+
+Additionally, searches for specific subtypes will be done for both SCA & SCAR. Subtypes 10 & 11 were chosen because they have no synonyms in DO or OMIM and are both over 10 years old. Subtype 34 was chosen because it is part of the request.
+
+```{r}
+subtypes <- c("10", "11", "34")
+
+st_search <- purrr::map(subtypes, ~ paste(search[1:3], .x, sep = " ")) |>
+    unlist() |>
+    stringr::str_replace('" (.+)', ' \\1"')
+names(st_search) <- purrr::map(subtypes, ~ paste0(names(search[1:3]), .x)) |>
+    unlist()
+```
+
+This analysis will compare search hit counts and IDs but not dig into full text extraction. I'm hoping to catch all results, 20,000 hits seems like a generous ceiling.
+
+```{r}
+search_all <- c(search, st_search)
+
+if (!dir.exsts(dirname(sca_file))) dir.create(data_dir, recursive = TRUE)
+if (file.exists(sca_file)) {
+    load(sca_file)
+} else {
+    res <- purrr::map(
+        search_all,
+        ~ europepmc::epmc_search(query = .x, synonym = FALSE, limit = 20000)
+    )
+    
+    sca_df <- dplyr::bind_rows(res, .id = "search_id") |>
+        dplyr::mutate(
+            category = dplyr::if_else(
+                stringr::str_detect(.data$search_id, "[0-9]"),
+                stringr::str_extract(.data$search_id, "[0-9]+"),
+                "general"
+            ),
+            search = dplyr::recode(.data$search_id, !!!search_all)
+        )
+    
+    save(sca_df, file = sca_file)
+}
+```
+
+The search for cerebellar ataxia exceeded 20,000 hits (~ 24K) but all others were below it. These are the overall counts for the general searches.
+
+```{r}
+sca_df |>
+    dplyr::filter(.data$category == "general") |>
+    dplyr::count(.data$search_id, .data$search) |>
+    dplyr::arrange(.data$search_id)
+```
+
+
+SCAD is at least as common as SCAR, but neither is used as frequently as SCA alone. SCAT is pretty common, but CAT is not.
+
+```{r}
+sca_df |>
+    dplyr::filter(.data$category != "general") |>
+    dplyr::count(search_id, search) |>
+    dplyr::mutate(st = stringr::str_extract(.data$search_id, "[0-9]+")) |>
+    dplyr::arrange(.data$st, .data$search_id) |>
+    dplyr::select(-"st")
+```
+Hmm... it seems with the subtypes that AD/AR are always less common than just the SCA name. That may indicate a significant ambiguity problem, given OMIM has defined the AD series as SCA (without D), but it could also just mean that the AD forms are more frequently reported on and authors are using the correct OMIM SCA names (without D). Note that for subtype 34, there are no hits for SCAD.
+
+To check I'll do an additional search with the SCA number terms specifically excluding "autosomal dominant". If the name is used correctly, each result should be zero (or close to zero) hits.
+
+```{r}
+sca_no_d <- search_all[stringr::str_detect(search_all, '^"spino.*[0-9]+')]
+sca_nd_nm <- names(sca_no_d) |>
+    paste0("_nd")
+sca_no_d <- paste0(sca_no_d, ' -"autosomal dominant"')
+names(sca_no_d) <- sca_nd_nm
+    
+if (!exists("sca_nd_df")) {
+    res_sca_nd <- purrr::map(
+        sca_no_d,
+        ~ europepmc::epmc_search(query = .x, synonym = FALSE, limit = 20000)
+    )
+    
+    sca_nd_df <- dplyr::bind_rows(res_sca_nd, .id = "search_id") |>
+        dplyr::mutate(
+            category = stringr::str_extract(.data$search_id, "[0-9]+"),
+            search = dplyr::recode(.data$search_id, !!!sca_no_d)
+        )
+    
+    save(sca_df, sca_nd_df, file = sca_file)
+}
+
+dplyr::count(sca_nd_df, .data$search_id, .data$search) |>
+    dplyr::arrange(.data$search_id)
+```
+
+Well, that was more than expected for all of them; they're actually closer to half. Maybe there is some confusion after all. I guess I could check a few of the publications that seem to be missing 'autosomal dominant' manually. I'll randomly select some, limited to PMC or Medline (aka PubMed) articles, and look at the full text on the Europe PMC website.
+
+```{r}
+if (!exists("sca_nd_chk")) {
+    sca_nd_chk <- sca_nd_df |>
+        dplyr::filter(.data$source %in% c("PMC", "MED")) |>
+        dplyr::slice_sample(n = 3, by = "search_id") |>
+        dplyr::mutate(
+            link = paste(
+                "https://europepmc.org/article",
+                .data$source,
+                .data$id,
+                sep = "/"
+            )
+        )
+    save(sca_df, sca_nd_df, sca_nd_chk, file = sca_file)
+}
+
+sca_nd_chk
+```
+<a id="sca_nd_links_1"></a>
+```{r, results = 'asis'}
+cat(paste0(1:nrow(sca_nd_chk), ". ", sca_nd_chk$search_id, ": [", sca_nd_chk$title, "](", sca_nd_chk$link, ")"), sep = "\n")
+```
+
+1. Match is "...which included 1 patient with **spinocerebellar ataxia, 10** with parkinsonism first..." --> NOT about SCA10
+2. About SCA10, no reference of autosomal dominant or recessive.
+...
+
+Looking at this it occurs to me that checking the opposite, the occurrence of SCA with AR, might be more quick and informative.
+
+```{r}
+sca_ar <- stringr::str_replace(sca_no_d, "dominant", "recessive") |>
+    stringr::str_remove("-")
+names(sca_ar) <- stringr::str_replace(names(sca_no_d), "nd", "ar")
+
+if (!exists("sca_ar_df")) {
+    res_sca_ar <- purrr::map(
+        sca_ar,
+        ~ europepmc::epmc_search(query = .x, synonym = FALSE, limit = 20000)
+    )
+    
+    sca_ar_df <- dplyr::bind_rows(res_sca_ar, .id = "search_id") |>
+        dplyr::mutate(
+            category = stringr::str_extract(.data$search_id, "[0-9]+"),
+            search = dplyr::recode(.data$search_id, !!!sca_no_d)
+        )
+    
+    save(sca_df, sca_nd_df, sca_nd_chk, sca_ar_df, file = sca_file)
+}
+
+dplyr::count(sca_ar_df, .data$search_id, .data$search) |>
+    dplyr::arrange(.data$search_id)
+```
+
+That's also more than I would've expected. I'll go back to checking the full text lacking AD first.
+
+Referencing the [SCA with no AD links](#sca_nd_links_1) above, here are a few more results: 
+3. Same as #2.
+4. Match is "Of these patients, 3 subjects presented clinically with CANVAS (33%, 100% of phenotype), 5 had cerebellar ataxia with neuropathy (56%, 12% of phenotype), and 1 had **spinocerebellar ataxia (11%**, 0.6% of phenotype). --> NOT about SCA11
+5. Match is "...PML expression in neurons in Purkinje cells in a culture model of **spinocerebellar ataxia (11**, 17)." --> NOT about SCA11 (actually about SCA7).
+6. About SCA11 (high-throughput), no reference of autosomal dominant or recessive.
+...
+
+This only highlights that 1) Europe PMC strips certain characters when comparing for exact searches (probably to speed up searches), which is messing with my results and assumptions, or 2) not everyone mentions AD. The AR results may be more informative but I think just checking for AR is too general. It's likely to be a waste of time.
+
+The real question is do people ever use the SCA name to refer to the AR subtypes? ...
+
+I cannot come up with a way to reliably check this in an automated manner.
+
+## INCONCLUSIVE
+
+The results here are inconclusive, except that they make clear that authors do include "type" in some instances, particularly with SCA(R)? and also may include "autosomal dominant" for SCA names, albeit rarely.
+

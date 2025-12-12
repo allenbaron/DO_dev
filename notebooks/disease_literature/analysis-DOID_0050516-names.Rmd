@@ -1,0 +1,298 @@
+---
+title: "Analysis of DOID:6457 name & synonyms"
+date: "2025-02-21"
+output:
+    html_notebook:
+        toc: true
+        toc_float: true
+        code_folding: hide
+---
+
+The goal of this analysis is to determine what name is in primary use at this stage for DOID:6457. Multiple terms exist that appear to be equivalent (see issue [#1514](https://github.com/DiseaseOntology/HumanDiseaseOntology/issues/1514)) and there are numerous names for this disease.
+
+
+```{r setup, include=FALSE}
+library(europepmc)
+library(tidyverse)
+library(xml2)
+library(here)
+library(hues)
+library(plotly)
+```
+
+```{r in_progress_data}
+data_dir <- here::here("data/disease_info")
+data_file <- file.path(data_dir, "cowden_syndrome_1.rda")
+
+if (!dir.exists(data_dir)) dir.create(data_dir, recursive = TRUE)
+```
+
+```{r custom_functions}
+# get_ftxt_safely() will automatically get PMC articles or books and will NOT
+#   fail if on errors caused by individual download failures
+safe_epmc_ftxt <- purrr::safely(europepmc::epmc_ftxt, otherwise = NA, quiet = FALSE)
+safe_epmc_ftxt_bk <- purrr::safely(europepmc::epmc_ftxt_book, otherwise = NA, quiet = FALSE)
+
+get_ftxt_safely <- function(pmcid = NA, bookid = NA) {
+    if (is.na(pmcid) && is.na(bookid) ) return(NA)
+    if (!is.na(pmcid)) {
+        out <- list(safe_epmc_ftxt(pmcid))
+    } else {
+        out <- list(safe_epmc_ftxt_bk(bookid))
+    }
+    cat(".")
+    out
+}
+
+
+# parse_ftxt_xml() parses results from get_ftxt_safely()
+parse_ftxt_xml <- function(safe_ftxt_xml, xml_accessor) {
+    if (!is.null(safe_ftxt_xml$error)) {
+        return(paste0("ERROR: ", safe_ftxt_xml$error$message))
+    }
+    out <- safe_ftxt_xml$result |>
+        xml2::xml_find_all(xml_accessor) |>
+        xml2::xml_text()
+
+    if (length(out) == 0) {
+        out <- paste0(
+            "ERROR [NO BODY]: ",
+            xml2::xml_text(safe_ftxt_xml$result)
+        )
+        if (length(out) == 0) {
+            out <- "ERROR: No text extractable"
+        }
+    } else if (length(out) > 1) {
+        out <- DO.utils::vctr_to_string(out, delim = "%%%%%") |>
+            paste0("WARNING: Multilength output, separated by %%%%%.")
+    }
+
+    out
+}
+```
+
+
+These are the terms currently in DO, or that have been identified in initial searches.
+
+```{r}
+terms <- c(
+    "PTEN hamartoma tumor syndrome", # current label
+    "Bannayan-Riley-Ruvalcaba syndrome",
+    "Bannayan-Zonana syndrome",
+    "Cowden syndrome 1",
+    "Riley-Smith syndrome",
+    "Ruvalcaba-Myhre-Smith syndrome",
+    # additional from OMIM (not in DO)
+    "multiple hamartoma syndrome",
+    "PTEN hamartoma tumor syndrome with granular cell tumor",
+    "macrocephaly, pseudopapilledema, and multiple hemangiomata",
+    "macrocephaly, multiple lipomas, and hemangiomata ",
+)
+
+initialism <- c("RMSS", "BZS", "PHTS", "MHAM", "BBRS", "CWS1", "CS", "CD")
+```
+
+
+Begin by searching EuropePMC for articles that contain one or more exact matches to these terms using the default search. _Save output to file, to avoid potential of repeat API call._
+
+```{r}
+# exclude abbreviations when searching for publications (too likely to 
+nm_search <- paste0(
+    '"', terms[stringr::str_length(terms) > 4] , '"',
+    collapse = " OR "
+)
+search_str <- paste0('OPEN_ACCESS:y AND (', nm_search, ')')
+
+if (!file.exists(data_file)) {
+    res <- europepmc::epmc_search(search_str, synonym = FALSE, limit = 20000)
+    res_init <- purrr::map(
+        initialism,
+        function(.init) {
+            init_search <- DO.utils::sandwich_text(.init, '"')
+            no_nm <- europepmc::epmc_search(
+                init_search,
+                synonym = FALSE,
+                limit = 20000
+            )
+            w_nm <- europepmc::epmc_search(
+                paste0(init_search, " AND (", nm_search, ")"),
+                synonym = FALSE,
+                limit = 20000
+            )
+        } 
+    )
+    save(res, res_init, file = data_file)
+} else {
+    load(data_file)
+}
+```
+
+The number of publication hits (`r format(nrow(res), big.mark = ",")`) can be reasonably be processed using all the full text articles, excluding preprints and retractions.
+
+```{r}
+res_tidy <- res |>
+    dplyr::filter(!stringr::str_detect(pubType, "retract|preprint")) |>
+    dplyr::select(
+        "id", "title", "pubYear", pubDate = "firstPublicationDate", "pmcid"
+    ) |>
+    dplyr::mutate(
+        pubDate = lubridate::as_date(pubDate),
+        pubYear = lubridate::year(pubDate)
+    )
+
+if (!exists("res_ftxt")) {
+    res_ftxt <- res_tidy |>
+        dplyr::rowwise() |>
+        dplyr::mutate(ft_xml = get_ftxt_safely(pmcid)) |>
+        dplyr::mutate(ft = parse_ftxt_xml(ft_xml, "//body"))
+    
+    save(res, res_ftxt, file = data_file)
+}
+```
+
+
+# Evaluating Usage
+
+Extracting all these values from the full text of the sample publications and all the titles (in a case-insensitive manner).
+```{r}
+regex_str <- "o.nyong.nyong( fever)?"
+term_df <- res_tidy |>
+    dplyr::left_join(
+        res_ftxt,
+        by = c("id", "title", "pubYear", "pubDate", "pmcid")
+    ) |>
+    dplyr::select("id", "pubDate", "title", "ft") |>
+    dplyr::mutate(
+        title_match = stringr::str_extract_all(
+            .data$title,
+            stringr::regex(regex_str, ignore_case = TRUE)
+        ),
+        ft_match = stringr::str_extract_all(
+            .data$ft,
+            stringr::regex(regex_str, ignore_case = TRUE)
+        )
+    ) |>
+    tidyr::unnest(title_match, keep_empty = TRUE) |>
+    tidyr::unnest(ft_match, keep_empty = TRUE) |>
+    dplyr::mutate(ft = !is.na(ft))
+```
+
+The number of publications with and without matches in their titles or full text, noting whether their full-text was obtained are as follows:
+
+```{r}
+term_df |>
+    dplyr::summarize(
+        title_match = any(!is.na(title_match)),
+        ft_match = any(!is.na(ft_match)),
+        ft = unique(ft),
+        .by = "id"
+    ) |>
+    dplyr::count(ft, title_match, ft_match) |>
+    dplyr::mutate(pct = round(n / sum(n) * 100, 2)) |>
+    dplyr::rename(ft_obtained = "ft")
+```
+Any non-matches will just be dropped for the analysis of names, and special quote or dash marks will be standardized to `'`.
+
+```{r}
+matches <- term_df |>
+    tidyr::pivot_longer(
+        title_match:ft_match,
+        names_to = c("source", ".value"),
+        names_sep = "_",
+        values_drop_na = TRUE
+    ) |>
+    dplyr::mutate(
+        match = stringr::str_replace_all(
+            .data$match,
+            c("['‘’′]" = "'", "[-‐–]" = "-")
+        ),
+        match_lc = stringr::str_to_lower(.data$match)
+    ) |>
+    dplyr::select(-"title")
+```
+
+The number of case-insenitive matches in the titles and full text are as follows:
+```{r}
+matches |>
+    DO.utils::collapse_col("match") |>
+    dplyr::count(.data$source, .data$match_lc)
+```
+
+The number of matches, in the full text only, preserving case are as follows:
+```{r}
+ft_matches <- matches |>
+    dplyr::filter(.data$source == "ft")
+
+ft_matches |>
+    DO.utils::collapse_col("match_lc") |> 
+    dplyr::count(.data$match, sort = TRUE)
+```
+
+The current name in DO is pretty low in the list and doesn't match the original. The top two are the original, with the second being the original capitalization. The uppercase version is much more common. It's much less common to find the name with "fever" but that's probably to be expected since the name of the virus will almost certainly be used at least once with each disease reference, and often much more.
+
+Organized by publication date and binned into year intervals (limited to the top ten), the results are as follows:
+
+```{r}
+g_colors <- hues::iwanthue(dplyr::n_distinct(ft_matches$match))
+
+ft_matches |>
+    DO.utils::collapse_col("match_lc") |>
+    dplyr::mutate(n = length(.data$source), .by = "match") |>
+    ggplot2::ggplot() +
+    ggplot2::geom_freqpoly(
+        ggplot2::aes(x = pubDate, color = match),
+        binwidth = 365
+    ) +
+    ggplot2::scale_color_manual(values = g_colors) +
+    ggplot2::facet_wrap(~ source, ncol = 1, scales = "free_y")
+```
+
+Hmm... the oldest uses are quite a long time ago and make the graph a bit hard to read. Subsetting the graph to after the year 2000:
+```{r warning=FALSE}
+g <- ft_matches |>
+    DO.utils::collapse_col("match_lc") |>
+    dplyr::mutate(n = length(.data$source), .by = "match") |>
+    ggplot2::ggplot() +
+    ggplot2::geom_freqpoly(
+        ggplot2::aes(x = pubDate, color = match, group = match),
+        binwidth = 365,
+        linewidth = 1
+    ) +
+    ggplot2::scale_color_manual(values = g_colors) +
+    ggplot2::scale_x_date(
+        date_breaks = "5 years",
+        date_labels = "%Y"
+    ) +
+    ggplot2::facet_wrap(~ source, ncol = 1, scales = "free_y") +
+    ggplot2::coord_cartesian(
+        xlim = c(as.Date("2000-01-01"), as.Date("2025-01-01"))
+    ) +
+    ggplot2::theme_minimal()
+
+plotly::ggplotly(g)
+```
+
+Based on this, it's very clear that the capitalized version of the original name is most common. Just looking at the disease name just to be sure this is also the case for the disease:
+```{r warning=FALSE}
+g <- ft_matches |>
+    dplyr::filter(stringr::str_detect(.data$match, "ever")) |>
+    DO.utils::collapse_col("match_lc") |>
+    dplyr::mutate(n = length(.data$source), .by = "match") |>
+    ggplot2::ggplot() +
+    ggplot2::geom_freqpoly(
+        ggplot2::aes(x = pubDate, color = match, group = match),
+        binwidth = 365,
+        linewidth = 1
+    ) +
+    ggplot2::scale_color_manual(values = g_colors) +
+    ggplot2::scale_x_date(
+        date_breaks = "5 years",
+        date_labels = "%Y"
+    ) +
+    ggplot2::facet_wrap(~ source, ncol = 1, scales = "free_y") +
+    ggplot2::theme_minimal()
+
+plotly::ggplotly(g)
+```
+
+A general sum would be more useful but the differences there are negligible. In this case, it makes sense to follow the most common name for the virus.
