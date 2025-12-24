@@ -41,13 +41,29 @@ rt_auto <- dplyr::filter(
 # Load and pre-process curated data
 cur <- googlesheets4::read_sheet(gs, sheet_ct, range = "A:E", col_types = "c")
 
+# CHECK 1. check that DOIDs are unique
+cur_id <- cur$id[!is.na(cur$id)]
+id_dup <- DO.utils::all_duplicated(cur_id)
+if (any(id_dup)) {
+    dup_id_n <- table(cur_id[id_dup])
+    rlang::abort(
+        c(
+            "Curated DOIDs must be unique.",
+            purrr::set_names(
+                paste0(names(dup_id_n), " (", dup_id_n, " occurrences)"),
+                nm = rep("x", length(dup_id))
+            )
+        )
+    )
+}
+
 # 1. drop curation columns
 prep <- cur %>%
 # 2. propagate id
     tidyr::fill("id", .direction = "down") %>%
 # 3. drop rows with only curation info (id, data_type, or value are empty)
     dplyr::filter(!dplyr::if_any("data_type":"value", is.na)) %>%
-# 4. keep only rows with headers of defined templates
+# 4. keep only rows with data_type of defined templates --> maybe should error on this instead??
     dplyr::filter(.data$data_type %in% rt_main$data_type) %>%
 # 6. ensure def sources start with 'url:'
     dplyr::mutate(
@@ -59,38 +75,37 @@ prep <- cur %>%
     ) %>%
 # 7. unsplit multiple values in one row
     DO.utils::lengthen_col(value, delim = "|") %>%
-# **. [TEMPORARY] drop automated columns that may have been entered manually
+# **. [TEMPORARY] drop automated columns that may have been entered manually --> validate instead??
     dplyr::filter(!.data$data_type %in% rt_auto)
 
-# ADDITIONAL PROCESSING IDEAS
-# 1. drop 'acronym annotation' header if it's been added; may be incorrect, more
-#   confident correct if adding programmatically
 
+#### COMPLETE DATA CHECK ####
 
-# CHECK data
+# CHECK 2. determine if any actions are incorrectly specified --> error
+err <- prep %>%
+    dplyr::filter(
+        !(is.na(.data$data_type) & is.na(.data$value)),
+        is.na(.data$action) | !.data$action %in% c("retain", "add", "remove", "exclude", "ignore", "restore")
+    ) %>%
+    tidyr::replace_na(list(action = "NONE"))
 
-# 1. determine if either of annotation or value is missing --> error ==> THIS IS PRECLUDED BY PREP STEP #3
-# err <- prep %>%
-#     dplyr::filter(
-#         dplyr::if_any(
-#             c("annotation", "value"),
-#             ~ DO.utils::is_blank(.x) | is.na(.x)
-#         )
-#     )
-#
-# if (nrow(err) > 0) {
-#     rlang::abort(
-#         c(
-#             "Annotations and values must be specified in pairs.",
-#             purrr::set_names(
-#                 paste(err[["id"]], err$annotation, err$value, sep = " - "),
-#                 nm = rep("x", nrow(err))
-#             )
-#         )
-#     )
-# }
+if (nrow(err) > 0) {
+    rlang::abort(
+        c(
+            "All data_types with values should have actions specified.",
+            purrr::set_names(
+                paste0(
+                    err[["id"]],
+                    ", ", err$data_type,
+                    " - action: ", err$action
+                ),
+                rep("x", nrow(err))
+            )
+        )
+    )
+}
 
-# 3. determine if data_type headers are properly limited to single values
+# CHECK 3. determine if data_type headers are properly limited to single values
 ann1 <- dplyr::filter(
     rt_main,
     !stringr::str_detect(template, stringr::coll("SPLIT=", ignore_case = TRUE))
@@ -98,7 +113,7 @@ ann1 <- dplyr::filter(
 err <- prep %>%
     dplyr::filter(
         .data$data_type %in% ann1,
-        !.data$status %in% c("remove", "exclude", "ignore")
+        !.data$action %in% c("remove", "exclude", "ignore")
     ) %>%
     DO.utils::collapse_col(.cols = "value", delim = " | ") %>%
     dplyr::filter(stringr::str_detect(.data$value, "\\|"))
@@ -133,7 +148,7 @@ if (nrow(err) > 0) {
 #     )
 # }
 
-# 4. make sure acronym/synonym annotations are correct
+# CHECK 4. make sure acronym/synonym annotations are correct
 err <- prep %>%
     dplyr::mutate(
         is_acronym = stringr::str_detect(value, "^[A-Za-z][A-Z0-9]{1,7}$")
@@ -155,7 +170,7 @@ if (nrow(err) > 0) {
     )
 }
 
-# 5. confirm existing / new diseases being added
+# CHECK 5. confirm existing / new diseases being added
 all_id <- unique(prep[["id"]])
 
 # check if classes exist --> safe, can also return term info, takes > 6 s
@@ -265,7 +280,7 @@ if (dep_n > 0) {
 # maybe change this to ask if the user wants to check the list first, then ask if continue?
 user_check <- NA
 while (!user_check %in% c("y", "n")) {
-    user_check <- readline("Does existing/new disease counts appear correct?  y/n")
+    user_check <- readline("Does existing/new disease counts appear correct? y/n:  ")
 }
 if (user_check != "y") {
     rlang::warn("Exiting with existing/new disease info for user review.")
@@ -296,7 +311,7 @@ if (user_check != "y") {
     # )
 }
 
-# 6. determine if any required manual data_types are missing for new diseases --> error
+# CHECK 6. determine if any required manual data_types are missing for new diseases --> error
 #   --> will report which requirements are missing for all given id
 new_req <- dplyr::filter(
     rt_main,
@@ -306,15 +321,16 @@ new_req <- dplyr::filter(
     )
 )$data_type
 new_req <- new_req[new_req != "id"]
-err <- prep %>%
-    dplyr::filter(.data$id %in% new_id) %>%
+new_df <- prep %>%
+    dplyr::filter(.data$id %in% new_id)
+err <- new_df %>%
     dplyr::summarize(
         missing = DO.utils::vctr_to_string(
             new_req[!new_req %in% .data$data_type],
             delim = ", "
         ),
         .by = "id"
-    ) %>%
+    ) |>
     dplyr::filter(!is.na(.data$missing))
 
 if (nrow(err) > 0) {
@@ -329,7 +345,32 @@ if (nrow(err) > 0) {
     )
 }
 
-# 7. determine if any single value data_types would be added to existing terms
+# CHECK 6b. determine if any required manual data_types are missing "positive actions" --> error
+#   --> will report which requirements are missing for all given id
+# NOTE: should not exist given earlier validation!!!
+err <- new_df %>%
+    dplyr::filter(
+        .data$data_type %in% new_req & !.data$action %in% c("add", "restore")
+    ) %>%
+    dplyr::mutate(action = tidyr::replace_na(.data$action, "NONE"))
+
+if (nrow(err) > 0) {
+    rlang::abort(
+        c(
+            "New disease(s) must have a positive 'action' set for all required data_types.",
+            purrr::set_names(
+                paste0(
+                    err[["id"]],
+                    " - data_type: ", err$data_type,
+                    " - action: ", err$action
+                ),
+                rep("x", nrow(err))
+            )
+        )
+    )
+}
+
+# CHECK 7. determine if any single value data_types would be added to existing terms
 #.  resulting in multiples --> error
 #   --> will report which requirements are missing for all given id
 exist_data <- in_DO %>%
@@ -350,7 +391,7 @@ err <- prep %>%
     dplyr::filter(
         .data$id %in% exist_data[["id"]],
         .data$data_type %in% ann1,
-        !.data$status %in% c("remove", "exclude", "ignore")
+        !.data$action %in% c("remove", "exclude", "ignore")
     ) %>%
     dplyr::bind_rows(
         dplyr::filter(exist_data, .data$data_type %in% ann1),
@@ -396,8 +437,19 @@ if (nrow(err) > 0) {
 
 # retain ONLY data to be added
 add <- prep %>%
-    dplyr::filter(.data$status %in% c("add", "restore")) %>%
+    dplyr::filter(.data$action %in% c("add", "restore")) %>%
     dplyr::select("id", "data_type", "value")
+
+# [FOR NOW] for SNOMEDCT_US switch any SKOS mappings to xrefs
+add <- add |>
+    dplyr::mutate(
+        data_type = dplyr::if_else(
+            stringr::str_detect(.data$data_type, "skos mapping") &
+                stringr::str_detect(.data$value, stringr::coll("SNOMEDCT_US")),
+            "xref(s)",
+            .data$data_type
+        )
+    )
 
 # add obo id & namespace to new diseases
 obo_req <- tibble::tibble(
@@ -411,7 +463,9 @@ obo_req <- tibble::tibble(
 
 
 # if def src or src type & no def for existing in curated sheet, add existing def
-### THIS DOES NOT WORK AS DESIRED... IT ADDS ANOTHER COPY OF THE DEFINITION
+# --> THIS DOES NOT WORK AS DESIRED... IT ADDS ANOTHER COPY OF THE DEFINITION
+# --> this is likely an issue with ROBOT template!!!
+#  *** REVIEW MANUALLY!!! ***
 needed_def <- add %>%
     dplyr::summarize(
         .by = "id",
@@ -425,7 +479,9 @@ needed_def <- add %>%
         by = "id"
     )
 
-# add oboInOwl:hasDbXref from skos:exactMatch annotations (not reciprocal because of exceptions)
+
+# add oboInOwl:hasDbXref from skos:exactMatch annotations (not reciprocal
+# because of exceptions)
 xref_skos <- add %>%
     dplyr::filter(.data$data_type %in% "skos mapping(s): exact") %>%
     dplyr::mutate(data_type = "xref(s)")
