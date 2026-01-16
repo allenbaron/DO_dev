@@ -110,7 +110,7 @@ plot_files <- purrr::map2(
 
 use_cases <- DO.utils::make_use_case_html()
 web_counts <- DO.utils::update_website_count_tables(
-    repo,
+    repo_path,
     latest_release,
     svn_path
 )
