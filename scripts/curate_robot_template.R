@@ -480,11 +480,16 @@ needed_def <- add %>%
     )
 
 
-# add oboInOwl:hasDbXref from skos:exactMatch annotations (not reciprocal
+# add oboInOwl:hasDbXref from skos:(exact|close)Match annotations (not reciprocal
 # because of exceptions)
+# !!!! Should this DROP DUPLICATES based on retain?
 xref_skos <- add %>%
-    dplyr::filter(.data$data_type %in% "skos mapping(s): exact") %>%
-    dplyr::mutate(data_type = "xref(s)")
+    dplyr::filter(
+        .data$data_type %in% c("skos mapping(s): exact", "skos mapping(s): close")
+    ) %>%
+    dplyr::mutate(data_type = "xref(s)") |>
+    # to ensure only one xref added per mapping
+    unique()
 
 # add & format data
 wide <- add %>%
