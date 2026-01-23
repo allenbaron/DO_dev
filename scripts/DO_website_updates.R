@@ -5,6 +5,7 @@
 
 library(here)
 library(DO.utils) # >= 0.3.3
+library(cowplot)
 
 # MANUALLY Update Data!!! -------------------------------------------------
 
@@ -81,11 +82,29 @@ source(here::here("scripts/DO_term_def_counts.R"))
 # Generate Plots ----------------------------------------------------------
 
 g_cb <- DO.utils::plot_citedby(out_dir = plot_outdir)
-g_term <- DO.utils::plot_term_def_counts(out_dir = plot_outdir)
-g_branch <- DO.utils::plot_branch_counts(repo_path, out_dir = plot_outdir)
-g_xref <- DO.utils::plot_xref_counts(repo_path, out_dir = plot_outdir)
-g_src <- DO.utils::plot_def_src(repo_path, out_dir = plot_outdir)
+g_term <- DO.utils::plot_term_def_counts(out_dir = NULL)
+g_branch <- DO.utils::plot_branch_counts(repo_path, out_dir = NULL)
+g_xref <- DO.utils::plot_xref_counts(repo_path, out_dir = NULL)
+g_src <- DO.utils::plot_def_src(repo_path, out_dir = NULL)
 
+grid_plots <- cowplot::align_plots(
+    g_term,
+    g_branch,
+    g_xref,
+    g_src,
+    align = "hv"
+)
+
+g <- purrr::map(grid_plots, ~ cowplot::ggdraw() + cowplot::draw_plot(.x))
+plot_filenms <- c(
+    "DO_term_def_count.png", "DO_branch_count.png", "DO_xref_count.png",
+    "DO_def_src.png"
+)
+plot_files <- purrr::map2(
+    g,
+    plot_filenms,
+    ~ ggsave(plot = .x, filename = file.path(plot_outdir, .y), h = 5, w = 8)
+)
 
 # Generate html page updates ----------------------------------------------
 
