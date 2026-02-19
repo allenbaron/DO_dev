@@ -347,11 +347,27 @@ if (nrow(err) > 0) {
 
 # CHECK 6b. determine if any required manual data_types are missing "positive actions" --> error
 #   --> will report which requirements are missing for all given id
-# NOTE: should not exist given earlier validation!!!
+# NOTE: actually required because action could be negative or missing
+
+# for plural: at least one positive action
+new_req_plural <- new_req[stringr::str_detect(new_req, stringr::coll("(s)"))]
+# for single: exactly one positive action
+new_req1 <- setdiff(new_req, new_req_plural)
+
 err <- new_df %>%
-    dplyr::filter(
-        .data$data_type %in% new_req & !.data$action %in% c("add", "restore")
+    dplyr::filter(.data$data_type %in% new_req) |>
+    dplyr::mutate(
+        err = (
+            sum(.data$action %in% c("add", "restore")) != 1 &
+                .data$data_type %in% new_req1
+        ) |
+            (
+                !any(.data$action %in% c("add", "restore")) &
+                    .data$data_type %in% new_req_plural
+            ),
+        .by = "data_type"
     ) %>%
+    dplyr::filter(.data$err) |>
     dplyr::mutate(action = tidyr::replace_na(.data$action, "NONE"))
 
 if (nrow(err) > 0) {
