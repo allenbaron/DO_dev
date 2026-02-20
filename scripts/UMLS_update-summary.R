@@ -14,6 +14,10 @@ do_repo <- "~/Documents/Ontologies/HumanDiseaseOntology"
 # commit used for UMLS update
 commit <- "8a80588764f4c998a0223b30b29858ef00cefbdb"
 
+# DOID_SSSOM curated Google Sheet -- for comparison
+sssom_gs <- "https://docs.google.com/spreadsheets/d/1qAzDm9_jFe_a0gqxDpWI9ik8FeSdI-aYr7smbGnSNpk/"
+sssom_sheet <- "mapping_curated"
+
 
 # PROGRAMMATIC SETUP ------------------------------------------------------
 
@@ -23,47 +27,13 @@ library(googledrive)
 library(googlesheets4)
 library(tidyverse)
 
-#' @param unparsed character vector of original lines (for error messages)
-#' @param parsed tibble of parsed lines (with V1 = full match, etc.)
-#' @param warn_col column(s) to check for partial parsing (default = all except
-#' V1)
-check_parsing <- function(unparsed, parsed, warn_col = -"V1") {
-    failed <- is.na(parsed$V1)
-    if (any(failed)) {
-        n <- sum(failed)
-        err_list <- purrr::set_names(
-            paste0("line ", which(failed), ": ", unparsed[failed]),
-            rep("x", n)
-        )
-        msg <- glue::glue("Failed to parse {n} lines")
-        rlang::abort(c(msg, err_list))
-    }
-
-    issue <- parsed |>
-        dplyr::rowwise() |>
-        dplyr::mutate(partial = any(is.na(dplyr::c_across({{ warn_col }})))) |>
-        dplyr::ungroup()
-    if (any(issue$partial)) {
-        n <- sum(issue$partial)
-        msg <- glue::glue(
-            "Parsed successfully but {n} lines may be missing data",
-            "\n`partial` column (boolean) included in output to identify these lines"
-        )
-        warning(msg)
-        out <- issue
-    } else {
-        out <- dplyr::select(parsed, -"V1")
-    }
-
-    out
-}
-
 parse_new_cuis <- function(x) {
     parsed <- stringr::str_match(
         x,
         "Found new CUI \\((?<cui>C[0-9]+)\\) using (?<source>[^ ]+) code \\((?<lui>[^ ]+)\\) on this term: (?<doid>DOID_[0-9]+)"
     ) |>
-        tibble::as_tibble()
+        tibble::as_tibble(.name_repair = "unique") |>
+        dplyr::rename(full_match = 1)
 
     checked <- check_parsing(x, parsed)
 
@@ -78,14 +48,12 @@ parse_new_cuis <- function(x) {
         ) |>
         tidyr::unite(
             col = "source_xref",
-            source,
-            lui,
+            "source",
+            "lui",
             sep = ":",
-            remove = TRUE
+            remove = FALSE
         ) |>
-        dplyr::rename(umls_cui = "cui") |>
-        dplyr::relocate("doid", "source_xref", "umls_cui", .before = 1)
-
+        dplyr::select("doid", "source", "source_xref", umls_cui = "cui")
     out
 }
 
@@ -118,32 +86,97 @@ parse_man_rev <- function(x) {
         dplyr::bind_rows()
 
     checked <- check_parsing(x, parsed, c("doid", "label", "comment"))
+
     out <- checked |>
-        tidyr::unite(
-            col = "source_xref",
-            source,
-            lui,
-            sep = ":",
-            remove = TRUE
-        ) |>
         dplyr::mutate(
-            source_xref = dplyr::na_if(.data$source_xref, "NA:NA"),
             doid = stringr::str_replace(.data$doid, "_", ":"),
             cui = stringr::str_replace(
                 .data$cui,
                 "^(UMLS_CUI:)?",
                 "UMLS_CUI:"
             )
-        ) |>
-        dplyr::rename(umls_cui = "cui") |>
-        dplyr::relocate("action", "umls_cui", .before = "comment")
+        )
 
-    if ("source_xref" %in% names(out)) {
-        out <- dplyr::relocate(out, "source_xref", .before = "comment")
+    if ("lui" %in% names(out)) {
+        out <- out |>
+            tidyr::unite(
+                col = "source_xref",
+                "source",
+                "lui",
+                sep = ":",
+                remove = FALSE
+            ) |>
+            dplyr::mutate(
+                source_xref = dplyr::na_if(.data$source_xref, "NA:NA")
+            ) |>
+            dplyr::select(
+                "doid", "label", "action", umls_cui = "cui", "source",
+                "source_xref", "comment"
+            )
+    } else {
+        out <- dplyr::relocate(
+            out,
+            "doid", "label", "action", "umls_cui",
+            .before = "comment"
+        )
     }
+
     out
 }
 
+#' @param unparsed character vector of original lines (for error messages)
+#' @param parsed tibble of parsed lines (with full_match, etc.)
+#' @param warn_col column(s) to check for partial parsing (default = all except
+#' full_match)
+check_parsing <- function(unparsed, parsed, warn_col = -"full_match") {
+    failed <- is.na(parsed$full_match)
+    if (any(failed)) {
+        n <- sum(failed)
+        err_list <- purrr::set_names(
+            paste0("line ", which(failed), ": ", unparsed[failed]),
+            rep("x", n)
+        )
+        msg <- glue::glue("Failed to parse {n} lines")
+        rlang::abort(c(msg, err_list))
+    }
+
+    issue <- parsed |>
+        dplyr::rowwise() |>
+        dplyr::mutate(partial = any(is.na(dplyr::c_across({{ warn_col }})))) |>
+        dplyr::ungroup()
+    if (any(issue$partial)) {
+        n <- sum(issue$partial)
+        msg <- glue::glue(
+            "Parsed successfully but {n} lines may be missing data",
+            "\n`partial` column (boolean) included in output to identify these lines"
+        )
+        warning(msg)
+        out <- issue
+    } else {
+        out <- dplyr::select(parsed, -"full_match")
+    }
+
+    out
+}
+
+make_curie_links <- function(.df, cols) {
+    dplyr::mutate(
+        .df,
+        dplyr::across(
+            {{ cols }},
+            ~ DO.utils::build_hyperlink(
+                x = stringr::str_remove(.x, ".*[:_]"),
+                url = stringr::str_match(.x, "(.+)[:_]")[, 2],
+                text = .x,
+                as = "gs"
+            )
+        )
+    )
+}
+
+name_by_pos <- function(colnm) {
+
+}
 
 # Set up new git branch ---------------------------------------------------
 
@@ -202,7 +235,7 @@ readr::write_file(new_de, de_path)                   # remove if fixed
 
 # parse UMLS build reports
 new_cui_raw <- readr::read_lines(umls_paths["new_cuis_from_xrefs.txt"])
-new_cui <- parse_new_cuis(new_cui_raw) |>
+new_cui <- parse_new_cuis(new_cui_raw)
 
 man_rev_raw <- readr::read_lines(umls_paths["for_manual_review.txt"])
 man_rev <- parse_man_rev(man_rev_raw)
@@ -236,7 +269,7 @@ umls_diff <- umls |>
             '.*hasDbXref obo:',
             doid = 'DOID_[0-9]+',
             ' "',
-            ns = '.+',
+            source = '.+',
             ':',
             lui = '[^"]+',
             '"\\)'
@@ -245,15 +278,15 @@ umls_diff <- umls |>
         too_few = "error"
     ) |>
     dplyr::mutate(
-        date = stringr::str_extract(.data$ns, "20[0-9]{2}_[0-9]{2}_[0-9]{2}$"),
-        ns = stringr::str_remove(.data$ns, "_20[0-9]{2}_[0-9]{2}_[0-9]{2}$")
+        date = stringr::str_extract(.data$source, "20[0-9]{2}_[0-9]{2}_[0-9]{2}$"),
+        source = stringr::str_remove(.data$source, "_20[0-9]{2}_[0-9]{2}_[0-9]{2}$")
     ) |>
-    tidyr::unite(col = "stmt", "doid", "ns", "lui", sep = "@", remove = TRUE) |>
+    tidyr::unite(col = "stmt", "doid", "source", "lui", sep = "@", remove = TRUE) |>
     DO.utils::collapse_col(.cols = c(change, date), delim = " >> ") |>
     tidyr::separate_wider_delim(
         cols = "stmt",
         delim = "@",
-        names = c("DOID", "ns", "lui")
+        names = c("doid", "source", "lui")
     ) |>
     dplyr::mutate(
         change = dplyr::case_when(
@@ -261,72 +294,55 @@ umls_diff <- umls |>
             .data$change == "-" ~ "removed",
             stringr::str_detect(.data$change, ">>") ~ "updated"
         ),
-        DOID = DO.utils::build_hyperlink(
-            x = stringr::str_remove(.data$DOID, ".*_"),
-            url = "DOID",
-            text = .data$DOID,
-            as = "gs"
-        ),
-        xref = DO.utils::build_hyperlink(
-            x = .data$lui,
-            url = .data$ns,
-            text = paste0(
-                .data$ns,
-                dplyr::if_else(
-                    is.na(.data$date),
-                    "",
-                    paste0(
-                        "_",
-                        stringr::str_extract(
-                            .data$date,
-                            "20[0-9]{2}_[0-9]{2}_[0-9]{2}$"
-                        )
-                    )
-                ),
-                ":",
-                .data$lui
-            ),
-            as = "gs"
-        )
+        doid = stringr::str_replace(.data$doid, "_", ":")
     ) |>
-    dplyr::select("DOID", "xref", "change", "date")
+    tidyr::unite(
+        col = "xref",
+        "source",
+        "lui",
+        sep = ":",
+        remove = FALSE
+    ) |>
+    dplyr::select("doid", "source", "xref", "change", "date")
 
+
+# add curated SSSOM info, if any
+
+sssom <- googlesheets4::read_sheet(
+    sssom_gs,
+    sssom_sheet,
+    col_types = "c"
+)
 
 # Write to new 'curator_review' Google Sheet in umls_build_dir ------------
 
-new_rev <- googledrive::drive_create((
+new_rev <- googledrive::drive_create(
     name = "curator_review",
     type = "spreadsheet",
     path = googledrive::as_id(umls_build_dir),
-    ovewrite = FALSE
+    overwrite = FALSE
 )
 
 sheet_data <- list(
-    for_manual_review = dplyr::mutate(
+    for_manual_review = make_curie_links(
         man_rev,
-        dplyr::across(
-            c("doid", "source_xref", "umls_cui"),
-            ~ DO.utils::build_hyperlink(
-                x = stringr::str_remove(.x, ".*[:_]"),
-                url = stringr::str_match(.x, "(.+)[:_]")[, 2],
-                text = .x,
-                as = "gs"
-            )
-        ),
-    new_cuis_from_xrefs = dplyr::mutate(
-        new_cui,
-        dplyr::across(
-            c("doid", "source_xref", "umls_cui"),
-            ~ DO.utils::build_hyperlink(
-                x = stringr::str_remove(.x, ".*[:_]"),
-                url = stringr::str_match(.x, "(.+)[:_]")[, 2],
-                text = .x,
-                as = "gs"
-            )
+        c(
+            "doid",
+            if ("source_xref" %in% names(man_rev)) "source_xref",
+            "umls_cui"
         )
-    umls_diff = umls_diff
+    ),
+    new_cuis_from_xrefs =  make_curie_links(
+        new_cui,
+        c("doid", "source_xref", "umls_cui")
+    ),
+    umls_diff =  make_curie_links(
+        umls_diff,
+        c("doid", "xref")
+    )
 )
-purrr::map2(
+
+purrr::walk2(
     sheet_data,
     names(sheet_data),
     ~ googlesheets4::write_sheet(
@@ -334,14 +350,4 @@ purrr::map2(
         ss = new_rev,
         sheet = .y
     )
-)
-
-
-
-manual <- googlesheets4::read_sheet(ss = gs, sheet = "for_manual_review")
-
-googlesheets4::write_sheet(
-    data = manual,
-    ss = gs,
-    sheet = paste0("for_manual_review-", today)
 )
