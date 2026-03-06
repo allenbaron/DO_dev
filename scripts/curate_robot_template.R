@@ -11,7 +11,7 @@ gs_rt_recode <- "https://docs.google.com/spreadsheets/d/1Zn6p5xkVHUwbWe1N8FUa3fN
 
 gs <- "https://docs.google.com/spreadsheets/d/1VYddDuDEQ_EpvuNE4O2QvdgcCq1WBcp-yI85DW5vnRI/edit?gid=874791186#gid=874791186"
 sheet_ct <- "curation-20251121"
-sheet_rt <- paste0("robot_template-", stringr::str_extract(sheet_ct, "20[0-9]+$"))
+sheet_rt <- stringr::str_replace(sheet_ct, "curation", "robot_template")
 
 # INCOMPLETE - SPARQL remove procedure... may not want to source it at this point in script
 #source(here::here("scripts/curate_remove_template.R"))
