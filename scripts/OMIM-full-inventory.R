@@ -1,7 +1,13 @@
 # Inventory all OMIM phenotypes to identify needed updates to DO
 
-library(here)
 library(DO.utils)
+library(dplyr)
+library(here)
+library(keyring)
+library(rlang)
+library(stringr)
+library(tidyr)
+
 
 # MANUAL INPUTS ------------------------------------------------------------
 
@@ -10,18 +16,10 @@ omim_data <- c("mimTitles", "phenotypicSeries", "genemap2", "mim2gene", "morbidm
 doid_edit_path <- here::here(
     "../Ontologies/HumanDiseaseOntology/src/ontology/doid-edit.owl"
 )
+curation_gs <- "https://docs.google.com/spreadsheets/d/1gVfdXwVMGO2-vD09Kdu67KX89eucYTY8C7gibOY5RUg/"
 
-# SET UP -------------------------------------------------------------------
 
-api_key <- keyring::key_get("OMIM_API_KEY")
-if (!nzchar(api_key)) {
-    rlang::abort(
-        c(
-            "OMIM API key not found in credentials store.",
-            i = 'Use keyring::key_set("OMIM_API_KEY") and paste the API key when prompted'
-        )
-    )
-}
+# FUNCTIONS ----------------------------------------------------------------
 
 # Age is determined from the "# Generated: YYYY-MM-DD" header line, which OMIM
 # sets to the download time
@@ -61,6 +59,90 @@ omim_age_days <- function(path) {
     as.numeric(Sys.Date() - omim_header_date(path))
 }
 
+### Helper functions for flag handling ###
+flag_order <- c("susceptibility", "locus_mim", "no_hgnc_symbol", "provisional")
+
+# Helper: sort a flag column vector into flag_order priority.
+sort_flags <- function(x) {
+    vapply(x, function(s) {
+        if (is.na(s)) return(NA_character_)
+        vals <- trimws(strsplit(s, " | ", fixed = TRUE)[[1]])
+        idx  <- match(vals, flag_order)
+        paste(vals[order(ifelse(is.na(idx), length(flag_order) + 1L, idx))],
+              collapse = " | ")
+    }, character(1L))
+}
+
+# Helper: merge two flag column values within the same row, where either or
+# both may already be " | "-delimited strings
+merge_flags <- function(a, b) {
+    mapply(function(x, y) {
+        vals <- unique(na.omit(c(
+            unlist(strsplit(x, " | ", fixed = TRUE)),
+            unlist(strsplit(y, " | ", fixed = TRUE))
+        )))
+        if (length(vals) == 0L) return(NA_character_)
+        idx <- match(vals, flag_order)
+        vals <- vals[order(ifelse(is.na(idx), length(flag_order) + 1L, idx))]
+        paste(vals, collapse = " | ")
+    }, a, b, SIMPLIFY = TRUE, USE.NAMES = FALSE)
+}
+
+map_inheritance <- function(x) {
+    vapply(x, function(s) {
+        if (is.na(s)) return(NA_character_)
+        vals   <- trimws(strsplit(s, " | ", fixed = TRUE)[[1L]])
+        mapped <- unique(na.omit(geno_map[vals]))
+        if (length(mapped) == 0L) NA_character_ else paste(mapped, collapse = "|")
+    }, character(1L))
+}
+
+# Convert a 1-based column number to a spreadsheet column letter (A, B, ..., Z,
+# AA, AB, ...).
+num_to_col_letter <- function(num) {
+    result <- ""
+    while (num > 0) {
+        remainder <- (num - 1) %% 26
+        result    <- paste0(LETTERS[remainder + 1], result)
+        num       <- (num - remainder - 1) %/% 26
+    }
+    result
+}
+
+# Return a vector of cell references for a given column letter, for use inside
+# dplyr::mutate() (uses row_number()). row_offset accounts for non-data rows
+# above the data in the sheet (e.g. 2: 1 header + 1 ROBOT instruction row).
+form_cell_ref <- function(num, nrow, .row_offset = 1L) {
+    paste0(num_to_col_letter(num), seq_len(nrow) + .row_offset)
+}
+
+
+# Build a gs4_formula vector for use inside dplyr::mutate(). Pass string
+# literals and bare column names interleaved in ...; column names are replaced
+# with per-row cell references (e.g. "D3", "D4", ...). Uses dplyr::pick() to
+# access the data being mutated. .row_offset accounts for non-data rows above
+# the data in the sheet (default 1 for a single header row).
+build_gs_formula <- function(..., .row_offset = 1L) {
+    .df <- dplyr::pick(dplyr::everything())
+    tidy_dots <- rlang::enquos(...)
+    input_str <- purrr::map(tidy_dots, rlang::as_name)
+    col_pos <- tidyselect::eval_select(
+        as.character(input_str),
+        data = .df,
+        strict = FALSE
+    )
+    if (length(col_pos) == 0L) {
+        rlang::abort("No valid columns selected for formula construction.")
+    }
+    input_refs <- setNames(input_str, input_str)
+    input_refs[names(col_pos)] <- purrr::map(
+        col_pos,
+        ~ form_cell_ref(.x, nrow(.df), .row_offset)
+    )
+
+    fmla <- purrr::pmap_chr(input_refs, function(...) paste0(...))
+    googlesheets4::gs4_formula(fmla)
+}
 
 # 1. Download OMIM files --------------------------------------------------
 
@@ -75,6 +157,15 @@ to_download <- omim_files[vapply(omim_files, omim_age_days, numeric(1)) > 30] |>
     names()
 
 if (length(to_download) > 0L) {
+    api_key <- keyring::key_get("OMIM_API_KEY")
+    if (!nzchar(api_key)) {
+        rlang::abort(
+            c(
+                "OMIM API key not found in credentials store.",
+                i = 'Use keyring::key_set("OMIM_API_KEY") and paste the API key when prompted'
+            )
+        )
+    }
     message(
         "Downloading ",
         paste(to_download, collapse = " and "),
@@ -98,6 +189,7 @@ if (length(to_download) > 0L) {
     )
 }
 
+
 # 2. Load and parse OMIM files --------------------------------------------
 
 mt     <- DO.utils::read_omim(omim_files["mimTitles"],         keep_mim = NULL)
@@ -106,18 +198,6 @@ mm     <- DO.utils::read_omim(omim_files["morbidmap"],         keep_mim = NULL)
 m2g    <- DO.utils::read_omim(omim_files["mim2gene"],          keep_mim = NULL)
 gm     <- DO.utils::read_omim(omim_files["genemap2"],          keep_mim = NULL)
 
-# Helper: merge two flag column values within the same row, where either or
-# both may already be " | "-delimited strings. Not replaceable by collapse_col()
-# (which collapses multiple rows) or lengthen_col() without a pivot.
-merge_flags <- function(a, b) {
-    mapply(function(x, y) {
-        vals <- sort(unique(na.omit(c(
-            unlist(strsplit(x, " | ", fixed = TRUE)),
-            unlist(strsplit(y, " | ", fixed = TRUE))
-        ))))
-        if (length(vals) == 0L) NA_character_ else paste(vals, collapse = " | ")
-    }, a, b, SIMPLIFY = TRUE, USE.NAMES = FALSE)
-}
 
 # 2a. mimTitles: phenotype universe ----------------------------------------
 # Asterisk (*) = gene only; NULL prefix = "predominantly phenotypes".
@@ -277,7 +357,7 @@ omim_pheno <- dplyr::bind_rows(mt_primary, mt_included, mt_moved) |>
     dplyr::left_join(mm_summary,     by = "omim") |>
     dplyr::left_join(gm_inheritance, by = "omim") |>
     dplyr::mutate(
-        flag = merge_flags(flag, mm_flag)
+        flag = sort_flags(merge_flags(flag, mm_flag))
     ) |>
     dplyr::select(-mm_flag) |>
     # Append PS records as their own rows (no gene/inheritance/mapping_key data)
@@ -305,9 +385,269 @@ oi <- DO.utils::inventory_omim(doid_edit_path, omim_pheno)
 
 # 5. Output ---------------------------------------------------------------
 
-# (deferred -- will split by sheet as needed)
 message(
     "Inventory complete: ", nrow(oi), " records\n",
     "  exists in DO : ", sum(oi$exists, na.rm = TRUE), "\n",
     "  missing      : ", sum(!oi$exists, na.rm = TRUE)
 )
+
+
+# 6. Robot template for missing phenotypes --------------------------------
+
+# 6a. Direct DO parent for each DOID (from doid-edit.owl subClassOf axioms).
+# Used to check whether all DO-mapped members of a PS share the same parent,
+# which is taken as the suggested parent for missing siblings.
+do_parents <- DO.utils::robot_query(
+    doid_edit_path,
+    query = '
+    PREFIX rdfs: <http://www.w3.org/2000/01/rdf-schema#>
+
+    SELECT ?id ?parent_id ?parent_label
+    WHERE {
+        ?id rdfs:subClassOf ?parent_id .
+        ?parent_id rdfs:label ?parent_label
+        FILTER(!isBlank(?parent_id))
+    }',
+    tidy_what = c("header", "uri_to_curie")
+)
+
+# 6b. For each PS, record the parent only when ALL DO-mapped members agree.
+ps_parent <- oi |>
+    dplyr::filter(!is.na(.data$ps), .data$exists) |>
+    tidyr::separate_longer_delim("ps", delim = " | ") |>
+    dplyr::select(ps, doid) |>
+    dplyr::left_join(do_parents, by = c("doid" = "id")) |>
+    dplyr::group_by(ps) |>
+    dplyr::summarise(
+        n_unique_parents = dplyr::n_distinct(parent_id, na.rm = TRUE),
+        parent_curie     = dplyr::first(na.omit(parent_id)),
+        parent_label     = dplyr::first(na.omit(parent_label)),
+        .groups          = "drop"
+    ) |>
+    dplyr::filter(n_unique_parents == 1L, !is.na(parent_curie)) |>
+    dplyr::select(ps, parent_curie, parent_label)
+
+# 6c. Propagate parent suggestion to each missing phenotype.
+# If a phenotype belongs to multiple PS that disagree → leave blank.
+pheno_parent <- oi |>
+    dplyr::filter(!.data$exists, !is.na(.data$ps)) |>
+    dplyr::select(omim, ps) |>
+    tidyr::separate_longer_delim("ps", delim = " | ") |>
+    dplyr::left_join(ps_parent, by = "ps") |>
+    dplyr::group_by(omim) |>
+    dplyr::summarise(
+        n_suggestions = dplyr::n_distinct(parent_curie, na.rm = TRUE),
+        parent_curie  = dplyr::first(na.omit(parent_curie)),
+        parent_label  = dplyr::first(na.omit(parent_label)),
+        .groups       = "drop"
+    ) |>
+    dplyr::filter(n_suggestions <= 1L) |>
+    dplyr::select(omim, parent_curie, parent_label)
+
+# 6d. Parse DO-formatted names and acronyms from mimTitles.
+# parse_omim_name() takes the raw "name; ABBREVIATION" OMIM string and returns
+# a DO-style lowercased/rearranged name and the abbreviation separately.
+name_primary <- mt |>
+    dplyr::filter(prefix %in% c(phenotype_prefixes, "Caret")) |>
+    dplyr::select(mim_number, preferred_title_symbol) |>
+    DO.utils::parse_omim_name(col = "preferred_title_symbol") |>
+    dplyr::transmute(
+        omim            = paste0("MIM:", mim_number),
+        do_label        = name,
+        primary_acronym = abbreviation
+    )
+
+# PS names from the phenotypicSeries header rows (no abbreviation present).
+name_ps <- ps_raw |>
+    dplyr::filter(is.na(mim_number)) |>
+    dplyr::transmute(
+        omim                   = paste0("MIM:", phenotypic_series_number),
+        preferred_title_symbol = phenotype
+    ) |>
+    DO.utils::parse_omim_name(col = "preferred_title_symbol") |>
+    dplyr::transmute(omim, do_label = name, primary_acronym = abbreviation)
+
+# Alternative titles → additional exact synonyms and acronyms.
+name_alt <- mt |>
+    dplyr::filter(
+        prefix %in% phenotype_prefixes,
+        !is.na(alternative_title_s_symbol_s)
+    ) |>
+    dplyr::select(mim_number, alternative_title_s_symbol_s) |>
+    tidyr::separate_rows(alternative_title_s_symbol_s, sep = ";;") |>
+    dplyr::mutate(
+        alternative_title_s_symbol_s = stringr::str_trim(
+            alternative_title_s_symbol_s
+        )
+    ) |>
+    dplyr::filter(nchar(alternative_title_s_symbol_s) > 0L) |>
+    DO.utils::parse_omim_name(col = "alternative_title_s_symbol_s") |>
+    dplyr::mutate(omim = paste0("MIM:", mim_number)) |>
+    dplyr::group_by(omim) |>
+    dplyr::summarise(
+        syn_exact   = paste(name, collapse = "|"),
+        alt_acronym = {
+            abbrevs <- na.omit(abbreviation)
+            if (length(abbrevs) == 0L) NA_character_ else paste(abbrevs, collapse = "|")
+        },
+        .groups = "drop"
+    )
+
+# Combine primary + PS names, merge acronyms (primary | alternative).
+name_parsed <- dplyr::bind_rows(name_primary, name_ps) |>
+    dplyr::left_join(name_alt, by = "omim") |>
+    dplyr::mutate(
+        acronym = dplyr::case_when(
+            !is.na(primary_acronym) & !is.na(alt_acronym) ~
+                paste(primary_acronym, alt_acronym, sep = "|"),
+            !is.na(primary_acronym) ~ primary_acronym,
+            !is.na(alt_acronym)     ~ alt_acronym,
+            .default = NA_character_
+        )
+    ) |>
+    dplyr::select(omim, do_label, acronym, syn_exact)
+
+# 6e. Map genemap2 inheritance strings to GENO class labels.
+# Values not listed here (somatic mutation, isolated cases, pseudoautosomal,
+# somatic mosaicism) have no GENO equivalent and map to NA implicitly.
+geno_map <- c(
+    "Autosomal recessive"  = "autosomal recessive inheritance",
+    "Autosomal dominant"   = "autosomal dominant inheritance",
+    "X-linked recessive"   = "X-linked recessive inheritance",
+    "X-linked dominant"    = "X-linked dominant inheritance",
+    "X-linked"             = "X-linked inheritance",
+    "Y-linked"             = "Y-linked inheritance",
+    "Mitochondrial"        = "mitochondrial inheritance",
+    "Multifactorial"       = "multifactorial inheritance",
+    "Digenic dominant"     = "digenic inheritance",
+    "Digenic recessive"    = "digenic inheritance"
+)
+
+
+# 6f. Assemble robot template rows.
+# Excludes: entries already in DO, susceptibility entries, included_entity.
+# Includes: phenotype, phenotype_unknown_molecular_basis,
+#           predominantly_phenotypes, phenotypic_series not in DO.
+robot_data <- oi |>
+    dplyr::filter(
+        !.data$exists,
+        omim_type %in% c(
+            "phenotype", "phenotype_unknown_molecular_basis",
+            "predominantly_phenotypes", "phenotypic_series"
+        ),
+        is.na(flag) | !stringr::str_detect(flag, "susceptibility")
+    ) |>
+    dplyr::select("omim":"inheritance") |>
+    dplyr::left_join(pheno_parent, by = "omim") |>
+    dplyr::left_join(name_parsed,  by = "omim") |>
+    dplyr::mutate(sc_inheritance = map_inheritance(inheritance)) |>
+    dplyr::transmute(
+        # Curation-assist columns (no ROBOT instruction; blank = ignored by ROBOT)
+        status             = NA_character_,
+        curation_notes     = NA_character_,
+        link               = omim,
+        def_article        = dplyr::if_else(
+            stringr::str_detect(do_label, "^[AEIOUaeiou]"),
+            "An",
+            "A"
+        ),
+        parent_label,
+        `characterized by` = NA_character_,
+        `genetic basis`    = NA_character_,
+        # ROBOT columns
+        iri                    = NA_character_,
+        parent_curie,
+        label                  = do_label,
+        def                    = NA_character_,
+        def_src                = NA_character_,
+        def_type               = NA_character_,
+        syn_exact,
+        acronym,
+        annotate_acronym       = NA_character_,
+        skos_exact             = NA_character_,
+        xrefs                  = NA_character_,
+        `sc_axiom-INHERITANCE` = sc_inheritance,
+        `sc_axiom-ANATOMY`     = NA_character_,
+        `sc_axiom-ONSET`       = NA_character_,
+        subset                 = NA_character_,
+        obo_id                 = NA_character_,
+        Namespace              = NA_character_
+    )
+
+# Add Google Sheets formulas for computed columns.
+robot_data <- robot_data |>
+    dplyr::mutate(
+        def = build_gs_formula(
+            "=concatenate(",
+            "if(not(isblank(", def_article, ")), concat(", def_article, ",\" \"),iferror(1/0)),",
+            "if(not(isblank(", parent_label, ")),", parent_label, ",iferror(1/0)),",
+            "if(not(isblank(", `characterized by`, ")),concatenate(\" characterized by \",", `characterized by`, "),iferror(1/0)),",
+            "if(not(isblank(", `genetic basis`, ")),concat(\" that has_material_basis_in \",", `genetic basis`, "),iferror(1/0)))"
+        ),
+        annotate_acronym = build_gs_formula(
+            "=if(isblank(", acronym, "),iferror(1/0),\"acronym\")"
+        ),
+        skos_exact = build_gs_formula("=", link),
+        xrefs = build_gs_formula(
+            "=if(isblank(", skos_exact, "),iferror(1/0),", skos_exact, ")"
+        ),
+        obo_id = build_gs_formula("=", iri),
+        Namespace = build_gs_formula(
+            "=if(isblank(", iri, "),iferror(1/0),\"disease_ontology\")"
+        )
+    )
+
+# Write data without ROBOT instruction row
+DO.utils::write_gs(
+    robot_data,
+    ss              = curation_gs,
+    sheet           = "new-robot_template",
+    hyperlink_curie = c("link", "parent_curie")
+)
+
+# Insert instructions as a separate block at the top of the sheet, to avoid
+# coercion errors due to binding > writing
+
+# ROBOT instruction row: written as first data row; ROBOT reads rows 1 + 2.
+# Curation-assist columns are NA (ROBOT ignores blank cells in column 2).
+robot_instructions <- tibble::tibble_row(
+    status               = NA_character_,
+    curation_notes       = NA_character_,
+    link                 = NA_character_,
+    def_article          = NA_character_,
+    parent_label         = NA_character_,
+    `characterized by`   = NA_character_,
+    `genetic basis`      = NA_character_,
+    iri                  = "ID",
+    parent_curie         = "SC %",
+    label                = "A rdfs:label",
+    def                  = "A obo:IAO_0000115",
+    def_src              = ">A oboInOwl:hasDbXref SPLIT=|",
+    def_type             = ">AI dc11:type SPLIT=|",
+    syn_exact            = "A oboInOwl:hasExactSynonym SPLIT=|",
+    acronym              = "A oboInOwl:hasExactSynonym SPLIT=|",
+    annotate_acronym     = ">A oboInOwl:SynonymTypeProperty",
+    skos_exact           = "A skos:exactMatch SPLIT=|",
+    xrefs                = "A oboInOwl:hasDbXref SPLIT=|",
+    `sc_axiom-INHERITANCE` = "SC 'has material basis in' some %",
+    `sc_axiom-ANATOMY`     = "SC 'disease has location' some %",
+    `sc_axiom-ONSET`       = "SC 'has material basis in' some %",
+    subset               = "AI oboInOwl:inSubset",
+    obo_id               = "A oboInOwl:id",
+    Namespace            = "A oboInOwl:hasOBONamespace"
+)
+
+googlesheets4::sheet_insert_rows(
+    curation_gs,
+    sheet = "new-robot_template",
+    before = 2L
+)
+googlesheets4::range_write(
+    curation_gs,
+    robot_instructions,
+    sheet = "new-robot_template",
+    range = "A2",
+    col_names = FALSE
+)
+
+message("Robot template written to Google Sheets: ", nrow(robot_data), " rows")
