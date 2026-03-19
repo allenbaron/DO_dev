@@ -211,6 +211,8 @@ if (file.exists(collection_pmc_raw_file)) {
 col_pmc <- as_tibble(do_col_pmc_summary) %>%
     DO.utils:::hoist_ArticleIds()
 
+# handle scenario where an ID type is mising (pmid was missing 2026-03-13)
+exist_id <- intersect(c("pmid", "pmcid", "doi"), names(col_pmc))
 col_pmc_merge <- col_pmc %>%
     tidyr::hoist(
         .col = Authors,
@@ -218,15 +220,17 @@ col_pmc_merge <- col_pmc %>%
     ) %>%
     dplyr::mutate(
         pub_date = lubridate::date(SortDate),
-        pmid = dplyr::if_else(
-            stringr::str_length(pmid) < 8,
-            NA_character_,
-            pmid
-        )
+        if ("pmid" %in% exist_id) {
+            pmid = dplyr::if_else(
+                stringr::str_length(pmid) < 8,
+                NA_character_,
+                pmid
+            )
+        }
     ) %>%
     dplyr::select(
-        first_author, title = Title, journal = Source, pub_date, doi, pmid,
-        pmcid
+        first_author, title = Title, journal = Source, pub_date,
+        dplyr::any_of(exist_id)
     ) %>%
     # drop columns without values
     dplyr::select(where(~!all(is.na(.x)))) %>%
