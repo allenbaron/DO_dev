@@ -11,7 +11,7 @@ gs_rt_recode <- "https://docs.google.com/spreadsheets/d/1Zn6p5xkVHUwbWe1N8FUa3fN
 
 gs <- "https://docs.google.com/spreadsheets/d/1VYddDuDEQ_EpvuNE4O2QvdgcCq1WBcp-yI85DW5vnRI/edit?gid=874791186#gid=874791186"
 sheet_ct <- "curation-20251121"
-sheet_rt <- stringr::str_replace(sheet_ct, "curation", "robot_template")
+sheet_rt <- stringr::str_replace(sheet_ct, "curation", "robot")
 
 # INCOMPLETE - SPARQL remove procedure... may not want to source it at this point in script
 #source(here::here("scripts/curate_remove_template.R"))
@@ -21,7 +21,8 @@ sheet_rt <- stringr::str_replace(sheet_ct, "curation", "robot_template")
 
 rt_main <- googlesheets4::read_sheet(
     gs_rt_recode,
-    range = "template_options!A:E",
+    sheet = "template_options",
+    range = "A:E",
     col_types = "c"
 ) |>
     dplyr::filter(
@@ -39,7 +40,7 @@ rt_auto <- dplyr::filter(
 # Prep & check curated data -----------------------------------------------
 
 # Load and pre-process curated data
-cur <- googlesheets4::read_sheet(gs, sheet_ct, range = "A:E", col_types = "c")
+cur <- googlesheets4::read_sheet(gs, sheet_ct, col_types = "c")
 
 # CHECK 1. check that DOIDs are unique
 cur_id <- cur$id[!is.na(cur$id)]
@@ -219,7 +220,8 @@ in_DO <- DO.utils::robot_query(
         de,
         query,
         tidy_what = c("header", "uri_to_curie")
-    )
+    ) |>
+    DO.utils::collapse_col("parent_iri")
 
 # ensure cols exist when all diseases are new
 if (nrow(in_DO) == 0) {
@@ -354,18 +356,18 @@ new_req_plural <- new_req[stringr::str_detect(new_req, stringr::coll("(s)"))]
 # for single: exactly one positive action
 new_req1 <- setdiff(new_req, new_req_plural)
 
-err <- new_df %>%
+err <- new_df |>
     dplyr::filter(.data$data_type %in% new_req) |>
     dplyr::mutate(
         err = (
             sum(.data$action %in% c("add", "restore")) != 1 &
                 .data$data_type %in% new_req1
         ) |
-            (
-                !any(.data$action %in% c("add", "restore")) &
+        (
+                sum(.data$action %in% c("add", "restore")) < 1 &
                     .data$data_type %in% new_req_plural
             ),
-        .by = "data_type"
+        .by = c("data_type", "id")
     ) %>%
     dplyr::filter(.data$err) |>
     dplyr::mutate(action = tidyr::replace_na(.data$action, "NONE"))
@@ -447,6 +449,49 @@ if (nrow(err) > 0) {
     )
 }
 
+
+# Check 8. Validate SSSOM data
+if (any(stringr::str_detect(names(prep), "SSSOM"))) {
+    mapping_dt <- c(
+        "xref(s)", "skos mapping(s): exact", "skos mapping(s): close",
+        "skos mapping(s): broad", "skos mapping(s): narrow",
+        "skos mapping(s): related"
+    )
+
+    # Check 8a. predicate_modifier 'Not' is marked for exclusion
+    err <- prep |>
+        dplyr::filter(
+            .data$data_type %in% mapping_dt,
+            .data[["SSSOM-predicate_modifier"]] == "Not",
+            !.data$action %in% c("exclude", "ignore")
+        )
+    if (nrow(err) > 0) {
+        rlang::abort(
+            c(
+                "Mappings with 'Not' predicate_modifier should be marked for exclusion.",
+                purrr::set_names(
+                    paste(
+                        err[["id"]], err$data_type,
+                        "predicate_modifier: ", err[["SSSOM-predicate_modifier"]],
+                        "action: ", err$action,
+                        sep = " - "
+                    ),
+                    rep("x", nrow(err))
+                )
+            )
+        )
+    }
+
+    # Check 8b. all SNOMEDCT_US prefixes should have date in them or in
+    # object_source_version
+    err <- prep |>
+        dplyr::filter(
+            .data$data_type %in% mapping_dt,
+            stringr::str_detect(.data$value, stringr::coll("SNOMEDCT_US")),
+            !stringr::str_detect(.data$value, "20[0-9]{2}_[0-9]{2}_[0-9]{2}"),
+            !stringr::str_detect(.data[["SSSOM-object_source_version"]], "20[0-9]{2}_[0-9]{2}_[0-9]{2}")
+        )
+}
 
 
 # Generate ROBOT template -------------------------------------------------
