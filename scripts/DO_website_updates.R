@@ -103,14 +103,15 @@ plot_filenms <- c(
 plot_files <- purrr::map2(
     g,
     plot_filenms,
-    ~ ggsave(plot = .x, filename = file.path(plot_outdir, .y), h = 5, w = 8)
+    # sizes are limited by max size of 'Disease Ontology Branch Counts'
+    ~ ggsave(plot = .x, filename = file.path(plot_outdir, .y), h = 5.3, w = 7.8)
 )
 
 # Generate html page updates ----------------------------------------------
 
 use_cases <- DO.utils::make_use_case_html()
 web_counts <- DO.utils::update_website_count_tables(
-    repo_path,
+    dirname(repo$path),
     latest_release,
     svn_path
 )
