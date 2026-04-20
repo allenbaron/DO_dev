@@ -254,7 +254,7 @@ matches |>
             stringr::coll("congenital", ignore_case = TRUE)
         )
     ) |>
-    DO.utils::collapse_col(c("source", "match_lc")O |> 
+    DO.utils::collapse_col(c("source", "match_lc") |> 
     dplyr::count(.data$match_lc, sort = TRUE)
 ```
 
