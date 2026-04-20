@@ -9,13 +9,38 @@ de <- here::here("../Ontologies/HumanDiseaseOntology/src/ontology/doid-edit.owl"
 
 gs_rt_recode <- "https://docs.google.com/spreadsheets/d/1Zn6p5xkVHUwbWe1N8FUa3fNcEkAOoE9P4ADb12f69hQ/edit"
 
-gs <- "https://docs.google.com/spreadsheets/d/1VYddDuDEQ_EpvuNE4O2QvdgcCq1WBcp-yI85DW5vnRI/edit?gid=874791186#gid=874791186"
-sheet_ct <- "curation-20251121"
+if (!exists("gs")) gs <- readline("Google sheet URL of curation template:  ")
+if (!exists("sheet_ct")) sheet_ct <- readline("Sheet name of curation template:  ")
 sheet_rt <- stringr::str_replace(sheet_ct, "curation", "robot")
 
 # INCOMPLETE - SPARQL remove procedure... may not want to source it at this point in script
 #source(here::here("scripts/curate_remove_template.R"))
 
+# convert "retain" to "add" for annotations on definitions when definition is
+# being replaced
+retain_def_annot <- function(.df) {
+    def_annot_dt <- c("definition source(s)", "definition source type(s)")
+
+    replace_ids <- .df |>
+        dplyr::filter(.data$data_type == "definition") |>
+        dplyr::summarize(
+            replace = all(c("add", "remove") %in% .data$action),
+            .by = "id"
+        ) |>
+        dplyr::filter(.data$replace) |>
+        dplyr::pull("id")
+
+    .df |>
+        dplyr::mutate(
+            action = dplyr::if_else(
+                .data$id %in% replace_ids &
+                    .data$data_type %in% def_annot_dt &
+                    .data$action == "retain",
+                "add",
+                .data$action
+            )
+        )
+}
 
 # Identify expected values and template codes -----------------------------
 
@@ -52,7 +77,7 @@ if (any(id_dup)) {
             "Curated DOIDs must be unique.",
             purrr::set_names(
                 paste0(names(dup_id_n), " (", dup_id_n, " occurrences)"),
-                nm = rep("x", length(dup_id))
+                nm = rep("x", length(dup_id_n))
             )
         )
     )
@@ -76,6 +101,10 @@ prep <- cur %>%
     ) %>%
 # 7. unsplit multiple values in one row
     DO.utils::lengthen_col(value, delim = "|") %>%
+# 8. drop rows with placeholder identifiers '---'
+    dplyr::filter(stringr::str_trim(.data$id) != "---") %>%
+# 9. retain definition annotations when replacing definition
+    retain_def_annot() %>%
 # **. [TEMPORARY] drop automated columns that may have been entered manually --> validate instead??
     dplyr::filter(!.data$data_type %in% rt_auto)
 
@@ -458,12 +487,12 @@ if (any(stringr::str_detect(names(prep), "SSSOM"))) {
         "skos mapping(s): related"
     )
 
-    # Check 8a. predicate_modifier 'Not' is marked for exclusion
+    # Check 8a. predicate_modifier 'Not' is marked for exclusion (or removal)
     err <- prep |>
         dplyr::filter(
             .data$data_type %in% mapping_dt,
             .data[["SSSOM-predicate_modifier"]] == "Not",
-            !.data$action %in% c("exclude", "ignore")
+            !.data$action %in% c("exclude", "ignore", "remove")
         )
     if (nrow(err) > 0) {
         rlang::abort(
@@ -489,28 +518,62 @@ if (any(stringr::str_detect(names(prep), "SSSOM"))) {
             .data$data_type %in% mapping_dt,
             stringr::str_detect(.data$value, stringr::coll("SNOMEDCT_US")),
             !stringr::str_detect(.data$value, "20[0-9]{2}_[0-9]{2}_[0-9]{2}"),
-            !stringr::str_detect(.data[["SSSOM-object_source_version"]], "20[0-9]{2}_[0-9]{2}_[0-9]{2}")
+            is.na(.data[["SSSOM-object_source_version"]]) |
+                !stringr::str_detect(
+                    .data[["SSSOM-object_source_version"]],
+                    "20[0-9]{2}-[0-9]{2}-[0-9]{2}"
+                )
         )
+    if (nrow(err) > 0) {
+        rlang::abort(
+            c(
+                "SNOMEDCT_US mappings must have date appended in prefix or in SSSOM-object_source_version",
+                purrr::set_names(err[["id"]], rep("x", nrow(err)))
+            )
+        )
+    }
 }
 
 
 # Generate ROBOT template -------------------------------------------------
 
 # retain ONLY data to be added
-add <- prep %>%
-    dplyr::filter(.data$action %in% c("add", "restore")) %>%
-    dplyr::select("id", "data_type", "value")
-
-# [FOR NOW] for SNOMEDCT_US switch any SKOS mappings to xrefs
-add <- add |>
+add <- prep |>
+    dplyr::filter(.data$action %in% c("add", "restore")) |>
+    # Process SNOMEDCT_US mappings
     dplyr::mutate(
+        # append dates to prefix where needed
+        value = dplyr::if_else(
+            .data$data_type %in% mapping_dt &
+                stringr::str_detect(.data$value, stringr::coll("SNOMEDCT_US")) &
+                !stringr::str_detect(
+                    .data$value,
+                    "20[0-9]{2}_[0-9]{2}_[0-9]{2}"
+                ),
+            stringr::str_replace(
+                .data$value,
+                "SNOMEDCT_US:",
+                paste0(
+                    "SNOMEDCT_US_",
+                    stringr::str_replace_all(
+                        .data[["SSSOM-object_source_version"]],
+                        "-",
+                        "_"
+                    ), ":"
+                )
+            ),
+            .data$value
+        ),
+        # switch any SKOS mappings to xrefs (TEMPORARY?)
         data_type = dplyr::if_else(
             stringr::str_detect(.data$data_type, "skos mapping") &
                 stringr::str_detect(.data$value, stringr::coll("SNOMEDCT_US")),
             "xref(s)",
             .data$data_type
         )
-    )
+    ) |>
+    dplyr::select("id", "data_type", "value")
+
 
 # add obo id & namespace to new diseases
 obo_req <- tibble::tibble(
