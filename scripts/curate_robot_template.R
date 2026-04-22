@@ -13,6 +13,11 @@ if (!exists("gs")) gs <- readline("Google sheet URL of curation template:  ")
 if (!exists("sheet_ct")) sheet_ct <- readline("Sheet name of curation template:  ")
 sheet_rt <- stringr::str_replace(sheet_ct, "curation", "robot")
 
+# ensure robot template sheet is unique
+if (sheet_rt == sheet_ct) {
+    sheet_rt <- paste0(sheet_ct, "-robot")
+}
+
 # INCOMPLETE - SPARQL remove procedure... may not want to source it at this point in script
 #source(here::here("scripts/curate_remove_template.R"))
 
@@ -249,8 +254,7 @@ in_DO <- DO.utils::robot_query(
         de,
         query,
         tidy_what = c("header", "uri_to_curie")
-    ) |>
-    DO.utils::collapse_col("parent_iri")
+    )
 
 # ensure cols exist when all diseases are new
 if (nrow(in_DO) == 0) {
@@ -265,10 +269,11 @@ if (nrow(in_DO) == 0) {
     )
 } else {
     # otherwise, ensure columns are correctly formatted, even when empty
-    in_DO <- in_DO %>%
+    in_DO <- in_DO |>
+        DO.utils::collapse_col("parent_iri") |>
         dplyr::mutate(
             dplyr::across(c("definition", "comment"), as.character)
-        ) %>%
+        ) |>
         tidy_sparql(tidy_what = "lgl_NA_FALSE")
 }
 
