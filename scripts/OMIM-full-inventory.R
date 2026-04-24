@@ -239,7 +239,6 @@ blue_background <- googlesheets4:::CellData(
         )
     )
 )
-range_flood(ss, range = "I:J", cell = blue_background)
 
 # Format a robot_template sheet with curation status dropdowns & frozen header.
 format_rt_sheet <- function(robot_data, col, ss, sheet, .row_offset = 1L, ...) {
@@ -264,10 +263,9 @@ omim_files <- setNames(
     file.path(data_dir, paste0(omim_data, ".txt")),
     omim_data
 )
+omim_file_ages <- vapply(omim_files, omim_age_days, numeric(1L))
 
-to_download <- omim_files[vapply(omim_files, omim_age_days, numeric(1)) > 30] |>
-    names()
-
+to_download <- names(omim_files[omim_file_ages > 30])
 if (length(to_download) > 0L) {
     api_key <- keyring::key_get("OMIM_API_KEY")
     if (!nzchar(api_key)) {
