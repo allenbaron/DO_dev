@@ -5,12 +5,15 @@ library(googlesheets4)
 library(tidyverse)
 library(DO.utils)
 
+# manual inputs
+gs <- readline("Google sheet URL of curation template:  ")
+sheet_ct <- readline("Sheet name of curation template:  ")
+
 de <- here::here("../Ontologies/HumanDiseaseOntology/src/ontology/doid-edit.owl")
 
+# other inputs/outputs
 gs_rt_recode <- "https://docs.google.com/spreadsheets/d/1Zn6p5xkVHUwbWe1N8FUa3fNcEkAOoE9P4ADb12f69hQ/edit"
 
-if (!exists("gs")) gs <- readline("Google sheet URL of curation template:  ")
-if (!exists("sheet_ct")) sheet_ct <- readline("Sheet name of curation template:  ")
 sheet_rt <- stringr::str_replace(sheet_ct, "curation", "robot")
 
 # ensure robot template sheet is unique
