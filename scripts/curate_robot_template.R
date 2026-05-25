@@ -275,7 +275,7 @@ if (nrow(in_DO) == 0) {
     in_DO <- in_DO |>
         DO.utils::collapse_col("parent_iri") |>
         dplyr::mutate(
-            dplyr::across(c("definition", "comment"), as.character)
+            dplyr::across(c("label", "definition", "comment"), as.character)
         ) |>
         tidy_sparql(tidy_what = "lgl_NA_FALSE")
 }
