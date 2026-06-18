@@ -1,0 +1,74 @@
+# MAIN QUERY
+PREFIX rdfs: <http://www.w3.org/2000/01/rdf-schema#>
+PREFIX owl: <http://www.w3.org/2002/07/owl#>
+PREFIX oboInOwl: <http://www.geneontology.org/formats/oboInOwl#>
+PREFIX skos: <http://www.w3.org/2004/02/skos/core#>
+
+SELECT ?id ?label ?node_type ?synonym ?mapping
+WHERE {
+    {
+        ## multiple exact-ish OMIM entries => "branch"
+        SELECT ?iri ?label (COUNT(DISTINCT ?mim) AS ?mim_n)
+        WHERE {
+            ?iri a owl:Class ;
+                rdfs:label ?label_raw .
+            FILTER(REGEX(STR(?iri), "DOID|MONDO"))
+            # drop lang tags
+            BIND(STR(?label_raw) AS ?label)
+
+            OPTIONAL{
+                VALUES ?predicate { 
+                    oboInOwl:hasDbXref
+                    skos:exactMatch
+                    skos:closeMatch
+                }
+                ?iri ?predicate ?mim .
+                FILTER(REGEX(LCASE(?mim), "o?mim"))
+            }
+        } GROUP BY ?iri ?label
+    }
+
+    OPTIONAL { ?iri owl:deprecated ?deprecated }
+    OPTIONAL {
+        ?iri ^rdfs:subClassOf ?child .
+        FILTER(!isBlank(?child))
+    }
+
+    # OMIM PS => "branch"
+    OPTIONAL{ 
+        ?iri oboInOwl:hasDbXref ?xref .
+        FILTER(REGEX(LCASE(?xref), "o?mim.*ps"))
+    }
+
+    # FINAL BINDING
+    BIND(BOUND(?xref) AS ?mimps)
+    BIND(
+        IF(
+            BOUND(?deprecated),
+            "deprecated",
+            IF(
+                BOUND(?child) || ?mimps = true || ?mim_n > 1,
+                "branch",
+                "leaf"
+            )
+        ) AS ?node_type
+    )
+    ####################################################
+
+    # SYNONYMS & MAPPINGS
+    OPTIONAL {
+        ?iri oboInOwl:hasExactSynonym ?synonym_raw .
+        # drop lang tags
+        BIND(STR(?synonym_raw) AS ?synonym)
+    }
+
+    OPTIONAL {
+        VALUES ?map_predicate { oboInOwl:hasDbXref skos:exactMatch skos:closeMatch }
+        ?iri a owl:Class ;
+            ?map_predicate ?mapping_raw .
+        BIND(STR(?mapping_raw) AS ?mapping)
+    }
+
+    # ID BINDING
+    BIND(REPLACE(STR(?iri), "^.*(DOID|MONDO)_([0-9]+)", "$1:$2") AS ?id)
+}
