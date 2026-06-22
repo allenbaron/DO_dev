@@ -104,9 +104,13 @@ def create_compare_record(
     comparison = {
         "mondo_id": mondo_id,
         "mondo_label": mondo_data["label"],
+        "mondo_root": mondo_data.get("root", "none"),
+        "mondo_upper_branch": mondo_data.get("upper_branch", None),
+        "mondo_sub_branch": mondo_data.get("sub_branch", None),
         "mondo_node_type": mondo_data["node_type"],
         "doid": doid,
         "do_label": do_data["label"],
+        "do_upper_branch": do_data.get("upper_branch", None),
         "do_node_type": do_data["node_type"],
         "mapped_by": mapped_by,
         "has_do_label": label_match,
@@ -123,16 +127,12 @@ def create_compare_record(
             sorted(mondo_data["synonyms"].difference(synonym_shared))
         ),
     }
-
-    if mondo_data["root"]:
-        comparison["mondo_root"] = mondo_data["root"]
     return comparison
 
 
 def standardize_df(df):
     for col in df.columns:
         if "root" in col:
-            df[col] = df[col].fillna("none")
             df[col] = pd.Categorical(
                 df[col],
                 categories=[
@@ -167,11 +167,14 @@ def standardize_df(df):
                 ],
                 ordered=True,
             )
+        # if "_branch" in col:
+        #     df[col].fillna("")
         if isinstance(df[col].iloc[0], set):
             df[col] = df[col].apply(lambda x: "|".join(sorted(x)))
     return df
 
 
+# Define mapping source priority for identification of unmapped terms (quasi-type info)
 priority_order = ["MIM", "ORDO", "NCI", "UMLS", "GARD", "MESH"]
 
 
@@ -221,6 +224,7 @@ if mondo_version is None or (datetime.now() - mondo_version).days > 28:
 #### EXTRACT DATA
 ############################################################################
 
+# query to extract general information about each term
 # rdflib only parses this correctly if the query is in a file
 sparql_path = os.path.join("sparql", "compare-do-mondo.rq")
 with open(sparql_path, "r") as f:
@@ -243,6 +247,7 @@ for row in do_res:
     if id not in do_terms:
         do_terms[id] = {
             "label": label,
+            "upper_branch": set(),
             "node_type": node_type,
             "synonyms": set(),
             "mappings": set(),
@@ -254,6 +259,39 @@ for row in do_res:
         if mapping.startswith("SNOMEDCT_US_"):
             mapping = "SNOMEDCT_US:" + mapping.split(":")[-1]
         do_terms[id]["mappings"].add(mapping)
+
+# DO branches are equivalent to a mix of MONDO "upper" and "sub" branches; will treat DO
+# branches as "upper" (for ease only)
+do_classification_query = """
+    PREFIX owl: <http://www.w3.org/2002/07/owl#>
+    PREFIX rdfs: <http://www.w3.org/2000/01/rdf-schema#>
+    PREFIX obo: <http://purl.obolibrary.org/obo/>
+
+    SELECT ?id ?upper_branch
+    WHERE {
+        ?iri a owl:Class ;
+            rdfs:subClassOf* ?upper_branch_iri .
+        FILTER(REGEX(STR(?iri), "DOID|MONDO"))
+
+        ?upper_branch_iri rdfs:label ?upper_branch_label ;
+            rdfs:subClassOf obo:DOID_4 .   # disease
+
+        BIND(STR(?upper_branch_label) AS ?upper_branch)
+        BIND(REPLACE(STR(?iri), "^.*(DOID|MONDO)_([0-9]+)", "$1:$2") AS ?id)
+    }
+"""
+
+do_classification = doid_graph.query(do_classification_query)
+for row in do_classification:
+    id, upper_branch = row
+    id = as_str(id)
+    upper_branch = as_str(upper_branch)
+    if not id in do_terms:
+        raise ValueError(
+            f"{id} found in classification query that is not in general query"
+        )
+    do_terms[id]["upper_branch"] = upper_branch
+
 
 # MONDO data --------------------------------------------------------------------
 mondo_graph = rdflib.Graph()
@@ -273,6 +311,8 @@ for row in mondo_res:
             "label": label,
             "node_type": node_type,
             "root": None,
+            "upper_branch": set(),
+            "sub_branch": None,
             "doid": set(),
             "synonyms": set(),
             "mappings": set(),
@@ -287,12 +327,15 @@ for row in mondo_res:
             mondo_terms[id]["mappings"].add(mapping)
 
 
-mondo_root_query = """
+# query includes actual MONDO root terms (at or above level of 'human disease'),
+# "upper" branches (just below 'human disease') and "sub" branches (equivalent to DO
+# branches)
+mondo_classification_query = """
     PREFIX owl: <http://www.w3.org/2002/07/owl#>
     PREFIX rdfs: <http://www.w3.org/2000/01/rdf-schema#>
     PREFIX obo: <http://purl.obolibrary.org/obo/>
 
-    SELECT ?id ?root
+    SELECT ?id ?root ?upper_branch ?sub_branch
     WHERE {
         ?iri a owl:Class .
         FILTER(REGEX(STR(?iri), "MONDO"))
@@ -308,6 +351,17 @@ mondo_root_query = """
             ?type_iri rdfs:label ?root_raw .
         }
 
+        OPTIONAL {
+            ?iri rdfs:subClassOf* ?sub_branch_iri .
+            ?sub_branch_iri rdfs:label ?sub_branch_label ;
+                rdfs:subClassOf ?upper_branch_iri .
+            ?upper_branch_iri rdfs:label ?upper_branch_label ;
+                rdfs:subClassOf obo:MONDO_0700096 .  # human disease
+
+            BIND(STR(?sub_branch_label) AS ?sub_branch)
+            BIND(STR(?upper_branch_label) AS ?upper_branch)
+        }
+
         # drop lang tags
         BIND(STR(?root_raw) AS ?root)
         # ID BINDING
@@ -315,20 +369,30 @@ mondo_root_query = """
     }
 """
 
-mondo_root = mondo_graph.query(mondo_root_query)
-for row in mondo_root:
-    id, root_label = row
+mondo_classification = mondo_graph.query(mondo_classification_query)
+for row in mondo_classification:
+    id, root_label, upper_branch, sub_branch = row
     id = as_str(id)
     root_label = as_str(root_label)
+    upper_branch = as_str(upper_branch)
     if id in mondo_terms:
         if root_label:
             mondo_terms[id]["root"] = root_label
-        else:
-            if id != "MONDO:0000001" and mondo_terms[id]["node_type"] != "deprecated":
-                raise ValueError(f"{id} without root is not deprecated")
-        # DO NOT USE THIS CONDITION: Some MONDO terms do NOT have a label
-        # else:
-        #     raise ValueError(f"{id} found in root query but not in general query")
+        elif id != "MONDO:0000001" and mondo_terms[id]["node_type"] != "deprecated":
+            raise ValueError(f"{id} without root is not deprecated")
+        if upper_branch:
+            mondo_terms[id]["upper_branch"] = upper_branch
+            # drop uninformative sub-branches (acute disease & anatomical system
+            # equivalents)
+            if upper_branch == "acute disease" or "body system" in upper_branch:
+                sub_branch = None
+            else:
+                sub_branch = as_str(sub_branch)
+        if sub_branch:
+            mondo_terms[id]["sub_branch"] = sub_branch
+    # DO NOT USE THIS CONDITION: Some MONDO terms do NOT have a label
+    # else:
+    #     raise ValueError(f"{id} found in root query but not in general query")
     elif root_label:
         raise ValueError(f"{id} found in root query that is not deprecated")
     else:
@@ -336,6 +400,8 @@ for row in mondo_root:
             "label": None,
             "node_type": "deprecated",
             "root": None,
+            "upper_branch": upper_branch,
+            "sub_branch": sub_branch,
             "doid": set(),
             "synonyms": set(),
             "mappings": set(),
@@ -451,40 +517,64 @@ for id in mondo_rm:
 
 # General Statistics -------------------------------------------------------
 
-stats_file = os.path.join(data_dir, "ontology_stats.tsv")
+ontology_stats_path = os.path.join(data_dir, "ontology_stats.tsv")
 
 # DO terms
 do_flat_dict = [{"id": k, **v} for k, v in do_terms.items()]
-do_df = standardize_df(pd.DataFrame(do_flat_dict)[["id", "node_type"]]).sort_values(
-    by=["node_type"]
-)
+do_df = standardize_df(
+    pd.DataFrame(do_flat_dict)[["id", "upper_branch", "node_type"]]
+).sort_values(by=["upper_branch", "node_type"])
 
 do_total = do_df["id"].nunique()
-do_node_stats = do_df.groupby(["node_type"])["id"].nunique()
-with open(stats_file, "w") as f:
-    f.write(f"DOID version: {doid_version.strftime("%Y-%m-%d")}\n")
-    f.write(f"Total DO terms: {do_total}\n")
+do_branch_count = do_df.groupby("upper_branch")["id"].nunique()
+do_node_count = do_df.groupby("node_type")["id"].nunique()
+do_fullgroup_count = do_df.groupby(["upper_branch", "node_type"])["id"].nunique()
+with open(ontology_stats_path, "w") as f:
+    f.write(f"DOID version:\t{doid_version.strftime("%Y-%m-%d")}\n")
+    f.write(f"Total DO terms:\t{do_total}\n")
     f.write("\n")
-    do_node_stats.to_csv(f, sep="\t")
+    do_branch_count.to_csv(f, sep="\t")
+    f.write("\n")
+    do_node_count.to_csv(f, sep="\t")
+    f.write("\n")
+    do_fullgroup_count.to_csv(f, sep="\t")
 
 
 # MONDO terms
 mondo_flat_dict = [{"id": k, **v} for k, v in mondo_terms.items()]
 mondo_df = standardize_df(
-    pd.DataFrame(mondo_flat_dict)[["id", "root", "node_type"]]
-).sort_values(by=["root", "node_type"])
+    pd.DataFrame(mondo_flat_dict)[
+        ["id", "root", "upper_branch", "sub_branch", "node_type"]
+    ]
+).sort_values(by=["root", "upper_branch", "sub_branch", "node_type"])
 
 mondo_total = mondo_df["id"].nunique()
-mondo_node_stats = mondo_df.groupby(["root", "node_type"])["id"].nunique()
-mondo_root_stats = mondo_df.drop(columns=["node_type"]).groupby("root")["id"].nunique()
-with open(stats_file, "a") as f:
+mondo_root_count = mondo_df.groupby("root")["id"].nunique()
+mondo_root_node_count = mondo_df.groupby(["root", "node_type"])["id"].nunique()
+mondo_fullgroup_count = mondo_df.groupby(
+    ["root", "upper_branch", "sub_branch", "node_type"]
+)["id"].nunique()
+mondo_human_df = mondo_df[mondo_df["upper_branch"].notna()]
+mondo_branch_count = mondo_human_df.groupby(["upper_branch", "sub_branch"])[
+    "id"
+].nunique()
+mondo_branch_node_count = mondo_human_df.groupby(
+    ["upper_branch", "sub_branch", "node_type"]
+)["id"].nunique()
+with open(ontology_stats_path, "a") as f:
     f.write("\n\n")
-    f.write(f"MONDO version: {mondo_version.strftime("%Y-%m-%d")}\n")
-    f.write(f"Total MONDO terms: {mondo_total}\n")
+    f.write(f"MONDO version:\t{mondo_version.strftime("%Y-%m-%d")}\n")
+    f.write(f"Total MONDO terms:\t{mondo_total}\n")
     f.write("\n")
-    mondo_root_stats.to_csv(f, sep="\t")
+    mondo_root_count.to_csv(f, sep="\t")
     f.write("\n")
-    mondo_node_stats.to_csv(f, sep="\t")
+    mondo_branch_count.to_csv(f, sep="\t")
+    f.write("\n")
+    mondo_branch_node_count.to_csv(f, sep="\t")
+    f.write("\n")
+    mondo_root_node_count.to_csv(f, sep="\t")
+    f.write("\n")
+    mondo_fullgroup_count.to_csv(f, sep="\t")
 
 
 # Detailed Mapping Outputs ---------------------------------------------------
@@ -498,7 +588,16 @@ mapped_df["deprecated"] = pd.Categorical(
     ordered=True,
 )
 mapped_out = mapped_df.sort_values(
-    by=["deprecated", "mondo_root", "mapped_by", "do_label", "mondo_label"]
+    by=[
+        "deprecated",
+        "mondo_root",
+        "do_upper_branch",
+        "mondo_upper_branch",
+        "mondo_sub_branch",
+        "mapped_by",
+        "do_label",
+        "mondo_label",
+    ]
 )
 
 mapped_out.to_csv(os.path.join(data_dir, "mapped_diseases.tsv"), index=False, sep="\t")
@@ -507,18 +606,18 @@ mapped_out.to_csv(os.path.join(data_dir, "mapped_diseases.tsv"), index=False, se
 # MONDO unmapped
 mondo_unmapped_flat_dict = [{"id": k, **v} for k, v in mondo_unmapped.items()]
 mondo_unmapped_df = standardize_df(pd.DataFrame(mondo_unmapped_flat_dict))
-mondo_unmapped_df["has_mapping"] = mondo_unmapped_df["mappings"].apply(
+mondo_unmapped_df["foremost_mapping"] = mondo_unmapped_df["mappings"].apply(
     has_priority_mapping
 )
 
 priority_order2 = [*priority_order, "other", "none"]
-mondo_unmapped_df["has_mapping"] = pd.Categorical(
-    mondo_unmapped_df["has_mapping"],
+mondo_unmapped_df["foremost_mapping"] = pd.Categorical(
+    mondo_unmapped_df["foremost_mapping"],
     categories=priority_order2,
     ordered=True,
 )
 mondo_unmapped_out = mondo_unmapped_df.sort_values(
-    by=["root", "node_type", "has_mapping", "label"]
+    by=["root", "upper_branch", "sub_branch", "node_type", "foremost_mapping", "label"]
 )
 
 mondo_unmapped_out.to_csv(
@@ -529,74 +628,160 @@ mondo_unmapped_out.to_csv(
 # DO unmapped
 do_unmapped_flat_dict = [{"id": k, **v} for k, v in do_unmapped.items()]
 do_unmapped_df = standardize_df(pd.DataFrame(do_unmapped_flat_dict))
-do_unmapped_df["has_mapping"] = do_unmapped_df["mappings"].apply(has_priority_mapping)
-do_unmapped_df["has_mapping"] = pd.Categorical(
-    do_unmapped_df["has_mapping"],
+do_unmapped_df["foremost_mapping"] = do_unmapped_df["mappings"].apply(
+    has_priority_mapping
+)
+do_unmapped_df["foremost_mapping"] = pd.Categorical(
+    do_unmapped_df["foremost_mapping"],
     categories=priority_order2,
     ordered=True,
 )
-do_unmapped_out = do_unmapped_df.sort_values(by=["node_type", "has_mapping", "label"])
+do_unmapped_out = do_unmapped_df.sort_values(
+    by=["upper_branch", "node_type", "foremost_mapping", "label"]
+)
 
 do_unmapped_out.to_csv(os.path.join(data_dir, "do_unmapped.tsv"), index=False, sep="\t")
 
 
 # Detailed Mapping Statistics ---------------------------------------------------
-mapping_stats = os.path.join(data_dir, "mapping_stats.tsv")
+mapping_stats_path = os.path.join(data_dir, "mapping_stats.tsv")
 
-# Mapped diseases
-mapped_stats = (
-    mapped_out[["mondo_id", "doid", "mondo_root", "mapped_by", "deprecated"]]
-    .groupby(["mondo_root", "mapped_by", "deprecated"])
+#### Mapped diseases ####
+mapped_by_count = (
+    mapped_out[
+        [
+            "mondo_id",
+            "doid",
+            "mondo_root",
+            "mapped_by",
+            "deprecated",
+        ]
+    ]
+    .groupby(
+        [
+            "mondo_root",
+            "mapped_by",
+            "deprecated",
+        ]
+    )
     .size()
     .rename("mapped")
-)
-
-
-# DO unmapped
-do_unmapped_stats = do_unmapped_out.groupby(["node_type"]).size()
-do_unmapped_stats = (
-    do_unmapped_stats.rename("unmapped")
     .to_frame()
-    .join(do_node_stats.rename("total"), how="left")
 )
-do_unmapped_stats["unmapped_pct"] = (
-    do_unmapped_stats["unmapped"] / do_unmapped_stats["total"]
+mapped_by_count["pct"] = (
+    mapped_by_count["mapped"] / mapped_by_count["mapped"].sum()
 ) * 100
-do_unmapped_stats["unmapped_pct"] = do_unmapped_stats["unmapped_pct"].round(1)
+mapped_by_count["pct"] = mapped_by_count["pct"].round(1)
 
-
-# MONDO unmapped
-mondo_unmapped_stats = mondo_unmapped_out.groupby(["root", "node_type"]).size()
-mondo_unmapped_stats = (
-    mondo_unmapped_stats.rename("unmapped")
+mapped_branch_overlap = (
+    mapped_out[
+        [
+            "mondo_id",
+            "doid",
+            "mondo_root",
+            "mondo_upper_branch",
+            "mondo_sub_branch",
+            "do_upper_branch",
+        ]
+    ]
+    .groupby(
+        ["mondo_root", "mondo_upper_branch", "mondo_sub_branch", "do_upper_branch"]
+    )
+    .size()
+    .rename("mapped")
     .to_frame()
-    .join(mondo_node_stats.rename("total"), how="left")
 )
-mondo_unmapped_stats["unmapped_pct"] = (
-    mondo_unmapped_stats["unmapped"] / mondo_unmapped_stats["total"]
+mapped_branch_overlap["pct"] = (
+    mapped_branch_overlap["mapped"] / mapped_branch_overlap["mapped"].sum()
 ) * 100
-mondo_unmapped_stats["unmapped_pct"] = mondo_unmapped_stats["unmapped_pct"].round(1)
+mapped_branch_overlap["pct"] = mapped_branch_overlap["pct"].round(1)
 
-mondo_unmapped_stats2 = (
-    mondo_unmapped_out.groupby(["root", "has_mapping"]).size().rename("unmapped")
+
+#### DO unmapped ####
+# by branch
+do_unmapped_count = do_unmapped_out.groupby(["upper_branch", "node_type"])[
+    "id"
+].nunique()
+do_unmapped_count = (
+    do_unmapped_count.rename("unmapped")
+    .to_frame()
+    .join(do_fullgroup_count.rename("total"), how="left")
 )
+do_unmapped_count["pct"] = (
+    do_unmapped_count["unmapped"] / do_unmapped_count["total"]
+) * 100
+do_unmapped_count["pct"] = do_unmapped_count["pct"].round(1)
+
+# by foremost mapped source
+do_unmapped_src = (
+    do_unmapped_out.groupby("foremost_mapping")["id"]
+    .nunique()
+    .rename("unmapped")
+    .to_frame()
+)
+do_unmapped_src["pct"] = (
+    do_unmapped_src["unmapped"] / do_unmapped_src["unmapped"].sum()
+) * 100
+do_unmapped_src["pct"] = do_unmapped_src["pct"].round(1)
 
 
-with open(mapping_stats, "w") as f:
-    f.write("MAPPING STATISTICS\n")
-    f.write("Mapped:\n")
-    f.write("source\ttotal_mapped\n")
-    f.write("DO\t{}\n".format(mapped_out["doid"].nunique()))
-    f.write("MONDO\t{}\n".format(mapped_out["mondo_id"].nunique()))
+#### MONDO unmapped ####
+# by branch (filtered to 'human disease' only)
+mondo_human_unmapped = mondo_unmapped_out[mondo_unmapped_out["upper_branch"].notna()]
+mondo_unmapped_count = mondo_human_unmapped.groupby(
+    ["upper_branch", "sub_branch", "node_type"]
+)["id"].nunique()
+mondo_unmapped_count = (
+    mondo_unmapped_count.rename("unmapped")
+    .to_frame()
+    .join(mondo_branch_node_count.rename("total"), how="left")
+)
+mondo_unmapped_count["pct"] = (
+    mondo_unmapped_count["unmapped"] / mondo_unmapped_count["total"]
+) * 100
+mondo_unmapped_count["pct"] = mondo_unmapped_count["pct"].round(1)
+
+# by foremost mapped source
+mondo_unmapped_src = (
+    mondo_human_unmapped.groupby("foremost_mapping")["id"]
+    .nunique()
+    .rename("unmapped")
+    .to_frame()
+)
+mondo_unmapped_src["pct"] = (
+    mondo_unmapped_src["unmapped"] / mondo_unmapped_src["unmapped"].sum()
+) * 100
+mondo_unmapped_src["pct"] = mondo_unmapped_src["pct"].round(1)
+
+#### SAVE ####
+with open(mapping_stats_path, "w") as f:
+    f.write("TOTALS:\n")
+    f.write("ontology\tmapped\tunmapped\n")
+    f.write(
+        "DO\t{}\t{}\n".format(
+            mapped_out["doid"].nunique(), do_unmapped_out["id"].nunique()
+        )
+    )
+    f.write(
+        "MONDO\t{}\t{}\n".format(
+            mapped_out["mondo_id"].nunique(), mondo_human_unmapped["id"].nunique()
+        )
+    )
     f.write("\n")
-    f.write("Mapped -- with details:\n")
-    mapped_stats.to_csv(f, sep="\t")
-    f.write("\n\n")
-    f.write("DO unmapped:\n")
-    do_unmapped_stats.to_csv(f, sep="\t")
-    f.write("\n\n")
-    f.write("MONDO unmapped:\n")
-    mondo_unmapped_stats.to_csv(f, sep="\t")
+    f.write("Mapped -- complete details:\n")
+    mapped_by_count.to_csv(f, sep="\t")
     f.write("\n")
-    f.write("MONDO unmapped -- with priority mapping identified:\n")
-    mondo_unmapped_stats2.to_csv(f, sep="\t")
+    f.write("Mapped -- branch comparison:\n")
+    mapped_branch_overlap.to_csv(f, sep="\t")
+    f.write("\n\n")
+    f.write("DO unmapped -- by branch:\n")
+    do_unmapped_count.to_csv(f, sep="\t")
+    f.write("\n")
+    f.write("DO unmapped -- by primary source:\n")
+    do_unmapped_src.to_csv(f, sep="\t")
+    f.write("\n\n")
+    f.write("MONDO unmapped -- by branch:\n")
+    mondo_unmapped_count.to_csv(f, sep="\t")
+    f.write("\n")
+    f.write("MONDO unmapped -- by primary source:\n")
+    mondo_unmapped_src.to_csv(f, sep="\t")
