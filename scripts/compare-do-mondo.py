@@ -172,6 +172,7 @@ def standardize_df(df):
     return df
 
 
+# Define mapping source priority for identification of unmapped terms (quasi-type info)
 priority_order = ["MIM", "ORDO", "NCI", "UMLS", "GARD", "MESH"]
 
 
@@ -221,6 +222,7 @@ if mondo_version is None or (datetime.now() - mondo_version).days > 28:
 #### EXTRACT DATA
 ############################################################################
 
+# query to extract general information about each term
 # rdflib only parses this correctly if the query is in a file
 sparql_path = os.path.join("sparql", "compare-do-mondo.rq")
 with open(sparql_path, "r") as f:
@@ -287,6 +289,7 @@ for row in mondo_res:
             mondo_terms[id]["mappings"].add(mapping)
 
 
+# MONDO root terms are at or above level of 'human disease'
 mondo_root_query = """
     PREFIX owl: <http://www.w3.org/2002/07/owl#>
     PREFIX rdfs: <http://www.w3.org/2000/01/rdf-schema#>
@@ -451,21 +454,21 @@ for id in mondo_rm:
 
 # General Statistics -------------------------------------------------------
 
-stats_file = os.path.join(data_dir, "ontology_stats.tsv")
+ontology_stats_path = os.path.join(data_dir, "ontology_stats.tsv")
 
 # DO terms
 do_flat_dict = [{"id": k, **v} for k, v in do_terms.items()]
 do_df = standardize_df(pd.DataFrame(do_flat_dict)[["id", "node_type"]]).sort_values(
-    by=["node_type"]
+    by="node_type"
 )
 
 do_total = do_df["id"].nunique()
-do_node_stats = do_df.groupby(["node_type"])["id"].nunique()
-with open(stats_file, "w") as f:
-    f.write(f"DOID version: {doid_version.strftime("%Y-%m-%d")}\n")
-    f.write(f"Total DO terms: {do_total}\n")
+do_node_count = do_df.groupby("node_type")["id"].nunique()
+with open(ontology_stats_path, "w") as f:
+    f.write(f"DOID version:\t{doid_version.strftime("%Y-%m-%d")}\n")
+    f.write(f"Total DO terms:\t{do_total}\n")
     f.write("\n")
-    do_node_stats.to_csv(f, sep="\t")
+    do_node_count.to_csv(f, sep="\t")
 
 
 # MONDO terms
@@ -475,16 +478,16 @@ mondo_df = standardize_df(
 ).sort_values(by=["root", "node_type"])
 
 mondo_total = mondo_df["id"].nunique()
-mondo_node_stats = mondo_df.groupby(["root", "node_type"])["id"].nunique()
-mondo_root_stats = mondo_df.drop(columns=["node_type"]).groupby("root")["id"].nunique()
-with open(stats_file, "a") as f:
+mondo_root_count = mondo_df.groupby("root")["id"].nunique()
+mondo_root_node_count = mondo_df.groupby(["root", "node_type"])["id"].nunique()
+with open(ontology_stats_path, "a") as f:
     f.write("\n\n")
-    f.write(f"MONDO version: {mondo_version.strftime("%Y-%m-%d")}\n")
-    f.write(f"Total MONDO terms: {mondo_total}\n")
+    f.write(f"MONDO version:\t{mondo_version.strftime("%Y-%m-%d")}\n")
+    f.write(f"Total MONDO terms:\t{mondo_total}\n")
     f.write("\n")
-    mondo_root_stats.to_csv(f, sep="\t")
+    mondo_root_count.to_csv(f, sep="\t")
     f.write("\n")
-    mondo_node_stats.to_csv(f, sep="\t")
+    mondo_root_node_count.to_csv(f, sep="\t")
 
 
 # Detailed Mapping Outputs ---------------------------------------------------
@@ -507,18 +510,18 @@ mapped_out.to_csv(os.path.join(data_dir, "mapped_diseases.tsv"), index=False, se
 # MONDO unmapped
 mondo_unmapped_flat_dict = [{"id": k, **v} for k, v in mondo_unmapped.items()]
 mondo_unmapped_df = standardize_df(pd.DataFrame(mondo_unmapped_flat_dict))
-mondo_unmapped_df["has_mapping"] = mondo_unmapped_df["mappings"].apply(
+mondo_unmapped_df["foremost_mapping"] = mondo_unmapped_df["mappings"].apply(
     has_priority_mapping
 )
 
 priority_order2 = [*priority_order, "other", "none"]
-mondo_unmapped_df["has_mapping"] = pd.Categorical(
-    mondo_unmapped_df["has_mapping"],
+mondo_unmapped_df["foremost_mapping"] = pd.Categorical(
+    mondo_unmapped_df["foremost_mapping"],
     categories=priority_order2,
     ordered=True,
 )
 mondo_unmapped_out = mondo_unmapped_df.sort_values(
-    by=["root", "node_type", "has_mapping", "label"]
+    by=["root", "node_type", "foremost_mapping", "label"]
 )
 
 mondo_unmapped_out.to_csv(
@@ -529,74 +532,131 @@ mondo_unmapped_out.to_csv(
 # DO unmapped
 do_unmapped_flat_dict = [{"id": k, **v} for k, v in do_unmapped.items()]
 do_unmapped_df = standardize_df(pd.DataFrame(do_unmapped_flat_dict))
-do_unmapped_df["has_mapping"] = do_unmapped_df["mappings"].apply(has_priority_mapping)
-do_unmapped_df["has_mapping"] = pd.Categorical(
-    do_unmapped_df["has_mapping"],
+do_unmapped_df["foremost_mapping"] = do_unmapped_df["mappings"].apply(
+    has_priority_mapping
+)
+do_unmapped_df["foremost_mapping"] = pd.Categorical(
+    do_unmapped_df["foremost_mapping"],
     categories=priority_order2,
     ordered=True,
 )
-do_unmapped_out = do_unmapped_df.sort_values(by=["node_type", "has_mapping", "label"])
+do_unmapped_out = do_unmapped_df.sort_values(
+    by=["node_type", "foremost_mapping", "label"]
+)
 
 do_unmapped_out.to_csv(os.path.join(data_dir, "do_unmapped.tsv"), index=False, sep="\t")
 
 
 # Detailed Mapping Statistics ---------------------------------------------------
-mapping_stats = os.path.join(data_dir, "mapping_stats.tsv")
+mapping_stats_path = os.path.join(data_dir, "mapping_stats.tsv")
 
-# Mapped diseases
-mapped_stats = (
-    mapped_out[["mondo_id", "doid", "mondo_root", "mapped_by", "deprecated"]]
-    .groupby(["mondo_root", "mapped_by", "deprecated"])
+#### Mapped diseases ####
+mapped_by_count = (
+    mapped_out[
+        [
+            "mondo_id",
+            "doid",
+            "mondo_root",
+            "mapped_by",
+            "deprecated",
+        ]
+    ]
+    .groupby(
+        [
+            "mondo_root",
+            "mapped_by",
+            "deprecated",
+        ]
+    )
     .size()
-    .rename("mapped")
-)
-
-
-# DO unmapped
-do_unmapped_stats = do_unmapped_out.groupby(["node_type"]).size()
-do_unmapped_stats = (
-    do_unmapped_stats.rename("unmapped")
+    .rename("mappings")
     .to_frame()
-    .join(do_node_stats.rename("total"), how="left")
 )
-do_unmapped_stats["unmapped_pct"] = (
-    do_unmapped_stats["unmapped"] / do_unmapped_stats["total"]
+mapped_by_count["pct"] = (
+    mapped_by_count["mappings"] / mapped_by_count["mappings"].sum()
 ) * 100
-do_unmapped_stats["unmapped_pct"] = do_unmapped_stats["unmapped_pct"].round(1)
+mapped_by_count["pct"] = mapped_by_count["pct"].round(1)
 
 
-# MONDO unmapped
-mondo_unmapped_stats = mondo_unmapped_out.groupby(["root", "node_type"]).size()
-mondo_unmapped_stats = (
-    mondo_unmapped_stats.rename("unmapped")
+#### DO unmapped ####
+do_unmapped_count = (
+    do_unmapped_out.groupby("node_type")["id"]
+    .nunique()
+    .rename("unmapped")
     .to_frame()
-    .join(mondo_node_stats.rename("total"), how="left")
+    .join(do_node_count.rename("total"), how="left")
 )
-mondo_unmapped_stats["unmapped_pct"] = (
-    mondo_unmapped_stats["unmapped"] / mondo_unmapped_stats["total"]
+
+do_unmapped_count["pct"] = (
+    do_unmapped_count["unmapped"] / do_unmapped_count["total"]
 ) * 100
-mondo_unmapped_stats["unmapped_pct"] = mondo_unmapped_stats["unmapped_pct"].round(1)
+do_unmapped_count["pct"] = do_unmapped_count["pct"].round(1)
 
-mondo_unmapped_stats2 = (
-    mondo_unmapped_out.groupby(["root", "has_mapping"]).size().rename("unmapped")
+# by foremost mapped source
+do_unmapped_src = (
+    do_unmapped_out.groupby("foremost_mapping")["id"]
+    .nunique()
+    .rename("unmapped")
+    .to_frame()
 )
+do_unmapped_src["pct"] = (
+    do_unmapped_src["unmapped"] / do_unmapped_src["unmapped"].sum()
+) * 100
+do_unmapped_src["pct"] = do_unmapped_src["pct"].round(1)
 
 
-with open(mapping_stats, "w") as f:
-    f.write("MAPPING STATISTICS\n")
-    f.write("Mapped:\n")
-    f.write("source\ttotal_mapped\n")
-    f.write("DO\t{}\n".format(mapped_out["doid"].nunique()))
-    f.write("MONDO\t{}\n".format(mapped_out["mondo_id"].nunique()))
+#### MONDO unmapped ####
+mondo_unmapped_count = (
+    mondo_unmapped_out.groupby(["root", "node_type"])["id"]
+    .nunique()
+    .rename("unmapped")
+    .to_frame()
+    .join(mondo_root_node_count.rename("total"), how="left")
+)
+mondo_unmapped_count["pct"] = (
+    mondo_unmapped_count["unmapped"] / mondo_unmapped_count["total"]
+) * 100
+mondo_unmapped_count["pct"] = mondo_unmapped_count["pct"].round(1)
+
+# by foremost mapped source
+mondo_human_unmapped = mondo_unmapped_out[mondo_unmapped_out["root"] == "human disease"]
+mondo_unmapped_src = (
+    mondo_human_unmapped.groupby("foremost_mapping")["id"]
+    .nunique()
+    .rename("unmapped")
+    .to_frame()
+)
+mondo_unmapped_src["pct"] = (
+    mondo_unmapped_src["unmapped"] / mondo_unmapped_src["unmapped"].sum()
+) * 100
+mondo_unmapped_src["pct"] = mondo_unmapped_src["pct"].round(1)
+
+#### SAVE ####
+with open(mapping_stats_path, "w") as f:
+    f.write("TOTALS:\n")
+    f.write("ontology\tmapped\tunmapped\n")
+    f.write(
+        "DO\t{}\t{}\n".format(
+            mapped_out["doid"].nunique(), do_unmapped_out["id"].nunique()
+        )
+    )
+    f.write(
+        "MONDO\t{}\t{}\n".format(
+            mapped_out["mondo_id"].nunique(), mondo_human_unmapped["id"].nunique()
+        )
+    )
     f.write("\n")
-    f.write("Mapped -- with details:\n")
-    mapped_stats.to_csv(f, sep="\t")
+    f.write("Mapped -- complete details:\n")
+    mapped_by_count.to_csv(f, sep="\t")
     f.write("\n\n")
     f.write("DO unmapped:\n")
-    do_unmapped_stats.to_csv(f, sep="\t")
-    f.write("\n\n")
-    f.write("MONDO unmapped:\n")
-    mondo_unmapped_stats.to_csv(f, sep="\t")
+    do_unmapped_count.to_csv(f, sep="\t")
     f.write("\n")
-    f.write("MONDO unmapped -- with priority mapping identified:\n")
-    mondo_unmapped_stats2.to_csv(f, sep="\t")
+    f.write("DO unmapped -- by primary source:\n")
+    do_unmapped_src.to_csv(f, sep="\t")
+    f.write("\n\n")
+    f.write("MONDO unmapped -- by root:\n")
+    mondo_unmapped_count.to_csv(f, sep="\t")
+    f.write("\n")
+    f.write("MONDO unmapped -- by primary source:\n")
+    mondo_unmapped_src.to_csv(f, sep="\t")
