@@ -707,31 +707,32 @@ other_mappings = [
 # exclude MONDO terms with any match from other_mappings in 'mappings_shared' or 'mappings_mondo'
 mondo_do_primary = mapped_out[
     ~mapped_out["mappings_shared"].str.contains(
-        r"|".join(other_mappings), case=False, na=False
+        r"|".join(authoritative_mappings), case=False, na=False
     )
-    & mapped_out["mappings_mondo"].str.contains(
-        r"|".join(other_mappings), case=False, na=False
+    & ~mapped_out["mappings_mondo"].str.contains(
+        r"|".join(authoritative_mappings), case=False, na=False
     )
 ].copy()
 
 mondo_do_primary["primary_source"] = np.where(
-    mondo_do_primary["mappings_shared"].isna() & mondo_do_primary["mappings_mondo"].isna(),
+    (mondo_do_primary["mappings_shared"] == "")
+    & (mondo_do_primary["mappings_mondo"] == ""),
     "DO_only",
-    "DO_major"
+    "DO_major",
 )
 
 mondo_do_primary.to_csv(
     os.path.join(data_dir, "mapped_DO_primary.tsv"), index=False, sep="\t"
 )
 
-do_primary_stats = (
-    mondo_do_primary.groupby("primary_source")["id"]
+mondo_do_primary_stats = (
+    mondo_do_primary.groupby("primary_source")["mondo_id"]
     .nunique()
     .rename("count")
     .to_frame()
 )
 
-with open(mapping_stats_path, "w") as f:
+with open(mapping_stats_path, "a") as f:
     f.write("\n\n")
     f.write("MONDO mapped to DO as primary source:\n")
-    do_primary_stats.to_csv(f, sep="\t")
+    mondo_do_primary_stats.to_csv(f, sep="\t")
