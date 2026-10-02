@@ -9,6 +9,8 @@
 #      & synonyms)?
 #   4. Which MONDO and DO diseases cannot be mapped to one another by any of the above
 #      methods?
+#   5. Which unmapped MONDO branch classes have descendants that map directly to DO?
+#      This serves to compare the additional branching in MONDO relative to DO.
 #
 # Output includes the full comparison data in TSV format and summary statistics.
 
@@ -176,6 +178,22 @@ def standardize_df(df):
 # Define mapping source priority for identification of unmapped terms (quasi-type info)
 priority_order = ["MIM", "ORDO", "NCI", "UMLS", "GARD", "MESH"]
 
+HIERARCHICAL_MAPPING_SOURCES = {
+    "ORDO",
+    "EFO",
+    "MESH",
+    "UMLS_CUI",
+    "NCI",
+    "ICD9CM",
+    "ICD10CM",
+    "ICD11",
+    "ICDO",
+    "SNOMEDCT_US",
+    "MEDDRA",
+    "ONCOTREE",
+    "NANDO",
+}
+
 
 def has_priority_mapping(mappings):
     if mappings == "":
@@ -184,6 +202,66 @@ def has_priority_mapping(mappings):
         if any(mapping.startswith(prefix) for mapping in mappings.split("|")):
             return prefix
     return "other"
+
+
+def get_mondo_branch_classes_with_do_mapped_descendants(mondo_terms, mondo_graph):
+    mondo_id_to_iri = {
+        mondo_id: rdflib.URIRef(
+            f"http://purl.obolibrary.org/obo/{mondo_id.replace(':', '_')}"
+        )
+        for mondo_id in mondo_terms
+    }
+    pending = [
+        mondo_id_to_iri[mondo_id]
+        for mondo_id, mondo_data in mondo_terms.items()
+        if mondo_data["doid"]
+    ]
+    ancestors_of_do_mapped_classes = set(pending)
+    while pending:
+        child = pending.pop()
+        for parent in mondo_graph.objects(child, rdflib.RDFS.subClassOf):
+            if parent not in ancestors_of_do_mapped_classes:
+                ancestors_of_do_mapped_classes.add(parent)
+                pending.append(parent)
+
+    branch_classes = []
+    for mondo_id, mondo_data in mondo_terms.items():
+        iri = mondo_id_to_iri[mondo_id]
+        if (
+            mondo_data["node_type"] == "leaf"
+            or mondo_data["doid"]
+            or iri not in ancestors_of_do_mapped_classes
+        ):
+            continue
+
+        mapping_sources = {
+            mapping.split(":", 1)[0]
+            for mapping in mondo_data["mappings"]
+            if ":" in mapping
+        }
+        hierarchical_sources = sorted(
+            mapping_sources.intersection(HIERARCHICAL_MAPPING_SOURCES),
+            key=str.casefold,
+        )
+        if hierarchical_sources:
+            source_group = "-".join(hierarchical_sources)
+        elif mondo_data["mappings"]:
+            source_group = "other/unconfirmed source(s)"
+        else:
+            source_group = "no non-DO source mapping"
+
+        branch_classes.append(
+            {
+                "id": mondo_id,
+                "label": mondo_data["label"],
+                "node_type": mondo_data["node_type"],
+                "source_group": source_group,
+                "hierarchical_sources": "|".join(hierarchical_sources),
+                "mappings": "|".join(sorted(mondo_data["mappings"])),
+            }
+        )
+
+    return branch_classes
 
 
 def compare_deprecated(row):
@@ -489,6 +567,49 @@ with open(ontology_stats_path, "a") as f:
     mondo_root_count.to_csv(f, sep="\t")
     f.write("\n")
     mondo_root_node_count.to_csv(f, sep="\t")
+
+
+# MONDO unmapped branch classes with DO-mapped descendants
+mondo_extra_branch_classes = get_mondo_branch_classes_with_do_mapped_descendants(
+    mondo_terms, mondo_graph
+)
+mondo_extra_branch_classes_df = pd.DataFrame(
+    mondo_extra_branch_classes,
+    columns=[
+        "id",
+        "label",
+        "node_type",
+        "source_group",
+        "hierarchical_sources",
+        "mappings",
+    ],
+).sort_values(by=["source_group", "label", "id"])
+mondo_extra_branch_classes_path = os.path.join(
+    data_dir, "mondo_branch_classes_with_do_mapped_descendants.tsv"
+)
+mondo_extra_branch_classes_df.to_csv(
+    mondo_extra_branch_classes_path, index=False, sep="\t"
+)
+
+mondo_extra_branch_source_counts = (
+    mondo_extra_branch_classes_df.groupby("source_group")["id"]
+    .nunique()
+    .rename("classes")
+    .to_frame()
+)
+with open(ontology_stats_path, "a") as f:
+    f.write("\n\n")
+    f.write(
+        "MONDO non-leaf (branch/deprecated) classes without direct DO mappings "
+        "and with at least one DO-mapped descendant:\n"
+    )
+    f.write(
+        "hierarchical source prefixes\t"
+        + "|".join(sorted(HIERARCHICAL_MAPPING_SOURCES, key=str.casefold))
+        + "\n"
+    )
+    f.write(f"total\t{len(mondo_extra_branch_classes_df)}\n")
+    mondo_extra_branch_source_counts.to_csv(f, sep="\t")
 
 
 # Detailed Mapping Outputs ---------------------------------------------------
