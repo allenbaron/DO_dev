@@ -178,21 +178,21 @@ def standardize_df(df):
 # Define mapping source priority for identification of unmapped terms (quasi-type info)
 priority_order = ["MIM", "ORDO", "NCI", "UMLS", "GARD", "MESH"]
 
-HIERARCHICAL_MAPPING_SOURCES = {
+HIERARCHICAL_MAPPING_SOURCES = [
+    "SNOMEDCT_US",
+    "NCI",
     "ORDO",
     "EFO",
     "MESH",
-    "UMLS_CUI",
-    "NCI",
     "ICD9CM",
     "ICD10CM",
-    "ICD11",
-    "ICDO",
-    "SNOMEDCT_US",
     "MEDDRA",
-    "ONCOTREE",
-    "NANDO",
-}
+    # "UMLS_CUI",
+    # "ICDO",
+    # "ICD11",
+    # "ONCOTREE",
+    # "NANDO",
+]
 
 
 def has_priority_mapping(mappings):
@@ -239,10 +239,11 @@ def get_mondo_branch_classes_with_do_mapped_descendants(mondo_terms, mondo_graph
             for mapping in mondo_data["mappings"]
             if ":" in mapping
         }
-        hierarchical_sources = sorted(
-            mapping_sources.intersection(HIERARCHICAL_MAPPING_SOURCES),
-            key=str.casefold,
-        )
+        hierarchical_sources = [
+            source
+            for source in HIERARCHICAL_MAPPING_SOURCES
+            if source in mapping_sources
+        ]
         if hierarchical_sources:
             source_group = "-".join(hierarchical_sources)
         elif mondo_data["mappings"]:
@@ -583,7 +584,33 @@ mondo_extra_branch_classes_df = pd.DataFrame(
         "hierarchical_sources",
         "mappings",
     ],
-).sort_values(by=["source_group", "label", "id"])
+)
+source_priority = {
+    source: index for index, source in enumerate(HIERARCHICAL_MAPPING_SOURCES)
+}
+
+
+def source_group_order_key(source_group):
+    if source_group == "other/unconfirmed source(s)":
+        return (1, ())
+    if source_group == "no non-DO source mapping":
+        return (2, ())
+    return (0, tuple(source_priority[source] for source in source_group.split("-")))
+
+
+ordered_source_groups = sorted(
+    mondo_extra_branch_classes_df["source_group"].unique(),
+    key=source_group_order_key,
+)
+source_group_order = {
+    source_group: index for index, source_group in enumerate(ordered_source_groups)
+}
+mondo_extra_branch_classes_df["_source_group_order"] = mondo_extra_branch_classes_df[
+    "source_group"
+].map(source_group_order)
+mondo_extra_branch_classes_df = mondo_extra_branch_classes_df.sort_values(
+    by=["_source_group_order", "label", "id"]
+).drop(columns=["_source_group_order"])
 mondo_extra_branch_classes_path = os.path.join(
     data_dir, "mondo_branch_classes_with_do_mapped_descendants.tsv"
 )
@@ -591,25 +618,28 @@ mondo_extra_branch_classes_df.to_csv(
     mondo_extra_branch_classes_path, index=False, sep="\t"
 )
 
-mondo_extra_branch_source_counts = (
+mondo_extra_branch_detailed = (
     mondo_extra_branch_classes_df.groupby("source_group")["id"]
     .nunique()
     .rename("classes")
     .to_frame()
+    .reindex(ordered_source_groups, fill_value=0)
 )
-with open(ontology_stats_path, "a") as f:
-    f.write("\n\n")
-    f.write(
-        "MONDO non-leaf (branch/deprecated) classes without direct DO mappings "
-        "and with at least one DO-mapped descendant:\n"
+mondo_extra_branch_by_source = (
+    pd.Series(
+        {
+            source: sum(
+                source in record["hierarchical_sources"].split("|")
+                for record in mondo_extra_branch_classes
+            )
+            for source in HIERARCHICAL_MAPPING_SOURCES
+        },
+        name="classes",
+        dtype="int64",
     )
-    f.write(
-        "hierarchical source prefixes\t"
-        + "|".join(sorted(HIERARCHICAL_MAPPING_SOURCES, key=str.casefold))
-        + "\n"
-    )
-    f.write(f"total\t{len(mondo_extra_branch_classes_df)}\n")
-    mondo_extra_branch_source_counts.to_csv(f, sep="\t")
+    .rename_axis("hierarchical_source")
+    .to_frame()
+)
 
 
 # Detailed Mapping Outputs ---------------------------------------------------
@@ -782,6 +812,13 @@ with open(mapping_stats_path, "w") as f:
     f.write("\n")
     f.write("MONDO unmapped -- by primary source:\n")
     mondo_unmapped_src.to_csv(f, sep="\t")
+    f.write("\n\n")
+    f.write("MONDO 'extra' branch classes:\n")
+    f.write(f"TOTAL\t{len(mondo_extra_branch_classes_df)}\n")
+    f.write("Exclusive source-set groups:\n")
+    mondo_extra_branch_detailed.to_csv(f, sep="\t")
+    f.write("\nMONDO 'extra' branch classes -- by source:\n")
+    mondo_extra_branch_by_source.to_csv(f, sep="\t")
 
 
 ## MONDO from DO only -- DO as source of truth
