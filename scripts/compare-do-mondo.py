@@ -204,7 +204,7 @@ def has_priority_mapping(mappings):
     return "other"
 
 
-def get_mondo_branch_classes_with_do_mapped_descendants(mondo_terms, mondo_graph):
+def get_mondo_extra_branch_classes(mondo_terms, mondo_graph):
     mondo_id_to_iri = {
         mondo_id: rdflib.URIRef(
             f"http://purl.obolibrary.org/obo/{mondo_id.replace(':', '_')}"
@@ -216,13 +216,26 @@ def get_mondo_branch_classes_with_do_mapped_descendants(mondo_terms, mondo_graph
         for mondo_id, mondo_data in mondo_terms.items()
         if mondo_data["doid"]
     ]
+    # identify original mondo terms mapped to DO terms that are descendants of other
+    # mondo terms that are not mapped to DO terms and include in output of this function
+    mondo_do_original = pending.copy()
+
     ancestors_of_do_mapped_classes = set(pending)
+    mondo_descendants_with_do_mapping = {}
     while pending:
         child = pending.pop()
         for parent in mondo_graph.objects(child, rdflib.RDFS.subClassOf):
             if parent not in ancestors_of_do_mapped_classes:
                 ancestors_of_do_mapped_classes.add(parent)
                 pending.append(parent)
+            if parent not in mondo_descendants_with_do_mapping:
+                mondo_descendants_with_do_mapping[parent] = set()
+            if child in mondo_do_original:
+                mondo_descendants_with_do_mapping[parent].add(child)
+            elif child in mondo_descendants_with_do_mapping:
+                mondo_descendants_with_do_mapping[parent].update(
+                    mondo_descendants_with_do_mapping[child]
+                )
 
     branch_classes = []
     for mondo_id, mondo_data in mondo_terms.items():
@@ -251,6 +264,11 @@ def get_mondo_branch_classes_with_do_mapped_descendants(mondo_terms, mondo_graph
         else:
             source_group = "no non-DO source mapping"
 
+        mondo_desc_do_mapped = sorted(
+            mondo_id_to_iri[descendant].split("/")[-1].replace("_", ":")
+            for descendant in mondo_descendants_with_do_mapping.get(iri, set())
+        )
+
         branch_classes.append(
             {
                 "id": mondo_id,
@@ -259,6 +277,7 @@ def get_mondo_branch_classes_with_do_mapped_descendants(mondo_terms, mondo_graph
                 "source_group": source_group,
                 "hierarchical_sources": "|".join(hierarchical_sources),
                 "mappings": "|".join(sorted(mondo_data["mappings"])),
+                "mondo_desc_do_mapped": "|".join(mondo_desc_do_mapped),
             }
         )
 
@@ -571,9 +590,7 @@ with open(ontology_stats_path, "a") as f:
 
 
 # MONDO unmapped branch classes with DO-mapped descendants
-mondo_extra_branch_classes = get_mondo_branch_classes_with_do_mapped_descendants(
-    mondo_terms, mondo_graph
-)
+mondo_extra_branch_classes = get_mondo_extra_branch_classes(mondo_terms, mondo_graph)
 mondo_extra_branch_classes_df = pd.DataFrame(
     mondo_extra_branch_classes,
     columns=[
@@ -583,6 +600,7 @@ mondo_extra_branch_classes_df = pd.DataFrame(
         "source_group",
         "hierarchical_sources",
         "mappings",
+        "mondo_desc_do_mapped",
     ],
 )
 source_priority = {
