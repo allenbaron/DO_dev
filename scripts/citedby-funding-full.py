@@ -49,6 +49,7 @@ import csv
 import hashlib
 import json
 import logging
+import math
 import os
 import re
 import shutil
@@ -57,6 +58,8 @@ import subprocess
 import time
 import xml.etree.ElementTree as ET
 from collections import Counter
+from datetime import timezone
+from email.utils import parsedate_to_datetime
 from pathlib import Path
 from urllib.parse import quote, urlencode, urlsplit
 
@@ -497,6 +500,7 @@ class APIClient:
         self.stats = Counter()
         self.ncbi_lock = asyncio.Lock()
         self.last_ncbi_request = 0.0
+        self.cooldowns = {}
         self.cache = None
 
         if cache_path:
@@ -546,54 +550,90 @@ class APIClient:
                 await asyncio.sleep(delay)
             self.last_ncbi_request = time.monotonic()
 
+    def _retry_delay(self, retry_after, attempt):
+        if retry_after:
+            try:
+                delay = float(retry_after)
+            except ValueError:
+                try:
+                    retry_time = parsedate_to_datetime(retry_after)
+                    if retry_time.tzinfo is None:
+                        retry_time = retry_time.replace(tzinfo=timezone.utc)
+                    delay = retry_time.timestamp() - time.time()
+                except (TypeError, ValueError, OverflowError):
+                    delay = 2**attempt
+            if math.isfinite(delay):
+                return max(0.0, delay)
+        return 2**attempt
+
+    async def _wait_for_cooldown(self, host):
+        while True:
+            delay = self.cooldowns.get(host, 0.0) - time.monotonic()
+            if delay <= 0:
+                return
+            await asyncio.sleep(delay)
+
     async def _get_text(self, session, url):
         cached = self._cached_text(url)
         if cached is not None:
             return cached
 
-        async with self.sem:
-            for attempt in range(MAX_RETRIES + 1):
-                await self._throttle(url)
-                self.stats["requests"] += 1
-                try:
-                    async with session.get(
-                        url,
-                        headers={"User-Agent": USER_AGENT},
-                        timeout=aiohttp.ClientTimeout(total=HTTP_TIMEOUT),
-                    ) as response:
-                        body = await response.text()
-                        if response.status == 200:
-                            self._cache_text(url, body)
-                            return body
-                        if response.status == 429:
-                            self.stats["rate_limited"] += 1
-                        elif response.status >= 500:
-                            self.stats["server_errors"] += 1
-                        else:
-                            self.stats[f"http_{response.status}"] += 1
-                            logger.warning(
-                                "HTTP %s from %s",
-                                response.status,
-                                urlsplit(url).netloc,
-                            )
-                            return None
-                        retry_after = response.headers.get("Retry-After")
-                        try:
-                            delay = float(retry_after) if retry_after else 2**attempt
-                        except ValueError:
-                            delay = 2**attempt
-                except (aiohttp.ClientError, asyncio.TimeoutError) as exc:
-                    self.stats["request_errors"] += 1
-                    logger.debug(
-                        "Request to %s failed with %s: %s",
-                        urlsplit(url).netloc,
-                        type(exc).__name__,
-                        str(exc) or "no exception detail",
-                    )
-                    delay = 2**attempt
+        host = urlsplit(url).hostname
+        for attempt in range(MAX_RETRIES + 1):
+            while True:
+                await self._wait_for_cooldown(host)
+                async with self.sem:
+                    await self._throttle(url)
+                    if self.cooldowns.get(host, 0.0) > time.monotonic():
+                        continue
+                    self.stats["requests"] += 1
+                    rate_limited = False
+                    try:
+                        async with session.get(
+                            url,
+                            headers={"User-Agent": USER_AGENT},
+                            timeout=aiohttp.ClientTimeout(total=HTTP_TIMEOUT),
+                        ) as response:
+                            if response.status == 429:
+                                self.stats["rate_limited"] += 1
+                                rate_limited = True
+                                delay = self._retry_delay(
+                                    response.headers.get("Retry-After"), attempt
+                                )
+                                self.cooldowns[host] = max(
+                                    self.cooldowns.get(host, 0.0),
+                                    time.monotonic() + delay,
+                                )
+                            elif response.status == 200:
+                                body = await response.text()
+                                self._cache_text(url, body)
+                                return body
+                            elif response.status >= 500:
+                                self.stats["server_errors"] += 1
+                                delay = self._retry_delay(
+                                    response.headers.get("Retry-After"), attempt
+                                )
+                            else:
+                                self.stats[f"http_{response.status}"] += 1
+                                logger.warning(
+                                    "HTTP %s from %s",
+                                    response.status,
+                                    urlsplit(url).netloc,
+                                )
+                                return None
+                    except (aiohttp.ClientError, asyncio.TimeoutError) as exc:
+                        self.stats["request_errors"] += 1
+                        logger.debug(
+                            "Request to %s failed with %s: %s",
+                            urlsplit(url).netloc,
+                            type(exc).__name__,
+                            str(exc) or "no exception detail",
+                        )
+                        delay = 2**attempt
+                    break
 
-                if attempt < MAX_RETRIES:
-                    await asyncio.sleep(delay)
+            if attempt < MAX_RETRIES and not rate_limited:
+                await asyncio.sleep(delay)
 
         self.stats["failed_requests"] += 1
         return None
