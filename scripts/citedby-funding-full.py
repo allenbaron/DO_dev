@@ -251,8 +251,8 @@ SOURCE_BASE_WEIGHTS = {
     "PubMed": 5,
     "Crossref": 4,
     "OpenAlex": 3,
-    "PMC_JATS": 2,
-    "PMC_FullText": 1,
+    "PMC-JATS": 2,
+    "PMC-FullText": 1,
 }
 
 ###############################################################################
@@ -265,7 +265,7 @@ def confidence(source):
     if source in ("PubMed", "EuropePMC"):
         return "High"
 
-    if source in ("Crossref", "OpenAlex", "PMC_JATS"):
+    if source in ("Crossref", "OpenAlex", "PMC-JATS"):
         return "Medium"
 
     return "Low"
@@ -838,7 +838,7 @@ def parse_openalex(data):
 ###############################################################################
 
 
-async def query_pmc_fulltext(session, pmcid, client):
+async def query_PMC_FullText(session, pmcid, client):
 
     url = (
         "https://www.ebi.ac.uk/europepmc/webservices/rest/"
@@ -946,7 +946,7 @@ def parse_pmc_funding(xml):
                             agency=agency,
                             subagency=subagency,
                             grant_id=grant_id,
-                            source="PMC_JATS",
+                            source="PMC-JATS",
                             evidence=grant_evidence(grant_id, evidence),
                         )
                     )
@@ -958,7 +958,7 @@ def parse_pmc_funding(xml):
                             agency=agency,
                             subagency=subagency,
                             grant_id=None,
-                            source="PMC_JATS",
+                            source="PMC-JATS",
                             evidence=funder[:1000],
                         )
                     )
@@ -971,7 +971,7 @@ def parse_pmc_funding(xml):
                     agency=agency,
                     subagency=subagency,
                     grant_id=grant_id,
-                    source="PMC_FullText",
+                    source="PMC-FullText",
                     evidence=grant_evidence(grant_id, text),
                 )
             )
@@ -983,7 +983,7 @@ def parse_pmc_funding(xml):
                     agency=agency,
                     subagency=subagency,
                     grant_id=grant_id,
-                    source="PMC_FullText",
+                    source="PMC-FullText",
                     evidence=evidence,
                 )
             )
@@ -993,7 +993,7 @@ def parse_pmc_funding(xml):
         if no_funding:
             assertions.append(
                 make_assertion(
-                    source="PMC_FullText",
+                    source="PMC-FullText",
                     evidence=grant_evidence(no_funding.group(0), text),
                 )
             )
@@ -1012,7 +1012,7 @@ def parse_pmc_funding(xml):
             assertions.append(
                 make_assertion(
                     agency=agency,
-                    source="PMC_FullText",
+                    source="PMC-FullText",
                     evidence=text[:1000],
                 )
             )
@@ -1188,14 +1188,14 @@ async def process_record(row, session, client, on_lookup=None):
     ###########################################################################
 
     if pmcid:
-        doc = await query_pmc_fulltext(session, pmcid, client)
+        doc = await query_PMC_FullText(session, pmcid, client)
         if doc:
             try:
                 fulltext_root = ET.fromstring(doc)
                 if fulltext_root.tag.endswith("article") or fulltext_root.findall(
                     ".//article"
                 ):
-                    matched_sources.append("PMC_JATS")
+                    matched_sources.append("PMC-JATS")
             except ET.ParseError:
                 logger.warning("Could not parse PMC full text for %s", pmcid)
 
@@ -1270,20 +1270,27 @@ async def run(
     )
     total_publications = len(df)
     completed_publications = 0
+    publication_count_width = len(str(total_publications))
     progress = None
     request_status = None
     if show_progress and tqdm_asyncio is not None:
+        progress_width = min(
+            shutil.get_terminal_size().columns - 1,
+            40 + len("Progress: || 100%   ")
+            + len(f"Publications = {total_publications}/{total_publications}"),
+        )
         progress = tqdm_asyncio(
             total=total_publications,
-            desc=f"Publications = 0/{total_publications}",
-            bar_format="Progress: |{bar:40}| {percentage:3.0f}%   {desc}",
+            desc=f"Publications = {0:>{publication_count_width}}/{total_publications}",
+            bar_format="Progress: |{bar}| {percentage:3.0f}%   {desc}",
+            ncols=max(1, progress_width),
             mininterval=0.1,
             unit="publication",
             position=0,
         )
         request_status = tqdm_asyncio(
             total=1,
-            desc="  Requests = 0, Cache = 0",
+            desc="  Cache = 0, Requests = 0",
             bar_format="{desc}",
             position=1,
         )
@@ -1291,16 +1298,16 @@ async def run(
     def update_progress_display():
         if progress is not None:
             progress.set_description_str(
-                f"Publications = {completed_publications}/{total_publications}",
+                f"Publications = {completed_publications:>{publication_count_width}}/{total_publications}",
                 refresh=False,
             )
             request_status.set_description_str(
-                f"  Requests = {client.stats['requests']}, "
-                f"Cache = {client.stats['cache_hits']}",
+                f"  Cache = {client.stats['cache_hits']}, "
+                f"Requests = {client.stats['requests']}",
                 refresh=False,
             )
-            progress.refresh()
             request_status.refresh()
+            progress.refresh()
 
     async def process_with_progress(row):
         nonlocal completed_publications
